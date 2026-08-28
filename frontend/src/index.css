@@ -1,0 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+* { box-sizing: border-box; }
+html { background: #121812; }
+body { margin: 0; min-width: 320px; font-family: 'Manrope', sans-serif; }
+button:focus-visible, select:focus-visible { outline: 2px solid #cbe86b; outline-offset: 2px; }

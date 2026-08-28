@@ -1,0 +1,39 @@
+{
+  "name": "tushar-p3",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "vite --config frontend/vite.config.ts",
+    "dev:server": "tsx backend/api/index.ts",
+    "build": "tsc -b frontend/tsconfig.app.json && vite --config frontend/vite.config.ts build",
+    "lint": "oxlint frontend backend",
+    "preview": "vite --config frontend/vite.config.ts preview"
+  },
+  "dependencies": {
+    "@googlemaps/js-api-loader": "^2.1.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "geotiff": "^3.0.5",
+    "pg": "^8.23.0",
+    "proj4": "^2.21.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/google.maps": "^3.66.0",
+    "@types/node": "^24.13.3",
+    "@types/pg": "^8.23.1",
+    "@types/proj4": "^2.5.6",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "concurrently": "^10.0.5",
+    "oxlint": "^1.79.0",
+    "tsx": "^4.23.12",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.2"
+  }
+}
