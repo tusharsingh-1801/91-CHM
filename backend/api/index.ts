@@ -2,6 +2,9 @@ import 'dotenv/config'
 import express from 'express'
 import pg from 'pg'
 import proj4 from 'proj4'
+import { spawn } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import path from 'node:path'
 
 const { Pool } = pg
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, password: process.env.DATABASE_PASSWORD })
@@ -175,6 +178,36 @@ app.get('/api/fields/:fieldId/ndvi', async (request, response) => {
   } catch (error) {
     console.error('GET /api/fields/:fieldId/ndvi failed:', error)
     response.status(503).json({ error: 'Database unavailable' })
+  }
+})
+
+app.get('/api/fields/:fieldId/ndvi/analysis', async (request, response) => {
+  const languageCode = request.query.language === 'hi-IN' ? 'hi-IN' : 'en-IN'
+  try {
+    const result = await pool.query('select observed_on, ndvi_value, cloud_cover, source, scene_id from public.ndvi_observations where field_id = $1 order by observed_on asc', [request.params.fieldId])
+    const scriptPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'analysis', 'ndvi_analysis.py')
+    const pythonPath = process.env.PYTHON_BIN ?? path.join(process.cwd(), '.venv', 'bin', 'python')
+    const analyzer = spawn(pythonPath, [scriptPath], { stdio: ['pipe', 'pipe', 'pipe'] })
+    let output = ''
+    let errorOutput = ''
+    analyzer.stdout.on('data', (chunk: Buffer) => { output += chunk.toString() })
+    analyzer.stderr.on('data', (chunk: Buffer) => { errorOutput += chunk.toString() })
+    analyzer.stdin.end(JSON.stringify({ languageCode, observations: result.rows }))
+    const exitCode = await new Promise<number | null>((resolve, reject) => {
+      analyzer.on('error', reject)
+      analyzer.on('close', resolve)
+    })
+    if (exitCode !== 0) {
+      console.error('NDVI analysis process failed:', errorOutput)
+      response.status(503).json({ error: 'Python NDVI analysis is unavailable' })
+      return
+    }
+    const analysis = JSON.parse(output) as Record<string, unknown>
+    if (analysis.error) { response.status(503).json({ error: 'NDVI analysis failed' }); return }
+    response.json({ ...analysis, languageCode, source: 'scikit-learn LinearRegression' })
+  } catch (error) {
+    console.error('GET NDVI analysis failed:', error)
+    response.status(503).json({ error: 'NDVI analysis is unavailable' })
   }
 })
 

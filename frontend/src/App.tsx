@@ -8,9 +8,10 @@ import {
   ingestWeather,
   loadFields,
   loadNdvi,
+  loadNdviAnalysis,
   loadScenes,
 } from "./lib/api";
-import type { NdviObservation } from "./lib/api";
+import type { NdviAnalysis, NdviObservation } from "./lib/api";
 import { GoogleSatelliteMap } from "./lib/GoogleSatelliteMap";
 
 type Field = {
@@ -148,8 +149,12 @@ function App() {
   const [assistantLanguage, setAssistantLanguage] = useState("en-IN");
   const [assistantAnswer, setAssistantAnswer] = useState("");
   const [assistantLoading, setAssistantLoading] = useState(false);
+  const [languageCode, setLanguageCode] = useState("en-IN");
+  const [ndviAnalysis, setNdviAnalysis] = useState<NdviAnalysis | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
   const field = fields[activeField] ?? fields[0];
   const displayedLatestNdvi = field.id ? latestNdvi : null;
+  const displayedNdviAnalysis = field.id ? ndviAnalysis : null;
   const filteredNdviObservations = field.id
     ? filterNdviByPeriod(ndviObservations, trendPeriod)
     : [];
@@ -204,6 +209,16 @@ function App() {
         setNdviObservations([]);
       });
   }, [field.id]);
+
+  useEffect(() => {
+    if (!field.id) {
+      return;
+    }
+    loadNdviAnalysis(field.id, languageCode)
+      .then(setNdviAnalysis)
+      .catch(() => setNdviAnalysis(null))
+      .finally(() => setAnalysisLoading(false));
+  }, [field.id, languageCode]);
 
   const notify = (message: string) => {
     setToast(message);
@@ -355,6 +370,17 @@ function App() {
             </button>
             <button className="assistant-button" onClick={() => setModal("assistant")}>
               ✦ <span>Ask TerraScope</span>
+            </button>
+            <button
+              className="language-toggle"
+              onClick={() => {
+                const nextLanguage = languageCode === "en-IN" ? "hi-IN" : "en-IN";
+                setLanguageCode(nextLanguage);
+                setAssistantLanguage(nextLanguage);
+              }}
+              aria-label="Switch dashboard language"
+            >
+              {languageCode === "en-IN" ? "हिंदी" : "English"}
             </button>
             <button className="export-button" onClick={exportReport}>
               ⇩ <span>Export report</span>
@@ -632,6 +658,28 @@ function App() {
                   <span key={`${label}-${index}`}>{label}</span>
                 ))}
               </div>
+              {analysisLoading && <p className="analysis-status">Analysing trend...</p>}
+              {!analysisLoading && displayedNdviAnalysis && displayedNdviAnalysis.status === "analysed" && (
+                <div className="analysis-summary">
+                  <div>
+                    <span>Trend</span>
+                    <b>{displayedNdviAnalysis.statusLabel}</b>
+                  </div>
+                  <div>
+                    <span>Next estimate</span>
+                    <b>{displayedNdviAnalysis.predictedNext?.toFixed(3)}</b>
+                  </div>
+                  <div>
+                    <span>Volatility</span>
+                    <b>{displayedNdviAnalysis.volatility?.toFixed(3)}</b>
+                  </div>
+                  <p>{displayedNdviAnalysis.summary}</p>
+                  <small>{displayedNdviAnalysis.recommendation}</small>
+                </div>
+              )}
+              {!analysisLoading && displayedNdviAnalysis?.status === "insufficient_data" && (
+                <p className="analysis-status">{displayedNdviAnalysis.summary}</p>
+              )}
             </div>
           </div>
           <div className="alerts-panel">

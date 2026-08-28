@@ -74,3 +74,28 @@ export async function loadNdvi(fieldId: string) {
   if (!response.ok) throw new Error('Unable to load NDVI observations')
   return response.json() as Promise<NdviObservation[]>
 }
+
+export type NdviAnalysis = {
+  status: string
+  statusLabel: string
+  trend?: 'improving' | 'declining' | 'stable'
+  summary: string
+  recommendation?: string
+  observations: number
+  average?: number
+  slopePerObservation?: number
+  volatility?: number
+  predictedNext?: number
+  rSquared?: number | null
+  languageCode: string
+  source: string
+}
+
+export async function loadNdviAnalysis(fieldId: string, languageCode = 'en-IN') {
+  const response = await fetch(`/api/fields/${fieldId}/ndvi/analysis?language=${encodeURIComponent(languageCode)}`)
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({})) as { error?: string }
+    throw new Error(payload.error ?? 'Unable to analyse NDVI')
+  }
+  return response.json() as Promise<NdviAnalysis>
+}

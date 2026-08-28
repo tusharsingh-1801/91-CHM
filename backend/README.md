@@ -20,6 +20,7 @@ PostgreSQL credentials stay in the server environment and are never bundled into
 - `PATCH /api/fields/:fieldId/location` stores `{ "latitude": 12.97, "longitude": 77.59 }` for authentic source queries.
 - `GET /api/fields/:fieldId/alerts` returns field alerts.
 - `GET /api/fields/:fieldId/ndvi` returns the NDVI observation history.
+- `GET /api/fields/:fieldId/ndvi/analysis?language=en-IN` runs the Python `scikit-learn` trend analysis service. Use `language=hi-IN` for Hindi analysis text. Set `PYTHON_BIN` if Python is not at `.venv/bin/python`.
 - `GET /api/fields/:fieldId/weather` returns NASA POWER observations.
 - `POST /api/fields/:fieldId/ingest/weather` imports weather data from the official NASA POWER API.
 - `GET /api/fields/:fieldId/scenes` returns stored Sentinel-2 scene metadata.
