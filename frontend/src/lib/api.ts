@@ -10,6 +10,9 @@ export type DatabaseField = {
   last_observation: string | null
   latitude: number | null
   longitude: number | null
+  planting_date: string | null
+  harvest_date: string | null
+  expected_yield_tons: number | null
 }
 
 export async function loadFields() {
@@ -67,18 +70,29 @@ export async function calculateNdvi(fieldId: string, sceneId: string) {
   return response.json() as Promise<{ sceneId: string; ndvi: number; validPixels: number; source: string }>
 }
 
-export type NdviObservation = { observed_on: string; ndvi_value: number | string; cloud_cover: number | string; source: string; scene_id: string | null }
+export type VegetationIndexObservation = {
+  observed_on: string
+  ndvi_value: number | string
+  ndre_value: number | string | null
+  ndmi_value: number | string | null
+  savi_value: number | string | null
+  evi_value: number | string | null
+  cloud_cover: number | string
+  source: string
+  scene_id: string | null
+}
 
 export async function loadNdvi(fieldId: string) {
   const response = await fetch(`/api/fields/${fieldId}/ndvi`)
   if (!response.ok) throw new Error('Unable to load NDVI observations')
-  return response.json() as Promise<NdviObservation[]>
+  return response.json() as Promise<VegetationIndexObservation[]>
 }
 
 export type NdviAnalysis = {
   status: string
   statusLabel: string
   trend?: 'improving' | 'declining' | 'stable'
+  stage?: string
   summary: string
   recommendation?: string
   observations: number
@@ -98,4 +112,44 @@ export async function loadNdviAnalysis(fieldId: string, languageCode = 'en-IN') 
     throw new Error(payload.error ?? 'Unable to analyse NDVI')
   }
   return response.json() as Promise<NdviAnalysis>
+}
+export type FieldEvent = {
+  id: string
+  field_id: string
+  event_type: string
+  event_date: string
+  notes: string | null
+  created_at: string
+}
+
+export async function loadFieldEvents(fieldId: string) {
+  const response = await fetch(`/api/fields/${fieldId}/events`)
+  if (!response.ok) throw new Error('Unable to load field events')
+  return response.json() as Promise<FieldEvent[]>
+}
+
+export async function createFieldEvent(fieldId: string, event_type: string, event_date: string, notes?: string) {
+  const response = await fetch(`/api/fields/${fieldId}/events`, { 
+    method: 'POST', 
+    headers: { 'Content-Type': 'application/json' }, 
+    body: JSON.stringify({ event_type, event_date, notes }) 
+  })
+  if (!response.ok) throw new Error('Unable to create field event')
+  return response.json() as Promise<FieldEvent>
+}
+
+export type Alert = {
+  id: string
+  title: string
+  severity: string
+  observed_at: string
+  resolved: boolean
+  scene_id: string | null
+  stress_geojson: Record<string, unknown> | null
+}
+
+export async function loadFieldAlerts(fieldId: string) {
+  const response = await fetch(`/api/fields/${fieldId}/alerts`)
+  if (!response.ok) throw new Error('Unable to load field alerts')
+  return response.json() as Promise<Alert[]>
 }

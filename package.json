@@ -6,27 +6,30 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
     "dev:client": "vite --config frontend/vite.config.ts",
-    "dev:server": "tsx backend/api/index.ts",
-    "build": "tsc -b frontend/tsconfig.app.json && vite --config frontend/vite.config.ts build",
+    "dev:server": "tsx backend/api/server.ts",
+    "typecheck": "tsc -b",
+    "test": "node --import tsx --test backend/api/**/*.test.ts",
+    "build": "npm run typecheck && vite --config frontend/vite.config.ts build",
     "lint": "oxlint frontend backend",
-    "preview": "vite --config frontend/vite.config.ts preview"
+    "preview": "vite --config frontend/vite.config.ts preview",
+    "migrate": "node-pg-migrate up -j ts -m backend/database/migrations --envPath .env"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.1.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "geotiff": "^3.0.5",
+    "node-pg-migrate": "^9.0.0",
     "pg": "^8.23.0",
-    "proj4": "^2.21.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/google.maps": "^3.66.0",
     "@types/node": "^24.13.3",
     "@types/pg": "^8.23.1",
-    "@types/proj4": "^2.5.6",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",

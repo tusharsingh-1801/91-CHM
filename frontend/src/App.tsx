@@ -10,8 +10,10 @@ import {
   loadNdvi,
   loadNdviAnalysis,
   loadScenes,
+  loadFieldAlerts,
+  loadFieldEvents
 } from "./lib/api";
-import type { NdviAnalysis, NdviObservation } from "./lib/api";
+import type { NdviAnalysis, VegetationIndexObservation, Alert, FieldEvent } from "./lib/api";
 import { GoogleSatelliteMap } from "./lib/GoogleSatelliteMap";
 
 type Field = {
@@ -26,13 +28,6 @@ type Field = {
   lastObservation?: string | null;
   latitude?: number | null;
   longitude?: number | null;
-};
-type AlertItem = {
-  title: string;
-  field: string;
-  time: string;
-  severity: string;
-  icon: string;
 };
 
 const initialFields: Field[] = [
@@ -63,35 +58,12 @@ const initialFields: Field[] = [
     color: "green",
   },
 ];
-const initialAlerts: AlertItem[] = [
-  {
-    title: "Moisture stress detected",
-    field: "River bend",
-    time: "Today, 08:42",
-    severity: "high",
-    icon: "!",
-  },
-  {
-    title: "Vegetation vigor improving",
-    field: "North block",
-    time: "Yesterday, 16:10",
-    severity: "positive",
-    icon: "↗",
-  },
-  {
-    title: "Cloud cover affected scan",
-    field: "East orchard",
-    time: "Aug 24, 11:28",
-    severity: "neutral",
-    icon: "○",
-  },
-];
 
 function ndviChartY(value: number) {
   return 210 - Math.max(0, Math.min(1, value)) * 180;
 }
 
-function createNdviChartPath(observations: NdviObservation[]) {
+function createNdviChartPath(observations: VegetationIndexObservation[]) {
   const values = observations
     .map((observation) => Number(observation.ndvi_value))
     .filter((value) => Number.isFinite(value));
@@ -112,7 +84,7 @@ function formatObservationDate(value: string) {
     : date.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
 }
 
-function filterNdviByPeriod(observations: NdviObservation[], period: string) {
+function filterNdviByPeriod(observations: VegetationIndexObservation[], period: string) {
   if (period === "This season") return observations;
   const latest = observations.at(-1);
   if (!latest) return [];
@@ -143,7 +115,7 @@ function App() {
   const googleMapsEnabled = Boolean(import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
   const [, setDataSource] = useState("Connecting to PostgreSQL...");
   const [latestNdvi, setLatestNdvi] = useState<number | null>(null);
-  const [ndviObservations, setNdviObservations] = useState<NdviObservation[]>([]);
+  const [ndviObservations, setVegetationIndexObservations] = useState<VegetationIndexObservation[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [assistantQuestion, setAssistantQuestion] = useState("");
   const [assistantLanguage, setAssistantLanguage] = useState("en-IN");
@@ -152,24 +124,30 @@ function App() {
   const [languageCode, setLanguageCode] = useState("en-IN");
   const [ndviAnalysis, setNdviAnalysis] = useState<NdviAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [events, setEvents] = useState<FieldEvent[]>([]);
+  const [activeAlert, setActiveAlert] = useState<Alert | null>(null);
+
   const field = fields[activeField] ?? fields[0];
   const displayedLatestNdvi = field.id ? latestNdvi : null;
   const displayedNdviAnalysis = field.id ? ndviAnalysis : null;
-  const filteredNdviObservations = field.id
+  const filteredVegetationIndexObservations = field.id
     ? filterNdviByPeriod(ndviObservations, trendPeriod)
     : [];
-  const chartLatestNdvi = Number(filteredNdviObservations.at(-1)?.ndvi_value);
-  const ndviChartPath = createNdviChartPath(filteredNdviObservations);
-  const chartLabels = filteredNdviObservations
+  const chartLatestNdvi = Number(filteredVegetationIndexObservations.at(-1)?.ndvi_value);
+  const ndviChartPath = createNdviChartPath(filteredVegetationIndexObservations);
+  const chartLabels = filteredVegetationIndexObservations
+
     .slice(-6)
     .map((observation) => formatObservationDate(observation.observed_on));
-  const filteredAlerts = initialAlerts.filter(
+
+  const filteredAlerts = alerts.filter(
     (alert) =>
       alertFilter === "All alerts" ||
       (alertFilter === "High priority" && alert.severity === "high") ||
       (alertFilter === "Positive" && alert.severity === "positive"),
   );
-
+  
   useEffect(() => {
     loadFields()
       .then((data) => {
@@ -200,13 +178,13 @@ function App() {
     }
     loadNdvi(field.id)
       .then((observations) => {
-        setNdviObservations(observations);
+        setVegetationIndexObservations(observations);
         const latest = observations.at(-1);
         setLatestNdvi(latest ? Number(latest.ndvi_value) : null);
       })
       .catch(() => {
         setLatestNdvi(null);
-        setNdviObservations([]);
+        setVegetationIndexObservations([]);
       });
   }, [field.id]);
 
@@ -214,6 +192,10 @@ function App() {
     if (!field.id) {
       return;
     }
+    
+    loadFieldAlerts(field.id).then(setAlerts).catch(() => setAlerts([]));
+    loadFieldEvents(field.id).then(setEvents).catch(() => setEvents([]));
+    setActiveAlert(null);
     loadNdviAnalysis(field.id, languageCode)
       .then(setNdviAnalysis)
       .catch(() => setNdviAnalysis(null))
@@ -288,7 +270,7 @@ function App() {
       if (latestScene) {
         await calculateNdvi(field.id, latestScene.scene_id);
         const observations = await loadNdvi(field.id);
-        setNdviObservations(observations);
+        setVegetationIndexObservations(observations);
         const latestObservation = observations.at(-1);
         setLatestNdvi(
           latestObservation ? Number(latestObservation.ndvi_value) : null,
@@ -450,6 +432,7 @@ function App() {
                   longitude={field.longitude}
                   fieldName={field.name}
                   zoom={mapZoom}
+                  stressGeojson={activeAlert?.stress_geojson}
                 />
               </div>
             )}
@@ -575,12 +558,30 @@ function App() {
                 <em>+2.1%</em>
               </div>
               <div>
+                <span>NDRE / NDMI</span>
+                <b>{displayedLatestNdvi !== null ? (filteredVegetationIndexObservations.at(-1)?.ndre_value || "—") : "—"} / {displayedLatestNdvi !== null ? (filteredVegetationIndexObservations.at(-1)?.ndmi_value || "—") : "—"}</b>
+              </div>
+
+              <div>
                 <span>Last observation</span>
                 <b>{field.lastObservation ?? "—"}</b>
                 <em>{field.lastObservation ? "Recorded observation" : "Unavailable"}</em>
               </div>
             </div>
-            <button className="full-report" onClick={() => setModal("report")}>
+            <div className="field-events-list" style={{ marginTop: "1rem" }}>
+              <h4>Ground Events</h4>
+              {events.length === 0 ? <p>No events logged.</p> : (
+                <ul style={{ listStyle: "none", padding: 0 }}>
+                  {events.map(event => (
+                    <li key={event.id} style={{ marginBottom: "0.5rem", fontSize: "0.85rem" }}>
+                      <strong>{event.event_type}</strong> - {new Date(event.event_date).toLocaleDateString()}
+                      {event.notes ? ` (${event.notes})` : ''}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+<button className="full-report" onClick={() => setModal("report")}>
               View field report <span>→</span>
             </button>
           </div>
@@ -607,7 +608,7 @@ function App() {
               </select>
             </div>
             <div className="chart">
-              {!filteredNdviObservations.length && (
+              {!filteredVegetationIndexObservations.length && (
                 <p
                   className="chart-empty-message"
                   style={{ color: "var(--muted)", padding: "48px 24px", textAlign: "center" }}
@@ -622,7 +623,7 @@ function App() {
                 <span>0.0</span>
               </div>
                 <svg
-                  style={!filteredNdviObservations.length ? { display: "none" } : undefined}
+                  style={!filteredVegetationIndexObservations.length ? { display: "none" } : undefined}
                 viewBox="0 0 700 210"
                 preserveAspectRatio="none"
                 role="img"
@@ -702,21 +703,19 @@ function App() {
               {filteredAlerts.map((alert) => (
                 <button
                   className="alert"
-                  key={alert.title}
+                  key={alert.id}
                   onClick={() => {
-                    setActiveField(
-                      fields.findIndex((item) => item.name === alert.field),
-                    );
+                    setActiveAlert(alert);
                     setModal("alert");
                   }}
                 >
                   <span className={`alert-icon ${alert.severity}`}>
-                    {alert.icon}
+                    !
                   </span>
                   <span>
                     <b>{alert.title}</b>
                     <small>
-                      {alert.field} · {alert.time}
+                      {new Date(alert.observed_at).toLocaleDateString()}
                     </small>
                   </span>
                   <span className="arrow">→</span>
