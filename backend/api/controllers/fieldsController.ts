@@ -350,3 +350,38 @@ export async function deleteFieldEvent(request: Request, response: Response) {
     response.status(503).json({ error: 'Database unavailable' });
   }
 }
+
+export async function getFieldOverlay(request: Request, response: Response) {
+  try {
+    const { fieldId, sceneId } = request.params;
+    const fieldResult = await pool.query('select ST_AsGeoJSON(boundary_geom)::jsonb as boundary_geojson from public.fields where id = $1', [fieldId]);
+    const field = fieldResult.rows[0];
+    if (!field || !field.boundary_geojson) { response.status(400).json({ error: 'Field boundary missing' }); return; }
+    
+    const sceneResult = await pool.query('select assets from public.satellite_scenes where field_id = $1 and scene_id = $2', [fieldId, sceneId]);
+    const scene = sceneResult.rows[0];
+    if (!scene) { response.status(404).json({ error: 'Scene not found' }); return; }
+    
+    const assets = scene.assets;
+    const engineResponse = await fetch(`${process.env.PYTHON_ENGINE_URL || "http://127.0.0.1:8000"}/generate-overlay`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        redUrl: assets['red']?.href ?? assets['B04']?.href,
+        nirUrl: assets['nir']?.href ?? assets['B08']?.href,
+        polygonGeojson: field.boundary_geojson
+      })
+    });
+    
+    if (!engineResponse.ok) {
+      response.status(502).json({ error: 'Python engine overlay generation failed' });
+      return;
+    }
+    
+    const data = await engineResponse.json();
+    response.json(data);
+  } catch (error) {
+    console.error('GET overlay failed:', error);
+    response.status(503).json({ error: 'Overlay generation failed' });
+  }
+}

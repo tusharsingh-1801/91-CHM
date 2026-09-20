@@ -6,7 +6,8 @@ import {
   getFieldWeather, calculateNdviFromScene, processNdviSentinelHub, 
   getFieldScenes, ingestSentinelScenes, ingestWeather, 
   createField, updateFieldLocation, updateField,
-  getFieldEvents, createFieldEvent, deleteFieldEvent
+  getFieldEvents, createFieldEvent, deleteFieldEvent,
+  getFieldOverlay
 } from '../controllers/fieldsController.ts';
 
 export const router = Router();
@@ -29,6 +30,7 @@ router.post('/fields/:fieldId/ingest/sentinel-scenes', ingestSentinelScenes);
 router.post('/fields/:fieldId/ingest/weather', ingestWeather);
 router.patch('/fields/:fieldId/location', updateFieldLocation);
 router.get('/fields/:fieldId/events', getFieldEvents);
+router.get('/fields/:fieldId/overlay/:sceneId', getFieldOverlay);
 router.post('/fields/:fieldId/events', createFieldEvent);
 router.delete('/fields/:fieldId/events/:eventId', deleteFieldEvent);
 

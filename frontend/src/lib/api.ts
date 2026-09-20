@@ -155,3 +155,9 @@ export async function loadFieldAlerts(fieldId: string) {
   if (!response.ok) throw new Error('Unable to load field alerts')
   return response.json() as Promise<Alert[]>
 }
+
+export async function loadFieldOverlay(fieldId: string, sceneId: string) {
+  const response = await fetch(`/api/fields/${fieldId}/overlay/${encodeURIComponent(sceneId)}`)
+  if (!response.ok) throw new Error('Unable to load overlay')
+  return response.json() as Promise<{ image: string; bounds: { north: number; south: number; east: number; west: number } }>
+}

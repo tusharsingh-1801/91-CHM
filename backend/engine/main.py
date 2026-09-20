@@ -8,6 +8,10 @@ from rasterio.mask import mask
 from pyproj import Transformer
 import math
 from statistics import mean, pstdev
+import base64
+import io
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from sklearn.linear_model import LinearRegression
 
 app = FastAPI(title="TerraScope Engine API")
@@ -266,3 +270,75 @@ def calculate_indices(payload: CalculateIndicesRequest):
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": "TerraScope Engine API"}
+
+class GenerateOverlayRequest(BaseModel):
+    redUrl: str
+    nirUrl: str
+    polygonGeojson: dict
+
+@app.post("/generate-overlay")
+def generate_overlay(payload: GenerateOverlayRequest):
+    try:
+        geom = shape(payload.polygonGeojson)
+        
+        with rasterio.open(payload.redUrl) as src:
+            raster_crs = src.crs
+            transformer = Transformer.from_crs("EPSG:4326", raster_crs, always_xy=True)
+            projected_geom = transform(transformer.transform, geom)
+            red_image, out_transform = mask(src, [projected_geom], crop=True)
+            red_band = red_image[0].astype(float)
+            
+            # Get bounds for the ground overlay
+            bounds = rasterio.features.bounds(projected_geom)
+            inv_transformer = Transformer.from_crs(raster_crs, "EPSG:4326", always_xy=True)
+            min_lon, min_lat = inv_transformer.transform(bounds[0], bounds[1])
+            max_lon, max_lat = inv_transformer.transform(bounds[2], bounds[3])
+            
+        with rasterio.open(payload.nirUrl) as src:
+            nir_image, _ = mask(src, [projected_geom], crop=True)
+            nir_band = nir_image[0].astype(float)
+            
+        valid_mask = (red_band != 0) & (nir_band != 0)
+        
+        denominator = nir_band + red_band
+        zero_mask = denominator == 0
+        ndvi = np.full_like(denominator, np.nan)
+        ndvi[valid_mask & ~zero_mask] = (nir_band[valid_mask & ~zero_mask] - red_band[valid_mask & ~zero_mask]) / denominator[valid_mask & ~zero_mask]
+        
+        # Create a colormap for NDVI (Red-Yellow-Green)
+        cmap = plt.get_cmap("RdYlGn")
+        cmap.set_bad(color='transparent')
+        
+        norm = mcolors.Normalize(vmin=-0.2, vmax=1.0)
+        rgba_image = cmap(norm(ndvi))
+        
+        # Apply alpha to valid pixels only
+        rgba_image[~valid_mask | zero_mask, 3] = 0.0 
+        
+        fig, ax = plt.subplots(figsize=(rgba_image.shape[1]/100, rgba_image.shape[0]/100), dpi=100)
+        ax.imshow(rgba_image)
+        ax.axis('off')
+        fig.patch.set_alpha(0)
+        ax.patch.set_alpha(0)
+        plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
+        plt.margins(0, 0)
+        
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png", transparent=True, pad_inches=0)
+        buf.seek(0)
+        image_base64 = base64.b64encode(buf.read()).decode('utf-8')
+        plt.close(fig)
+        
+        return {
+            "image": f"data:image/png;base64,{image_base64}",
+            "bounds": {
+                "north": max_lat,
+                "south": min_lat,
+                "east": max_lon,
+                "west": min_lon
+            }
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

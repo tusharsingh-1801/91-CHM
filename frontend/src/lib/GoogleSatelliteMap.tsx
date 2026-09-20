@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { importLibrary, setOptions } from '@googlemaps/js-api-loader'
 
-type Props = { latitude: number; longitude: number; fieldName: string; zoom: number; stressGeojson?: Record<string, unknown> | null }
+type Props = { latitude: number; longitude: number; fieldName?: string; zoom?: number; stressGeojson?: Record<string, unknown> | null; overlay?: { image: string, bounds: any } | null }
 
-export function GoogleSatelliteMap({ latitude, longitude, fieldName, zoom, stressGeojson }: Props) {
+export function GoogleSatelliteMap({ latitude, longitude, fieldName = '', zoom = 14, stressGeojson, overlay }: Props) {
   const mapElement = useRef<HTMLDivElement>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
   const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null)
+  const overlayRef = useRef<google.maps.GroundOverlay | null>(null)
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID
 
@@ -46,5 +47,18 @@ export function GoogleSatelliteMap({ latitude, longitude, fieldName, zoom, stres
   }, [stressGeojson]);
 
   useEffect(() => { if (mapRef.current) mapRef.current.setZoom(zoom + 14) }, [zoom])
+  
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (overlay && overlay.image && overlay.bounds) {
+      if (overlayRef.current) overlayRef.current.setMap(null);
+      overlayRef.current = new google.maps.GroundOverlay(overlay.image, overlay.bounds, { opacity: 0.8 });
+      overlayRef.current.setMap(mapRef.current);
+    } else if (!overlay && overlayRef.current) {
+      overlayRef.current.setMap(null);
+      overlayRef.current = null;
+    }
+  }, [overlay]);
+
   return <div ref={mapElement} className="google-map" aria-label={`Google satellite view of ${fieldName}`} />
 }
