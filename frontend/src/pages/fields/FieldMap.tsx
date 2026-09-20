@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { GoogleSatelliteMap } from '../../lib/GoogleSatelliteMap';
-import { calculateNdvi, ingestSentinelScenes, loadFieldAlerts, loadScenes } from '../../lib/api';
+import { calculateNdvi, ingestSentinelScenes, loadFieldAlerts, loadScenes, resolveFieldAlert } from '../../lib/api';
 
 export function FieldMap() {
-  const { field } = useOutletContext<{ field: any }>();
+  const { field, refreshField } = useOutletContext<{ field: any; refreshField: () => Promise<void> }>();
   const { fieldId } = useParams();
   const [scenes, setScenes] = useState<any[]>([]);
   const [activeSceneId, setActiveSceneId] = useState<string>('');
-  const [stressGeojson, setStressGeojson] = useState<any>(null);
+  const [alerts, setAlerts] = useState<any[]>([]);
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -28,14 +28,15 @@ export function FieldMap() {
       setActiveSceneId(data[0]?.scene_id || '');
     }).catch(() => setError('Unable to load satellite observations.'));
     loadFieldAlerts(fieldId).then(alerts => {
-      const activeAlert = alerts.find(a => !a.resolved && a.severity === 'high');
-      if (activeAlert?.stress_geojson) setStressGeojson(activeAlert.stress_geojson);
+      setAlerts(alerts);
     }).catch(() => setError('Unable to load field alerts.'));
   }, [fieldId]);
 
   const tileUrl = fieldId && activeSceneId
     ? `/api/fields/${fieldId}/tiles/${activeSceneId}/{z}/{x}/{y}.png`
     : null;
+  const stressGeojson = alerts.find(alert => !alert.resolved && alert.severity === 'high' && alert.scene_id === activeSceneId)?.stress_geojson ?? null;
+  const activeAlert = alerts.find(alert => !alert.resolved && alert.scene_id === activeSceneId);
 
   const processLatestScene = async () => {
     if (!fieldId || processing) return;
@@ -50,6 +51,8 @@ export function FieldMap() {
       setActiveSceneId(sceneId);
       setMessage('Calculating NDVI, NDRE, NDMI, SAVI and EVI…');
       const result = await calculateNdvi(fieldId, sceneId);
+      const [updatedAlerts] = await Promise.all([loadFieldAlerts(fieldId), refreshField()]);
+      setAlerts(updatedAlerts);
       setMessage(`Analysis complete. NDVI ${result.ndvi.toFixed(3)} with ${result.validCoverage.toFixed(1)}% valid coverage.`);
     } catch (caught) {
       setMessage('');
@@ -76,11 +79,12 @@ export function FieldMap() {
           </select>
         </label>
         <button type="button" onClick={processLatestScene} disabled={processing} style={{ minHeight: '44px', padding: '0.65rem 1rem', background: '#4d7c0f', color: 'white', border: 0, borderRadius: '6px' }}>
-          {processing ? 'Processing…' : 'Find & Process Latest Scene'}
+          {processing ? 'Processing…' : 'Find & Process Best Recent Scene'}
         </button>
       </div>
       {message && <div role="status" style={{ padding: '.75rem 1rem', background: '#ecfccb', color: '#365314' }}>{message}</div>}
       {error && <div role="alert" style={{ padding: '.75rem 1rem', background: '#fee2e2', color: '#991b1b' }}>{error}</div>}
+      {activeAlert && <div role="alert" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:'1rem', padding:'.75rem 1rem', background:'#fff7ed', color:'#9a3412' }}><span><strong>{activeAlert.title}</strong> for this observation</span><button type="button" onClick={async () => { if (!fieldId) return; await resolveFieldAlert(fieldId, activeAlert.id); setAlerts(current => current.map(alert => alert.id === activeAlert.id ? { ...alert, resolved:true } : alert)); }}>Mark resolved</button></div>}
       <div style={{ flex: 1, position: 'relative' }}>
         {hasLocation ? (
           <GoogleSatelliteMap

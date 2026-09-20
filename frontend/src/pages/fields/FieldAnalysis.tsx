@@ -54,8 +54,6 @@ export function FieldAnalysis() {
           <select value={language} onChange={e => { setLoading(true); setLanguage(e.target.value); }} style={{ padding: '0.5rem', borderRadius: '4px' }}>
             <option value="en-IN">English</option>
             <option value="hi-IN">Hindi (हिंदी)</option>
-            <option value="bn-IN">Bengali (বাংলা)</option>
-            <option value="te-IN">Telugu (తెలుగు)</option>
           </select>
         </div>
 

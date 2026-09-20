@@ -16,12 +16,17 @@ export function AddFieldWizard({ onComplete, onCancel }: { onComplete: (fieldId:
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const [boundaryPoints, setBoundaryPoints] = useState(0);
+  const [boundaryFinished, setBoundaryFinished] = useState(false);
   
   const mapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const drawingManagerRef = useRef<any>(null);
+  const polygonRef = useRef<google.maps.Polygon | null>(null);
+  const boundaryFinishedRef = useRef(false);
+  const boundaryPathRef = useRef<google.maps.LatLngLiteral[]>([]);
   
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const configuredKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const apiKey = configuredKey && !configuredKey.startsWith('your-') ? configuredKey : '';
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -36,10 +41,9 @@ export function AddFieldWizard({ onComplete, onCancel }: { onComplete: (fieldId:
       let isMounted = true;
       setOptions({ key: apiKey, v: 'weekly' });
       Promise.all([
-        importLibrary('maps'), 
-        importLibrary('drawing'), 
+        importLibrary('maps'),
         importLibrary('geometry')
-      ]).then(([maps, drawing, geometry]) => {
+      ]).then(([maps, geometry]) => {
         if (!isMounted || !mapElement.current) return;
         
         const map = new maps.Map(mapElement.current, {
@@ -49,22 +53,46 @@ export function AddFieldWizard({ onComplete, onCancel }: { onComplete: (fieldId:
         });
         mapRef.current = map;
 
-        const drawingManager = new (drawing as any).DrawingManager({
-          drawingMode: (drawing as any).OverlayType.POLYGON,
-          drawingControl: true,
-          drawingControlOptions: {
-            position: google.maps.ControlPosition.TOP_CENTER,
-            drawingModes: [(drawing as any).OverlayType.POLYGON]
-          },
-          polygonOptions: {
-            editable: true,
-            fillColor: '#84cc16',
-            strokeColor: '#4d7c0f',
-            strokeWeight: 2,
-          }
+        const polygon = new maps.Polygon({
+          map,
+          paths: boundaryPathRef.current,
+          editable: true,
+          fillColor: '#84cc16',
+          fillOpacity: 0.25,
+          strokeColor: '#cbe86b',
+          strokeWeight: 3,
         });
-        drawingManager.setMap(map);
-        drawingManagerRef.current = drawingManager;
+        polygonRef.current = polygon;
+
+        const updateBoundary = () => {
+          const path = polygon.getPath();
+          setBoundaryPoints(path.getLength());
+          boundaryPathRef.current = Array.from({ length: path.getLength() }, (_, index) => {
+            const point = path.getAt(index);
+            return { lat: point.lat(), lng: point.lng() };
+          });
+          if (path.getLength() < 3) {
+            setPolygonGeojson(null);
+            setAreaHectares(0);
+            return;
+          }
+          const coordinates: number[][] = [];
+          for (let index = 0; index < path.getLength(); index += 1) {
+            const point = path.getAt(index);
+            coordinates.push([point.lng(), point.lat()]);
+          }
+          coordinates.push([...coordinates[0]]);
+          setAreaHectares(geometry.spherical.computeArea(path) / 10000);
+          setPolygonGeojson({ type: 'Polygon', coordinates: [coordinates] });
+        };
+        const path = polygon.getPath();
+        ['insert_at', 'set_at', 'remove_at'].forEach(eventName =>
+          path.addListener(eventName, updateBoundary)
+        );
+        map.addListener('click', (event: google.maps.MapMouseEvent) => {
+          if (!event.latLng || boundaryFinishedRef.current) return;
+          path.push(event.latLng);
+        });
 
         // Try geolocation
         if (navigator.geolocation) {
@@ -74,33 +102,29 @@ export function AddFieldWizard({ onComplete, onCancel }: { onComplete: (fieldId:
           });
         }
 
-        google.maps.event.addListener(drawingManager, 'polygoncomplete', (polygon: any) => {
-          drawingManager.setDrawingMode(null);
-          const path = polygon.getPath();
-          const updateBoundary = () => {
-            const coordinates: number[][] = [];
-            for (let i = 0; i < path.getLength(); i++) {
-              const point = path.getAt(i);
-              coordinates.push([point.lng(), point.lat()]);
-            }
-            if (coordinates.length < 3) {
-              setPolygonGeojson(null);
-              setAreaHectares(0);
-              return;
-            }
-            coordinates.push([...coordinates[0]]);
-            setAreaHectares((geometry as any).spherical.computeArea(path) / 10000);
-            setPolygonGeojson({ type: 'Polygon', coordinates: [coordinates] });
-          };
-          updateBoundary();
-          ['insert_at', 'set_at', 'remove_at'].forEach(eventName =>
-            google.maps.event.addListener(path, eventName, updateBoundary)
-          );
-        });
-      });
-      return () => { isMounted = false; };
+      }).catch(() => setError('Google Maps could not be loaded. Check the browser API key and allowed localhost domain.'));
+      return () => {
+        isMounted = false;
+        polygonRef.current?.setMap(null);
+        polygonRef.current = null;
+        mapRef.current = null;
+      };
     }
   }, [step, apiKey]);
+
+  const undoBoundaryPoint = () => {
+    const path = polygonRef.current?.getPath();
+    if (!path?.getLength()) return;
+    boundaryFinishedRef.current = false;
+    setBoundaryFinished(false);
+    path.pop();
+  };
+
+  const clearBoundary = () => {
+    boundaryFinishedRef.current = false;
+    setBoundaryFinished(false);
+    polygonRef.current?.getPath().clear();
+  };
 
   const handleSave = async () => {
     if (!polygonGeojson || saving) return;
@@ -182,7 +206,7 @@ export function AddFieldWizard({ onComplete, onCancel }: { onComplete: (fieldId:
 
         {step === 'boundary' && (
           <div>
-            <p>Draw your field boundary. Polygon must be closed.</p>
+            <p>Click each corner of your field on the map. Add at least three points, then choose <strong>Finish boundary</strong>. You can drag points to correct the shape.</p>
             {!apiKey ? (
                <div style={{ padding: '2rem', background: '#fee2e2', color: '#991b1b' }}>
                  No Google Maps API Key found. A map is required to draw a field.
@@ -190,9 +214,19 @@ export function AddFieldWizard({ onComplete, onCancel }: { onComplete: (fieldId:
             ) : (
                <div ref={mapElement} style={{ width: '100%', height: '400px', background: '#ccc' }} />
             )}
+            {apiKey && (
+              <div className="boundary-tools" aria-live="polite">
+                <span>{boundaryPoints} point{boundaryPoints === 1 ? '' : 's'} · {areaHectares.toFixed(2)} ha</span>
+                <button type="button" onClick={undoBoundaryPoint} disabled={!boundaryPoints}>Undo point</button>
+                <button type="button" onClick={clearBoundary} disabled={!boundaryPoints}>Clear</button>
+                <button type="button" onClick={() => { boundaryFinishedRef.current = true; setBoundaryFinished(true); }} disabled={boundaryPoints < 3 || boundaryFinished}>
+                  {boundaryFinished ? 'Boundary finished' : 'Finish boundary'}
+                </button>
+              </div>
+            )}
             <div className="actions" style={{ marginTop: '1rem' }}>
               <button type="button" onClick={() => setStep('dates')}>Back</button>
-              <button type="button" disabled={!polygonGeojson} onClick={() => setStep('confirm')}>Review</button>
+              <button type="button" disabled={!polygonGeojson || !boundaryFinished} onClick={() => setStep('confirm')}>Review</button>
             </div>
           </div>
         )}
@@ -231,6 +265,10 @@ export function AddFieldWizard({ onComplete, onCancel }: { onComplete: (fieldId:
         .step-label, .wizard-status { color:#cbe86b; }
         .wizard-error { color:#ffb4a2; background:#4b2420; padding:.75rem; border-radius:4px; }
         .wizard-content button { min-height:44px; padding:.65rem 1rem; }
+        .wizard-content button:disabled { opacity:.55; cursor:not-allowed; }
+        .boundary-tools { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:.75rem; color:#cbe86b; font-size:.85rem; }
+        .boundary-tools span { margin-right:auto; }
+        .boundary-tools button { min-height:36px; padding:.4rem .65rem; background:#27371f; color:#edf1df; border:1px solid #536b36; border-radius:4px; }
       `}} />
     </div>
   );

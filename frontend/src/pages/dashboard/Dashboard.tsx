@@ -6,66 +6,80 @@ import { AddFieldWizard } from '../../features/fields/AddFieldWizard';
 export function Dashboard() {
   const [fields, setFields] = useState<any[]>([]);
   const [modal, setModal] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const refreshFields = () => {
-    loadFields().then(setFields).catch(console.error);
+    setLoading(true);
+    setError('');
+    loadFields()
+      .then(setFields)
+      .catch(() => setError('TerraScope could not load fields. Check the API and database services, then retry.'))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    refreshFields();
+    let cancelled = false;
+    loadFields()
+      .then(data => { if (!cancelled) setFields(data); })
+      .catch(() => { if (!cancelled) setError('TerraScope could not load fields. Check the API and database services, then retry.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
+  const averageHealth = fields.length ? Math.round(fields.reduce((sum, field) => sum + Number(field.health_score || 0), 0) / fields.length) : 0;
+  const averageNdvi = fields.length ? fields.reduce((sum, field) => sum + Number(field.ndvi_average || 0), 0) / fields.length : 0;
+  const monitoredArea = fields.reduce((sum, field) => sum + Number(field.area_hectares || 0), 0);
+
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+    <main className="dashboard-shell">
+      <header className="dashboard-header">
         <div>
-          <h1 style={{ margin: 0, color: '#111827', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            TerraScope
-          </h1>
-          <p style={{ margin: '0.25rem 0 0 0', color: '#6b7280' }}>Crop Health Monitoring Dashboard</p>
+          <span className="eyebrow">SATELLITE CROP INTELLIGENCE</span>
+          <h1>Terra<span>Scope</span></h1>
+          <p>Understand field health from Sentinel-2 imagery and weather observations.</p>
         </div>
-        <button 
-          onClick={() => setModal('add')} 
-          style={{ background: '#4d7c0f', color: 'white', padding: '0.5rem 1rem', borderRadius: '6px', border: 'none', cursor: 'pointer' }}
-        >
-          + Add Field
-        </button>
+        <button className="primary-action" onClick={() => setModal('add')}>+ Add field</button>
       </header>
 
-      {fields.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '4rem', background: '#f9fafb', borderRadius: '8px' }}>
-          <h3 style={{ color: '#374151' }}>No fields added yet</h3>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>Add your first field to start monitoring crop health.</p>
-          <button onClick={() => setModal('add')} style={{ background: '#4d7c0f', color: 'white', padding: '0.5rem 1rem', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>
-            Add Field
-          </button>
+      {error && <div className="service-error" role="alert"><strong>Service unavailable</strong><span>{error}</span><button onClick={refreshFields}>Retry</button></div>}
+
+      {!error && !loading && fields.length > 0 && (
+        <section className="summary-grid" aria-label="Farm summary">
+          <article><span>Fields</span><strong>{fields.length}</strong><small>actively monitored</small></article>
+          <article><span>Average health</span><strong>{averageHealth}<em>/100</em></strong><small>experimental indicator</small></article>
+          <article><span>Average NDVI</span><strong>{averageNdvi.toFixed(3)}</strong><small>latest field values</small></article>
+          <article><span>Monitored area</span><strong>{monitoredArea.toFixed(1)}<em> ha</em></strong><small>boundary-derived</small></article>
+        </section>
+      )}
+
+      {loading ? (
+        <div className="dashboard-state" role="status">Loading fields…</div>
+      ) : !error && fields.length === 0 ? (
+        <div className="dashboard-state">
+          <span className="empty-icon">◇</span>
+          <h2>No fields added yet</h2>
+          <p>Add your first field, draw its boundary and TerraScope will search for a recent Sentinel-2 observation.</p>
+          <button className="primary-action" onClick={() => setModal('add')}>Add your first field</button>
         </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+      ) : !error ? (
+        <section>
+          <div className="section-heading"><div><span className="eyebrow">YOUR LAND</span><h2>Monitored fields</h2></div><span>{fields.length} total</span></div>
+        <div className="field-grid">
           {fields.map(field => (
-            <Link key={field.id} to={`/fields/${field.id}/map`} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb' }}>
-                <h3 style={{ margin: '0 0 0.5rem 0', color: '#111827' }}>{field.name}</h3>
-                <p style={{ margin: '0 0 1rem 0', color: '#6b7280', fontSize: '0.875rem' }}>{field.crop} &middot; {field.area_hectares} ha</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase' }}>Health Score</span>
-                    <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: field.health_score > 80 ? '#15803d' : field.health_score > 60 ? '#b45309' : '#b91c1c' }}>
-                      {field.health_score}/100
-                    </span>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase' }}>Last Scan</span>
-                    <div style={{ fontWeight: '500' }}>
-                      {field.last_observation ? new Date(field.last_observation).toLocaleDateString() : 'N/A'}
-                    </div>
-                  </div>
+            <Link key={field.id} to={`/fields/${field.id}/map`} className="field-card">
+                <div className="field-card-top"><div><span className="field-status"></span><small>{field.crop}</small><h3>{field.name}</h3></div><span className="card-arrow">↗</span></div>
+                <div className="field-metrics">
+                  <div><span>Health</span><strong>{field.last_observation ? `${field.health_score}/100` : 'Pending'}</strong></div>
+                  <div><span>NDVI</span><strong>{field.last_observation ? Number(field.ndvi_average).toFixed(3) : '—'}</strong></div>
+                  <div><span>Area</span><strong>{field.area_hectares} ha</strong></div>
                 </div>
-              </div>
+                <footer>{field.last_observation ? `Observed ${new Date(field.last_observation).toLocaleDateString()}` : 'Awaiting first successful observation'}</footer>
             </Link>
           ))}
         </div>
-      )}
+        </section>
+      ) : null}
 
       {modal === 'add' && (
         <AddFieldWizard 
@@ -73,6 +87,6 @@ export function Dashboard() {
           onCancel={() => setModal('')} 
         />
       )}
-    </div>
+    </main>
   );
 }

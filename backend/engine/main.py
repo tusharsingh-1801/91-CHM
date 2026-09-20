@@ -20,6 +20,10 @@ from sklearn.linear_model import LinearRegression
 
 app = FastAPI(title="TerraScope Engine API")
 
+@app.get("/")
+def root():
+    return {"service": "TerraScope Engine API", "health": "/health", "docs": "/docs"}
+
 class AnalyzeIndicesRequest(BaseModel):
     languageCode: str = "en-IN"
     plantingDate: str = None
@@ -49,10 +53,10 @@ def analyze_indices(payload: AnalyzeIndicesRequest):
         except (ValueError, TypeError):
             continue
 
-    if not values:
+    if len(values) < 2:
         if payload.languageCode == "hi-IN":
-            return {"status": "insufficient_data", "statusLabel": "डेटा उपलब्ध नहीं", "summary": "कम से कम दो NDVI observations जोड़ें।", "observations": 0}
-        return {"status": "insufficient_data", "statusLabel": "Not enough data", "summary": "Add at least two NDVI observations to analyse the trend.", "observations": 0}
+            return {"status": "insufficient_data", "statusLabel": "पर्याप्त डेटा नहीं", "summary": "Trend analysis के लिए कम से कम दो अलग-अलग तारीखों के NDVI observations चाहिए।", "observations": len(values)}
+        return {"status": "insufficient_data", "statusLabel": "Not enough data", "summary": "At least two dated NDVI observations are required before a trend can be calculated.", "observations": len(values)}
 
     sample_count = len(values)
     features = [[i] for i in range(sample_count)]
@@ -309,11 +313,21 @@ def generate_overlay(payload: GenerateOverlayRequest):
             min_lon, min_lat = inv_transformer.transform(bounds[0], bounds[1])
             max_lon, max_lat = inv_transformer.transform(bounds[2], bounds[3])
             
+        nir_band = np.full(red_band.shape, np.nan, dtype=np.float32)
         with rasterio.open(payload.nirUrl) as src:
-            nir_image, _ = mask(src, [projected_geom], crop=True)
-            nir_band = nir_image[0].astype(float)
+            reproject(
+                source=rasterio.band(src, 1),
+                destination=nir_band,
+                src_transform=src.transform,
+                src_crs=src.crs,
+                src_nodata=src.nodata,
+                dst_transform=out_transform,
+                dst_crs=raster_crs,
+                dst_nodata=np.nan,
+                resampling=Resampling.bilinear,
+            )
             
-        valid_mask = (red_band != 0) & (nir_band != 0)
+        valid_mask = np.isfinite(red_band) & np.isfinite(nir_band) & (red_band != 0) & (nir_band != 0)
         
         denominator = nir_band + red_band
         zero_mask = denominator == 0
@@ -361,6 +375,7 @@ def generate_overlay(payload: GenerateOverlayRequest):
 class TileRequest(BaseModel):
     redUrl: str
     nirUrl: str
+    sclUrl: str = None
     polygonGeojson: dict = None
 
 @app.post("/tiles/{z}/{x}/{y}.png")
@@ -373,6 +388,12 @@ def generate_tile(z: int, x: int, y: int, payload: TileRequest):
         red_band = red_image.data[0].astype(float)
         nir_band = nir_image.data[0].astype(float)
         tile_mask = (red_image.mask != 0) & (nir_image.mask != 0)
+
+        if payload.sclUrl:
+            with Reader(payload.sclUrl) as scl_src:
+                scl_image = scl_src.tile(x, y, z)
+            scl_band = scl_image.data[0]
+            tile_mask &= (scl_image.mask != 0) & ~np.isin(scl_band.astype(np.int16), [0, 1, 2, 3, 8, 9, 10, 11])
 
         if payload.polygonGeojson and red_image.crs and red_image.transform:
             field_geom = shape(payload.polygonGeojson)

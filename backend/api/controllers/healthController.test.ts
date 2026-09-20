@@ -1,8 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert';
+import { app } from '../app.ts';
 
-test('Health controller should exist', () => {
-  // A placeholder test to ensure testing works
-  assert.ok(true, 'Test framework is functional');
+test('API root explains where to find health status', async () => {
+  const server = app.listen(0);
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address === 'object');
+    const response = await fetch(`http://127.0.0.1:${address.port}/`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { service: 'TerraScope API', health: '/api/health' });
+  } finally {
+    server.close();
+  }
 });
-

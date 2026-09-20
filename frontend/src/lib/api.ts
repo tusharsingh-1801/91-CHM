@@ -23,10 +23,19 @@ export async function loadFields() {
   return response.json() as Promise<DatabaseField[]>
 }
 
-export async function createField(name: string, crop: string) {
-  const response = await fetch('/api/fields', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, crop }) })
-  if (!response.ok) throw new Error('Unable to create field')
-  return response.json() as Promise<DatabaseField>
+export async function updateField(fieldId: string, updates: { name: string; crop: string; planting_date: string | null; harvest_date: string | null; expected_yield_tons: number | null }) {
+  const response = await fetch(`/api/fields/${fieldId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) })
+  const payload = await response.json().catch(() => ({})) as DatabaseField & { error?: string }
+  if (!response.ok) throw new Error(payload.error ?? 'Unable to update field')
+  return payload
+}
+
+export async function deleteField(fieldId: string) {
+  const response = await fetch(`/api/fields/${fieldId}`, { method: 'DELETE' })
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({})) as { error?: string }
+    throw new Error(payload.error ?? 'Unable to delete field')
+  }
 }
 
 export async function checkApiHealth() {
@@ -143,6 +152,11 @@ export async function createFieldEvent(fieldId: string, event_type: string, even
   return response.json() as Promise<FieldEvent>
 }
 
+export async function deleteFieldEvent(fieldId: string, eventId: string) {
+  const response = await fetch(`/api/fields/${fieldId}/events/${eventId}`, { method: 'DELETE' })
+  if (!response.ok) throw new Error('Unable to delete field event')
+}
+
 export type Alert = {
   id: string
   title: string
@@ -157,6 +171,11 @@ export async function loadFieldAlerts(fieldId: string) {
   const response = await fetch(`/api/fields/${fieldId}/alerts`)
   if (!response.ok) throw new Error('Unable to load field alerts')
   return response.json() as Promise<Alert[]>
+}
+
+export async function resolveFieldAlert(fieldId: string, alertId: string) {
+  const response = await fetch(`/api/fields/${fieldId}/alerts/${alertId}/resolve`, { method: 'PATCH' })
+  if (!response.ok) throw new Error('Unable to resolve alert')
 }
 
 export async function loadFieldOverlay(fieldId: string, sceneId: string) {

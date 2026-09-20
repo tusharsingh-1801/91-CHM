@@ -18,7 +18,7 @@ export async function askAssistant(request: Request, response: Response) {
       const fieldResult = await pool.query('select name, crop, area_hectares, health_score, ndvi_average, canopy_coverage, health_delta, last_observation from public.fields where id = $1', [fieldId]);
       const field = fieldResult.rows[0];
       if (!field) { response.status(404).json({ error: 'Field not found' }); return; }
-      const ndviResult = await pool.query('select observed_on, ndvi_value, cloud_cover, source from public.ndvi_observations where field_id = $1 order by observed_on desc limit 5', [fieldId]);
+      const ndviResult = await pool.query('select observed_on, ndvi_value, ndre_value, ndmi_value, cloud_cover, valid_coverage_percent, source from public.vegetation_indices where field_id = $1 order by observed_on desc limit 5', [fieldId]);
       fieldContext = JSON.stringify({ field, recentNdvi: ndviResult.rows });
     }
     const targetLanguage = languageCode?.trim() || 'en-IN';
@@ -49,4 +49,3 @@ export async function askAssistant(request: Request, response: Response) {
     response.status(504).json({ error: messageText });
   }
 }
-

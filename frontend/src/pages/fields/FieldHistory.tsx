@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { loadFieldEvents, createFieldEvent } from '../../lib/api';
+import { loadFieldEvents, createFieldEvent, deleteFieldEvent } from '../../lib/api';
 
 export function FieldHistory() {
   const { field } = useOutletContext<{ field: any }>();
@@ -50,6 +50,11 @@ export function FieldHistory() {
                 </div>
                 <div style={{ color: '#4b5563', fontWeight: '500' }}>
                   {new Date(ev.event_date).toLocaleDateString()}
+                  <button type="button" onClick={async () => {
+                    if (!window.confirm('Delete this field event?')) return;
+                    await deleteFieldEvent(field.id, ev.id);
+                    setEvents(current => current.filter(item => item.id !== ev.id));
+                  }} style={{ display:'block', marginTop:'.5rem', border:0, background:'none', color:'#b91c1c', padding:0 }}>Delete</button>
                 </div>
               </div>
             ))}

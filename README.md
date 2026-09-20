@@ -12,6 +12,7 @@ A research-grade crop-health intelligence platform using Sentinel-2 satellite im
 Copy `.env.example` to `.env` and configure the following:
 - `DATABASE_URL`: PostgreSQL connection string (e.g., `postgres://postgres:postgres@localhost:5432/terrascope`)
 - `API_PORT`: Node.js API port (`3001` locally; Docker overrides it to `3000`)
+- `POSTGRES_PORT`: Host port exposed by Docker for PostgreSQL (use `5433` if `5432` is already occupied)
 - `PYTHON_ENGINE_URL`: Python FastAPI URL (default: `http://127.0.0.1:8000`)
 - `VITE_GOOGLE_MAPS_API_KEY`: Google Maps API Key for the frontend map UI (Requires Maps JavaScript API enabled)
 - `VITE_GOOGLE_MAPS_MAP_ID`: Google Maps Map ID
@@ -54,6 +55,7 @@ Run the entire stack (PostGIS, Python Engine, Node API, NGINX Frontend) with Doc
 docker-compose up --build
 ```
 The frontend will be available at `http://localhost:5173`.
+API health is available at `http://localhost:3000/api/health` and the Python engine at `http://localhost:8000/health`.
 
 ## Testing
 Run the test suites and type checks:

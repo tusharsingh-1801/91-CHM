@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${PGPASSWORD:-postgres}
       POSTGRES_DB: ${PGDATABASE:-terrascope}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -36,6 +36,10 @@ services:
       - NODE_ENV=production
       - API_PORT=3000
       - PYTHON_ENGINE_URL=http://python-engine:8000
+      - SARVAM_API_KEY=${SARVAM_API_KEY:-}
+      - SARVAM_MODEL=${SARVAM_MODEL:-sarvam-105b}
+      - SENTINEL_HUB_CLIENT_ID=${SENTINEL_HUB_CLIENT_ID:-}
+      - SENTINEL_HUB_CLIENT_SECRET=${SENTINEL_HUB_CLIENT_SECRET:-}
     depends_on:
       db:
         condition: service_healthy
@@ -46,6 +50,9 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
+        VITE_GOOGLE_MAPS_MAP_ID: ${VITE_GOOGLE_MAPS_MAP_ID:-}
     ports:
       - "5173:80"
     depends_on:
@@ -53,4 +60,3 @@ services:
 
 volumes:
   postgres_data:
-

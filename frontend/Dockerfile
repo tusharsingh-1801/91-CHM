@@ -1,6 +1,10 @@
 FROM node:20-alpine AS build
 
 WORKDIR /app
+ARG VITE_GOOGLE_MAPS_API_KEY=""
+ARG VITE_GOOGLE_MAPS_MAP_ID=""
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
+ENV VITE_GOOGLE_MAPS_MAP_ID=$VITE_GOOGLE_MAPS_MAP_ID
 COPY package*.json ./
 RUN npm ci
 COPY . .
@@ -24,4 +28,3 @@ RUN echo 'server {\
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
-

@@ -1,6 +1,24 @@
 import type { Request, Response } from 'express';
 import { pool } from '../db/pool.ts';
 
+export function isValidFieldBoundary(boundary: unknown): boundary is { type: 'Polygon'; coordinates: number[][][] } {
+  const candidate = boundary as { type?: string; coordinates?: unknown[][][] } | null;
+  const coordinates = candidate?.coordinates?.[0];
+  const isCoordinate = (value: unknown): value is [number, number] =>
+    Array.isArray(value) && value.length >= 2 && Number.isFinite(value[0]) && Number.isFinite(value[1]) &&
+    value[0] >= -180 && value[0] <= 180 && value[1] >= -90 && value[1] <= 90;
+  return candidate?.type === 'Polygon' && Array.isArray(coordinates) && coordinates.length >= 4 &&
+    coordinates.every(isCoordinate) && coordinates[0][0] === coordinates.at(-1)?.[0] && coordinates[0][1] === coordinates.at(-1)?.[1];
+}
+
+export function calculateHealthScore(ndvi: number, ndmi: number | null, validCoverage: number) {
+  const clamp = (value: number) => Math.max(0, Math.min(100, value));
+  const ndviScore = clamp(((ndvi - 0.15) / 0.65) * 100);
+  const moistureScore = ndmi === null ? ndviScore : clamp(((ndmi + 0.2) / 0.7) * 100);
+  const dataQuality = clamp(validCoverage) / 100;
+  return Math.round((ndviScore * 0.75 + moistureScore * 0.25) * dataQuality);
+}
+
 export async function getFields(_request: Request, response: Response) {
   try {
     const result = await pool.query(`
@@ -23,6 +41,20 @@ export async function getFieldAlerts(request: Request, response: Response) {
     response.json(result.rows);
   } catch (error) {
     console.error('GET /api/fields/:fieldId/alerts failed:', error);
+    response.status(503).json({ error: 'Database unavailable' });
+  }
+}
+
+export async function resolveFieldAlert(request: Request, response: Response) {
+  try {
+    const result = await pool.query(
+      'update public.alerts set resolved = true where id = $1 and field_id = $2 returning id, resolved',
+      [request.params.alertId, request.params.fieldId]
+    );
+    if (!result.rowCount) { response.status(404).json({ error: 'Alert not found' }); return; }
+    response.json(result.rows[0]);
+  } catch (error) {
+    console.error('PATCH field alert failed:', error);
     response.status(503).json({ error: 'Database unavailable' });
   }
 }
@@ -139,11 +171,7 @@ export async function calculateNdviFromScene(request: Request, response: Respons
         validPixels, validCoverage, minimum, maximum, median, standardDeviation]
     );
 
-    const clamp = (value: number) => Math.max(0, Math.min(100, value));
-    const ndviScore = clamp(((ndvi - 0.15) / 0.65) * 100);
-    const moistureScore = ndmi === null ? ndviScore : clamp(((ndmi + 0.2) / 0.7) * 100);
-    const dataQuality = clamp(validCoverage) / 100;
-    const healthScore = Math.round((ndviScore * 0.75 + moistureScore * 0.25) * dataQuality);
+    const healthScore = calculateHealthScore(ndvi, ndmi, validCoverage);
     await pool.query(
       `update public.fields set
          health_delta = $1 - health_score,
@@ -202,7 +230,7 @@ export async function processNdviSentinelHub(request: Request, response: Respons
 
 export async function getFieldScenes(request: Request, response: Response) {
   try {
-    const result = await pool.query('select * from public.satellite_scenes where field_id = $1 order by observed_at desc', [request.params.fieldId]);
+    const result = await pool.query('select * from public.satellite_scenes where field_id = $1 order by cloud_cover asc nulls last, observed_at desc', [request.params.fieldId]);
     response.json(result.rows);
   } catch (error) {
     console.error('GET satellite scenes failed:', error);
@@ -281,13 +309,7 @@ export async function ingestWeather(request: Request, response: Response) {
 
 export async function createField(request: Request, response: Response) {
   const { name, crop, boundary_geojson, planting_date, harvest_date } = request.body as any;
-  const coordinates = boundary_geojson?.coordinates?.[0];
-  const isCoordinate = (value: unknown): value is [number, number] =>
-    Array.isArray(value) && value.length >= 2 && Number.isFinite(value[0]) && Number.isFinite(value[1]) &&
-    value[0] >= -180 && value[0] <= 180 && value[1] >= -90 && value[1] <= 90;
-  const isClosed = Array.isArray(coordinates) && coordinates.length >= 4 &&
-    coordinates[0]?.[0] === coordinates.at(-1)?.[0] && coordinates[0]?.[1] === coordinates.at(-1)?.[1];
-  if (!name?.trim() || !crop?.trim() || boundary_geojson?.type !== 'Polygon' || !isClosed || !coordinates.every(isCoordinate)) {
+  if (!name?.trim() || !crop?.trim() || !isValidFieldBoundary(boundary_geojson)) {
     response.status(400).json({ error: 'name, crop, and a valid closed Polygon boundary are required' });
     return;
   }
@@ -340,6 +362,18 @@ export async function updateFieldLocation(request: Request, response: Response) 
 
 export async function updateField(request: Request, response: Response) {
   const { name, crop, planting_date, harvest_date, expected_yield_tons } = request.body as { name?: string; crop?: string; planting_date?: string | null; harvest_date?: string | null; expected_yield_tons?: number | null };
+  if ((name !== undefined && !name.trim()) || (crop !== undefined && !crop.trim())) {
+    response.status(400).json({ error: 'Field name and crop cannot be empty' });
+    return;
+  }
+  if (expected_yield_tons !== undefined && expected_yield_tons !== null && (!Number.isFinite(expected_yield_tons) || expected_yield_tons < 0)) {
+    response.status(400).json({ error: 'Expected yield must be a positive number' });
+    return;
+  }
+  if (planting_date && harvest_date && planting_date > harvest_date) {
+    response.status(400).json({ error: 'Harvest date must be after planting date' });
+    return;
+  }
   try {
     const result = await pool.query(
       `update public.fields 
@@ -356,6 +390,17 @@ export async function updateField(request: Request, response: Response) {
     response.json(result.rows[0]);
   } catch (error) {
     console.error('PATCH field failed:', error);
+    response.status(503).json({ error: 'Database unavailable' });
+  }
+}
+
+export async function deleteField(request: Request, response: Response) {
+  try {
+    const result = await pool.query('delete from public.fields where id = $1 returning id', [request.params.fieldId]);
+    if (!result.rowCount) { response.status(404).json({ error: 'Field not found' }); return; }
+    response.status(204).send();
+  } catch (error) {
+    console.error('DELETE field failed:', error);
     response.status(503).json({ error: 'Database unavailable' });
   }
 }
@@ -452,14 +497,19 @@ export async function getFieldTile(request: Request, response: Response) {
     if (!scene) { response.status(404).json({ error: 'Scene not found' }); return; }
     
     const assets = scene.assets;
+    const redUrl = assets['red']?.href ?? assets['B04']?.href;
+    const nirUrl = assets['nir']?.href ?? assets['B08']?.href;
+    if (!redUrl || !nirUrl) { response.status(422).json({ error: 'Scene does not contain red and NIR assets' }); return; }
     const engineResponse = await fetch(`${process.env.PYTHON_ENGINE_URL || "http://127.0.0.1:8000"}/tiles/${z}/${x}/${y}.png`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        redUrl: assets['red']?.href ?? assets['B04']?.href,
-        nirUrl: assets['nir']?.href ?? assets['B08']?.href,
+        redUrl,
+        nirUrl,
+        sclUrl: assets['scl']?.href ?? assets['SCL']?.href,
         polygonGeojson: scene.boundary_geojson
-      })
+      }),
+      signal: AbortSignal.timeout(30_000)
     });
     
     if (!engineResponse.ok) {
