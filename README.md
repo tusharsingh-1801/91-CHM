@@ -1,77 +1,69 @@
 # TerraScope Crop Health Monitor
 
-NDVI and satellite-imagery dashboard for monitoring crop health.
+A research-grade crop-health intelligence platform using Sentinel-2 satellite imagery and NASA POWER weather data.
 
-## Project structure
+## Prerequisites
+- Node.js (v20+)
+- Python (v3.9+)
+- PostgreSQL (v15+) with PostGIS extension
+- Docker & Docker Compose (optional, for containerized setup)
 
-- `frontend/` contains the React + Vite dashboard.
-- `backend/` contains the Express + PostgreSQL API.
-- `backend/database/schema.sql` contains the PostgreSQL schema and seed data.
-- `.env` contains the private database connection string.
+## Environment Variables
+Copy `.env.example` to `.env` and configure the following:
+- `DATABASE_URL`: PostgreSQL connection string (e.g., `postgres://postgres:postgres@localhost:5432/terrascope`)
+- `API_PORT`: Node.js API port (default: `3000`)
+- `PYTHON_ENGINE_URL`: Python FastAPI URL (default: `http://127.0.0.1:8000`)
+- `VITE_GOOGLE_MAPS_API_KEY`: Google Maps API Key for the frontend map UI (Requires Maps JavaScript API enabled)
+- `VITE_GOOGLE_MAPS_MAP_ID`: Google Maps Map ID
 
-## Run locally
+*Note: Google imagery is only the basemap visualization. Sentinel-2 processing does not require Google credentials.*
 
-1. Install PostgreSQL and create a database named `terrascope`.
-2. Set `DATABASE_URL` in `.env`.
-3. Run `npm install`.
-4. Run `npm run dev`.
+## Database Setup & Migrations
+1. Ensure PostgreSQL is running.
+2. Create the database: `createdb terrascope`
+3. Enable PostGIS: `psql -d terrascope -c "CREATE EXTENSION postgis;"`
+4. Run migrations to initialize schema and seed data:
+```bash
+npm run migrate
+```
 
-For NDVI trend analysis, create the local Python environment and install its dependency:
-
+## Python Environment Setup
+TerraScope uses a FastAPI Python engine with `rasterio` and `scikit-learn` for satellite processing.
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r backend/analysis/requirements.txt
+pip install -r backend/engine/requirements.txt
 ```
 
-Use `.venv/bin/python` when running the analysis module from the backend.
-
-The backend automatically creates the tables and seed fields on startup. The frontend runs on the Vite URL shown in the terminal, normally `http://localhost:5173`.
-
-## Useful commands
-
+## Starting Services Locally
+Start the Node.js API and Vite frontend:
 ```bash
-npm run dev          # frontend and backend together
-npm run dev:client   # frontend only
-npm run dev:server   # backend only
-npm run build        # production frontend build
-npm run lint         # lint frontend and backend
+npm install
+npm run dev
 ```
 
-See [backend/README.md](backend/README.md) for database and API details.
-
-## Google satellite map
-
-Copy `.env.example` to `.env` and set `VITE_GOOGLE_MAPS_API_KEY` and `VITE_GOOGLE_MAPS_MAP_ID`. In Google Cloud Console, enable **Maps JavaScript API**, enable billing, restrict the browser key by HTTP referrer, and create a map ID. The dashboard then shows Google satellite imagery for fields with coordinates. Google imagery is only the basemap; NDVI values must come from an authenticated multispectral source such as Sentinel-2.
-# React + TypeScript + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+Start the Python FastAPI engine (in a separate terminal):
+```bash
+source .venv/bin/activate
+uvicorn backend.engine.main:app --port 8000 --reload
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Docker Setup
+Run the entire stack (PostGIS, Python Engine, Node API, NGINX Frontend) with Docker:
+```bash
+docker-compose up --build
+```
+The frontend will be available at `http://localhost:5173`.
+
+## Testing
+Run the test suites and type checks:
+```bash
+npm run typecheck
+npm run lint
+npm run test
+```
+
+## Common Errors
+- `EPERM` on `npm run migrate`: Ensure PostgreSQL is running and `DATABASE_URL` is correct.
+- `Python Engine Unavailable`: Ensure Uvicorn is running on port 8000.
+- `Map rendering errors`: Verify `VITE_GOOGLE_MAPS_API_KEY` is present and domain-restricted correctly.

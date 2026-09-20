@@ -35,6 +35,8 @@ services:
     environment:
       - DATABASE_URL=postgres://${PGUSER:-postgres}:${PGPASSWORD:-postgres}@db:5432/${PGDATABASE:-terrascope}
       - NODE_ENV=production
+      - API_PORT=3000
+      - PYTHON_ENGINE_URL=http://python-engine:8000
     depends_on:
       db:
         condition: service_healthy

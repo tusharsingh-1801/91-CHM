@@ -13,6 +13,8 @@ export type DatabaseField = {
   planting_date: string | null
   harvest_date: string | null
   expected_yield_tons: number | null
+  boundary_geojson?: Record<string, unknown> | null
+  stress_geojson?: Record<string, unknown> | null
 }
 
 export async function loadFields() {

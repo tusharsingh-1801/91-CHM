@@ -12,15 +12,12 @@ from sklearn.linear_model import LinearRegression
 
 app = FastAPI(title="TerraScope Engine API")
 
-class AnalyzeNdviRequest(BaseModel):
 class AnalyzeIndicesRequest(BaseModel):
     languageCode: str = "en-IN"
     plantingDate: str = None
     harvestDate: str = None
     observations: list
 
-@app.post("/analyze-ndvi")
-def analyze_ndvi(payload: AnalyzeNdviRequest):
 @app.post("/analyze-indices")
 def analyze_indices(payload: AnalyzeIndicesRequest):
     from datetime import datetime
@@ -136,7 +133,6 @@ def calculate_indices(payload: CalculateIndicesRequest):
             raster_crs = src.crs
             transformer = Transformer.from_crs("EPSG:4326", raster_crs, always_xy=True)
             projected_geom = transform(transformer.transform, geom)
-            red_image, _ = mask(src, [projected_geom], crop=True)
             red_image, out_transform = mask(src, [projected_geom], crop=True)
             red_band = red_image[0].astype(float)
             
@@ -159,14 +155,11 @@ def calculate_indices(payload: CalculateIndicesRequest):
         red_valid = red_band[valid_mask]
         nir_valid = nir_band[valid_mask]
         
-        denominator = nir_valid + red_valid
         denominator = nir_band + red_band
         zero_mask = denominator == 0
         ndvi = np.zeros_like(denominator)
-        ndvi[~zero_mask] = (nir_valid[~zero_mask] - red_valid[~zero_mask]) / denominator[~zero_mask]
         ndvi[~zero_mask] = (nir_band[~zero_mask] - red_band[~zero_mask]) / denominator[~zero_mask]
         
-        mean_ndvi = float(np.mean(ndvi))
         mean_ndvi = float(np.mean(ndvi[valid_mask & ~zero_mask]))
         
         # Stress Zone Detection
@@ -261,7 +254,6 @@ def calculate_indices(payload: CalculateIndicesRequest):
             "ndmi": round(mean_ndmi, 4) if mean_ndmi is not None else None,
             "savi": round(mean_savi, 4) if mean_savi is not None else None,
             "evi": round(mean_evi, 4) if mean_evi is not None else None,
-            "validPixels": valid_pixels
             "validPixels": valid_pixel_count,
             "stressGeojson": stress_geojson
         }
@@ -270,3 +262,7 @@ def calculate_indices(payload: CalculateIndicesRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "service": "TerraScope Engine API"}

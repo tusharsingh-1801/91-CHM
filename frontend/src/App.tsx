@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import {
   calculateNdvi,
-  createField,
   askFieldAssistant,
   ingestSentinelScenes,
   ingestWeather,
@@ -15,6 +14,8 @@ import {
 } from "./lib/api";
 import type { NdviAnalysis, VegetationIndexObservation, Alert, FieldEvent } from "./lib/api";
 import { GoogleSatelliteMap } from "./lib/GoogleSatelliteMap";
+import { AddFieldWizard } from "./features/fields/AddFieldWizard";
+
 
 type Field = {
   id?: string;
@@ -110,8 +111,6 @@ function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [modal, setModal] = useState("");
   const [toast, setToast] = useState("");
-  const [newFieldName, setNewFieldName] = useState("");
-  const [newFieldCrop, setNewFieldCrop] = useState("");
   const googleMapsEnabled = Boolean(import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
   const [, setDataSource] = useState("Connecting to PostgreSQL...");
   const [latestNdvi, setLatestNdvi] = useState<number | null>(null);
@@ -230,32 +229,7 @@ function App() {
     URL.revokeObjectURL(url);
     notify("Report downloaded");
   };
-  const addField = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!newFieldName.trim() || !newFieldCrop.trim()) return;
-    createField(newFieldName, newFieldCrop)
-      .then((created) => {
-        setFields([
-          ...fields,
-          {
-            name: created.name,
-            crop: created.crop,
-            area: `${created.area_hectares} ha`,
-            health: created.health_score,
-            delta: "New",
-            color: "green",
-            canopyCoverage: created.canopy_coverage,
-            lastObservation: created.last_observation,
-          },
-        ]);
-        setActiveField(fields.length);
-        setNewFieldName("");
-        setNewFieldCrop("");
-        setModal("");
         notify("Field added to PostgreSQL");
-      })
-      .catch(() => notify("Could not save field. Check the API connection."));
-  };
   const collectFieldData = async () => {
     if (!field.id) {
       notify("Select a database field first");
@@ -776,31 +750,33 @@ function App() {
               </>
             )}
             {modal === "add-field" && (
-              <>
-                <p className="eyebrow">WORKSPACE</p>
-                <h2>Add a new field</h2>
-                <form onSubmit={addField}>
-                  <label>
-                    Field name
-                    <input
-                      value={newFieldName}
-                      onChange={(event) => setNewFieldName(event.target.value)}
-                      placeholder="e.g. South pasture"
-                      required
-                    />
-                  </label>
-                  <label>
-                    Crop type
-                    <input
-                      value={newFieldCrop}
-                      onChange={(event) => setNewFieldCrop(event.target.value)}
-                      placeholder="e.g. Maize"
-                      required
-                    />
-                  </label>
-                  <button className="modal-action">Add field →</button>
-                </form>
-              </>
+              <AddFieldWizard 
+                onComplete={(newId) => {
+                  setModal("");
+                  loadFields().then((data) => {
+                    setFields(data.map((item) => ({
+                      id: item.id,
+                      name: item.name,
+                      crop: item.crop,
+                      area: `${item.area_hectares} ha`,
+                      health: item.health_score,
+                      delta: `${item.health_delta >= 0 ? "+" : ""}${item.health_delta}%`,
+                      color: item.health_score > 80 ? "green" : item.health_score > 60 ? "yellow" : "red",
+                      lastObservation: item.last_observation ? new Date(item.last_observation).toLocaleDateString() : undefined,
+                      latitude: item.latitude ?? undefined,
+                      longitude: item.longitude ?? undefined,
+                      boundary_geojson: item.boundary_geojson
+                    })));
+                    const idx = data.findIndex(f => f.id === newId);
+                    if (idx !== -1) {
+                        const newUrl = new URL(window.location.href);
+                        newUrl.searchParams.set("field", idx.toString());
+                        window.history.pushState({}, "", newUrl);
+                    }
+                  });
+                }}
+                onCancel={() => setModal("")} 
+              />
             )}
             {modal === "report" && (
               <>

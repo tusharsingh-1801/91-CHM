@@ -117,7 +117,7 @@ export async function calculateNdviFromScene(request: Request, response: Respons
         const { ndvi, ndre, ndmi, savi, evi, validPixels, stressGeojson } = await engineResponse.json() as { ndvi: number, ndre: number | null, ndmi: number | null, savi: number | null, evi: number | null, validPixels: number, stressGeojson?: Record<string, unknown> };
     
     await pool.query(
-      'insert into public.vegetation_indices (field_id, observed_on, ndvi_value, ndre_value, ndmi_value, savi_value, evi_value, cloud_cover, source, scene_id) values ($1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10)',
+      'insert into public.vegetation_indices (field_id, observed_on, ndvi_value, ndre_value, ndmi_value, savi_value, evi_value, cloud_cover, source, scene_id) values ($1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10) on conflict (field_id, scene_id, observed_on) do update set ndvi_value = excluded.ndvi_value, ndre_value = excluded.ndre_value, ndmi_value = excluded.ndmi_value, savi_value = excluded.savi_value, evi_value = excluded.evi_value, cloud_cover = excluded.cloud_cover',
       [request.params.fieldId, scene.observed_at, ndvi, ndre, ndmi, savi, evi, scene.cloud_cover, 'Copernicus Sentinel-2 Red/NIR/RE/SWIR/Blue', scene.scene_id]
     );
     
@@ -185,12 +185,31 @@ export async function ingestSentinelScenes(request: Request, response: Response)
     const minLatitude = Math.min(...flatCoordinates.filter((_value: number, index: number) => index % 2 === 1));
     const maxLatitude = Math.max(...flatCoordinates.filter((_value: number, index: number) => index % 2 === 1));
     const catalogUrl = 'https://earth-search.aws.element84.com/v1/search';
-    const catalogResponse = await fetch(catalogUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ collections: ['sentinel-2-l2a'], bbox: [minLongitude, minLatitude, maxLongitude, maxLatitude], datetime: '2026-06-01T00:00:00Z/2026-08-28T23:59:59Z', query: { 'eo:cloud_cover': { lt: 30 } }, limit: 10 }) });
+    
+    const days = parseInt(request.query.days as string, 10) || 90;
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+    const datetime = `${startDate.toISOString()}/${endDate.toISOString()}`;
+
+    const catalogResponse = await fetch(catalogUrl, { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ 
+        collections: ['sentinel-2-l2a'], 
+        bbox: [minLongitude, minLatitude, maxLongitude, maxLatitude], 
+        datetime, 
+        query: { 'eo:cloud_cover': { lt: 40 } }, 
+        limit: 10,
+        sortby: [{ field: "eo:cloud_cover", direction: "asc" }, { field: "datetime", direction: "desc" }]
+      }) 
+    });
+
     if (!catalogResponse.ok) { response.status(502).json({ error: 'Sentinel catalog request failed' }); return; }
-    const catalog = await catalogResponse.json() as { features?: Array<{ id: string; collection?: string[]; properties: { datetime: string; 'eo:cloud_cover'?: number }; assets: Record<string, { href: string; type?: string }> }> };
+    const catalog = await catalogResponse.json() as { features?: Array<{ id: string; collection?: string; properties: { datetime: string; 'eo:cloud_cover'?: number }; assets: Record<string, { href: string; type?: string }> }> };
     let imported = 0;
     for (const scene of catalog.features ?? []) {
-      await pool.query('insert into public.satellite_scenes (field_id, scene_id, collection, observed_at, cloud_cover, source, catalog_url, assets) values ($1, $2, $3, $4, $5, $6, $7, $8) on conflict (field_id, scene_id) do update set cloud_cover = excluded.cloud_cover, assets = excluded.assets', [request.params.fieldId, scene.id, scene.collection?.[0] ?? 'sentinel-2-l2a', scene.properties.datetime, scene.properties['eo:cloud_cover'] ?? null, 'Copernicus Sentinel-2 via Earth Search', catalogUrl, JSON.stringify(scene.assets)]);
+      await pool.query('insert into public.satellite_scenes (field_id, scene_id, collection, observed_at, cloud_cover, source, catalog_url, assets) values ($1, $2, $3, $4, $5, $6, $7, $8) on conflict (field_id, scene_id) do update set cloud_cover = excluded.cloud_cover, assets = excluded.assets', [request.params.fieldId, scene.id, typeof scene.collection === 'string' ? scene.collection : 'sentinel-2-l2a', scene.properties.datetime, scene.properties['eo:cloud_cover'] ?? null, 'Copernicus Sentinel-2 via Earth Search', catalogUrl, JSON.stringify(scene.assets)]);
       imported += 1;
     }
     response.json({ source: 'Copernicus Sentinel-2', catalogUrl, imported });
@@ -224,17 +243,22 @@ export async function ingestWeather(request: Request, response: Response) {
 }
 
 export async function createField(request: Request, response: Response) {
-  const { name, crop, latitude, longitude } = request.body as { name?: string; crop?: string; latitude?: number; longitude?: number };
+  const { name, crop, latitude, longitude, boundary_geojson, area_hectares, planting_date, harvest_date } = request.body as any;
   if (!name?.trim() || !crop?.trim()) {
     response.status(400).json({ error: 'name and crop are required' });
     return;
   }
   try {
     const result = await pool.query(
-      `insert into public.fields (name, crop, location) 
-       values ($1, $2, CASE WHEN $3::numeric IS NOT NULL AND $4::numeric IS NOT NULL THEN ST_SetSRID(ST_MakePoint($4, $3), 4326) ELSE NULL END) 
-       returning id, name, crop, area_hectares, health_score, ndvi_average, canopy_coverage, health_delta, last_observation, ST_Y(location) as latitude, ST_X(location) as longitude, ST_AsGeoJSON(boundary_geom)::jsonb as boundary_geojson, created_at`,
-      [name.trim(), crop.trim(), latitude ?? null, longitude ?? null],
+      `insert into public.fields (name, crop, location, boundary_geom, area_hectares, planting_date, harvest_date) 
+       values (
+         $1, $2, 
+         CASE WHEN $3::numeric IS NOT NULL AND $4::numeric IS NOT NULL THEN ST_SetSRID(ST_MakePoint($4, $3), 4326) ELSE NULL END,
+         CASE WHEN $5::jsonb IS NOT NULL THEN ST_GeomFromGeoJSON($5::text) ELSE NULL END,
+         $6, $7, $8
+       ) 
+       returning id, name, crop, area_hectares, health_score, ndvi_average, canopy_coverage, health_delta, last_observation, ST_Y(location) as latitude, ST_X(location) as longitude, ST_AsGeoJSON(boundary_geom)::jsonb as boundary_geojson, planting_date, harvest_date, created_at`,
+      [name.trim(), crop.trim(), latitude ?? null, longitude ?? null, boundary_geojson ? JSON.stringify(boundary_geojson) : null, area_hectares ?? 0, planting_date ?? null, harvest_date ?? null],
     );
     response.status(201).json(result.rows[0]);
   } catch (error) {
