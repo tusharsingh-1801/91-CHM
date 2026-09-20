@@ -11,7 +11,7 @@ A research-grade crop-health intelligence platform using Sentinel-2 satellite im
 ## Environment Variables
 Copy `.env.example` to `.env` and configure the following:
 - `DATABASE_URL`: PostgreSQL connection string (e.g., `postgres://postgres:postgres@localhost:5432/terrascope`)
-- `API_PORT`: Node.js API port (default: `3000`)
+- `API_PORT`: Node.js API port (`3001` locally; Docker overrides it to `3000`)
 - `PYTHON_ENGINE_URL`: Python FastAPI URL (default: `http://127.0.0.1:8000`)
 - `VITE_GOOGLE_MAPS_API_KEY`: Google Maps API Key for the frontend map UI (Requires Maps JavaScript API enabled)
 - `VITE_GOOGLE_MAPS_MAP_ID`: Google Maps Map ID
@@ -61,6 +61,7 @@ Run the test suites and type checks:
 npm run typecheck
 npm run lint
 npm run test
+python -m pytest backend/engine -q
 ```
 
 ## Common Errors

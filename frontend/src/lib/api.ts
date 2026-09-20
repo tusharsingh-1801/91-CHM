@@ -50,14 +50,16 @@ export async function askFieldAssistant(message: string, fieldId?: string, langu
 
 export async function ingestWeather(fieldId: string) {
   const response = await fetch(`/api/fields/${fieldId}/ingest/weather`, { method: 'POST' })
-  if (!response.ok) throw new Error('Weather ingestion failed')
-  return response.json() as Promise<{ source: string; imported: number }>
+  const payload = await response.json().catch(() => ({})) as { error?: string; source: string; imported: number }
+  if (!response.ok) throw new Error(payload.error ?? 'Weather ingestion failed')
+  return payload
 }
 
 export async function ingestSentinelScenes(fieldId: string) {
   const response = await fetch(`/api/fields/${fieldId}/ingest/sentinel-scenes`, { method: 'POST' })
-  if (!response.ok) throw new Error('Sentinel scene ingestion failed')
-  return response.json() as Promise<{ source: string; imported: number }>
+  const payload = await response.json().catch(() => ({})) as { error?: string; source: string; imported: number }
+  if (!response.ok) throw new Error(payload.error ?? 'Sentinel scene ingestion failed')
+  return payload
 }
 
 export async function loadScenes(fieldId: string) {
@@ -68,8 +70,9 @@ export async function loadScenes(fieldId: string) {
 
 export async function calculateNdvi(fieldId: string, sceneId: string) {
   const response = await fetch(`/api/fields/${fieldId}/ndvi/from-scene/${encodeURIComponent(sceneId)}`, { method: 'POST' })
-  if (!response.ok) throw new Error('NDVI calculation failed')
-  return response.json() as Promise<{ sceneId: string; ndvi: number; validPixels: number; source: string }>
+  const payload = await response.json().catch(() => ({})) as { error?: string; sceneId: string; ndvi: number; validPixels: number; validCoverage: number; healthScore: number; source: string }
+  if (!response.ok) throw new Error(payload.error ?? 'NDVI calculation failed')
+  return payload
 }
 
 export type VegetationIndexObservation = {

@@ -12,8 +12,11 @@ RUN npm ci
 COPY backend/ ./backend/
 COPY .env.example ./.env
 
-# Run typescript build for backend
-RUN npx tsc -b backend/api
+# Validate the API sources without depending on frontend files that are not
+# copied into this image.
+RUN npx tsc --ignoreConfig --noEmit --target ES2022 --module NodeNext \
+    --moduleResolution NodeNext --allowImportingTsExtensions \
+    --esModuleInterop --skipLibCheck backend/api/app.ts backend/api/server.ts
 
 # Run migrations and then start the server
 CMD ["sh", "-c", "npm run migrate && npm run dev:server"]

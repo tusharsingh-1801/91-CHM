@@ -114,21 +114,58 @@ export async function calculateNdviFromScene(request: Request, response: Respons
       return;
     }
     
-        const { ndvi, ndre, ndmi, savi, evi, validPixels, stressGeojson } = await engineResponse.json() as { ndvi: number, ndre: number | null, ndmi: number | null, savi: number | null, evi: number | null, validPixels: number, stressGeojson?: Record<string, unknown> };
+    const { ndvi, ndre, ndmi, savi, evi, validPixels, validCoverage, minimum, maximum, median, standardDeviation, stressGeojson } = await engineResponse.json() as {
+      ndvi: number; ndre: number | null; ndmi: number | null; savi: number | null; evi: number | null;
+      validPixels: number; validCoverage: number; minimum: number; maximum: number; median: number;
+      standardDeviation: number; stressGeojson?: Record<string, unknown>;
+    };
     
     await pool.query(
-      'insert into public.vegetation_indices (field_id, observed_on, ndvi_value, ndre_value, ndmi_value, savi_value, evi_value, cloud_cover, source, scene_id) values ($1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10) on conflict (field_id, scene_id, observed_on) do update set ndvi_value = excluded.ndvi_value, ndre_value = excluded.ndre_value, ndmi_value = excluded.ndmi_value, savi_value = excluded.savi_value, evi_value = excluded.evi_value, cloud_cover = excluded.cloud_cover',
-      [request.params.fieldId, scene.observed_at, ndvi, ndre, ndmi, savi, evi, scene.cloud_cover, 'Copernicus Sentinel-2 Red/NIR/RE/SWIR/Blue', scene.scene_id]
+      `insert into public.vegetation_indices
+       (field_id, observed_on, ndvi_value, ndre_value, ndmi_value, savi_value, evi_value,
+        cloud_cover, source, scene_id, valid_pixel_count, valid_coverage_percent,
+        ndvi_min, ndvi_max, ndvi_median, ndvi_stddev)
+       values ($1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+       on conflict (field_id, scene_id, observed_on) do update set
+         ndvi_value = excluded.ndvi_value, ndre_value = excluded.ndre_value,
+         ndmi_value = excluded.ndmi_value, savi_value = excluded.savi_value,
+         evi_value = excluded.evi_value, cloud_cover = excluded.cloud_cover,
+         valid_pixel_count = excluded.valid_pixel_count,
+         valid_coverage_percent = excluded.valid_coverage_percent,
+         ndvi_min = excluded.ndvi_min, ndvi_max = excluded.ndvi_max,
+         ndvi_median = excluded.ndvi_median, ndvi_stddev = excluded.ndvi_stddev`,
+      [request.params.fieldId, scene.observed_at, ndvi, ndre, ndmi, savi, evi,
+        scene.cloud_cover, 'Copernicus Sentinel-2 Red/NIR/RE/SWIR/Blue', scene.scene_id,
+        validPixels, validCoverage, minimum, maximum, median, standardDeviation]
+    );
+
+    const clamp = (value: number) => Math.max(0, Math.min(100, value));
+    const ndviScore = clamp(((ndvi - 0.15) / 0.65) * 100);
+    const moistureScore = ndmi === null ? ndviScore : clamp(((ndmi + 0.2) / 0.7) * 100);
+    const dataQuality = clamp(validCoverage) / 100;
+    const healthScore = Math.round((ndviScore * 0.75 + moistureScore * 0.25) * dataQuality);
+    await pool.query(
+      `update public.fields set
+         health_delta = $1 - health_score,
+         health_score = $1,
+         ndvi_average = $2,
+         last_observation = $3::date
+       where id = $4`,
+      [healthScore, ndvi, scene.observed_at, request.params.fieldId]
     );
     
     if (stressGeojson) {
       await pool.query(
-        'insert into public.alerts (field_id, title, severity, observed_at, stress_geom, scene_id) values ($1, $2, $3, $4, ST_GeomFromGeoJSON($5), $6)',
+        `insert into public.alerts (field_id, title, severity, observed_at, stress_geom, scene_id)
+         select $1, $2, $3, $4, ST_GeomFromGeoJSON($5), $6
+         where not exists (
+           select 1 from public.alerts where field_id = $1 and scene_id = $6 and title = $2
+         )`,
         [request.params.fieldId, 'Stress Zone Detected', 'high', scene.observed_at, JSON.stringify(stressGeojson), scene.scene_id]
       );
     }
     
-    response.json({ sceneId: scene.scene_id, observedAt: scene.observed_at, ndvi, ndre, ndmi, savi, evi, validPixels, source: 'Copernicus Sentinel-2' });
+    response.json({ sceneId: scene.scene_id, observedAt: scene.observed_at, ndvi, ndre, ndmi, savi, evi, validPixels, validCoverage, healthScore, source: 'Copernicus Sentinel-2' });
   } catch (error) {
     console.error('POST NDVI calculation failed:', error);
     const message = error instanceof DOMException && error.name === 'TimeoutError' ? 'Python engine request timed out' : 'NDVI calculation failed';
@@ -243,23 +280,34 @@ export async function ingestWeather(request: Request, response: Response) {
 }
 
 export async function createField(request: Request, response: Response) {
-  const { name, crop, latitude, longitude, boundary_geojson, area_hectares, planting_date, harvest_date } = request.body as any;
-  if (!name?.trim() || !crop?.trim()) {
-    response.status(400).json({ error: 'name and crop are required' });
+  const { name, crop, boundary_geojson, planting_date, harvest_date } = request.body as any;
+  const coordinates = boundary_geojson?.coordinates?.[0];
+  const isCoordinate = (value: unknown): value is [number, number] =>
+    Array.isArray(value) && value.length >= 2 && Number.isFinite(value[0]) && Number.isFinite(value[1]) &&
+    value[0] >= -180 && value[0] <= 180 && value[1] >= -90 && value[1] <= 90;
+  const isClosed = Array.isArray(coordinates) && coordinates.length >= 4 &&
+    coordinates[0]?.[0] === coordinates.at(-1)?.[0] && coordinates[0]?.[1] === coordinates.at(-1)?.[1];
+  if (!name?.trim() || !crop?.trim() || boundary_geojson?.type !== 'Polygon' || !isClosed || !coordinates.every(isCoordinate)) {
+    response.status(400).json({ error: 'name, crop, and a valid closed Polygon boundary are required' });
     return;
   }
   try {
     const result = await pool.query(
-      `insert into public.fields (name, crop, location, boundary_geom, area_hectares, planting_date, harvest_date) 
-       values (
-         $1, $2, 
-         CASE WHEN $3::numeric IS NOT NULL AND $4::numeric IS NOT NULL THEN ST_SetSRID(ST_MakePoint($4, $3), 4326) ELSE NULL END,
-         CASE WHEN $5::jsonb IS NOT NULL THEN ST_GeomFromGeoJSON($5::text) ELSE NULL END,
-         $6, $7, $8
-       ) 
+      `with boundary as (
+         select ST_SetSRID(ST_GeomFromGeoJSON($3::text), 4326) as geom
+       )
+       insert into public.fields (name, crop, location, boundary_geom, area_hectares, planting_date, harvest_date)
+       select $1, $2, ST_PointOnSurface(geom), geom,
+              round((ST_Area(geom::geography) / 10000.0)::numeric, 2), $4, $5
+       from boundary
+       where ST_IsValid(geom) and ST_GeometryType(geom) = 'ST_Polygon'
        returning id, name, crop, area_hectares, health_score, ndvi_average, canopy_coverage, health_delta, last_observation, ST_Y(location) as latitude, ST_X(location) as longitude, ST_AsGeoJSON(boundary_geom)::jsonb as boundary_geojson, planting_date, harvest_date, created_at`,
-      [name.trim(), crop.trim(), latitude ?? null, longitude ?? null, boundary_geojson ? JSON.stringify(boundary_geojson) : null, area_hectares ?? 0, planting_date ?? null, harvest_date ?? null],
+      [name.trim(), crop.trim(), JSON.stringify(boundary_geojson), planting_date ?? null, harvest_date ?? null],
     );
+    if (!result.rowCount) {
+      response.status(400).json({ error: 'Field boundary is not a valid polygon' });
+      return;
+    }
     response.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('POST /api/fields failed:', error);
@@ -358,7 +406,10 @@ export async function getFieldOverlay(request: Request, response: Response) {
     const field = fieldResult.rows[0];
     if (!field || !field.boundary_geojson) { response.status(400).json({ error: 'Field boundary missing' }); return; }
     
-    const sceneResult = await pool.query('select assets from public.satellite_scenes where field_id = $1 and scene_id = $2', [fieldId, sceneId]);
+    const sceneResult = await pool.query(
+      'select assets from public.satellite_scenes where field_id = $1 and scene_id = $2',
+      [fieldId, sceneId]
+    );
     const scene = sceneResult.rows[0];
     if (!scene) { response.status(404).json({ error: 'Scene not found' }); return; }
     
@@ -390,7 +441,13 @@ export async function getFieldTile(request: Request, response: Response) {
   try {
     const { fieldId, sceneId, z, x, y } = request.params;
     
-    const sceneResult = await pool.query('select assets from public.satellite_scenes where field_id = $1 and scene_id = $2', [fieldId, sceneId]);
+    const sceneResult = await pool.query(
+      `select scenes.assets, ST_AsGeoJSON(fields.boundary_geom)::jsonb as boundary_geojson
+       from public.satellite_scenes scenes
+       join public.fields fields on fields.id = scenes.field_id
+       where scenes.field_id = $1 and scenes.scene_id = $2`,
+      [fieldId, sceneId]
+    );
     const scene = sceneResult.rows[0];
     if (!scene) { response.status(404).json({ error: 'Scene not found' }); return; }
     
@@ -400,7 +457,8 @@ export async function getFieldTile(request: Request, response: Response) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         redUrl: assets['red']?.href ?? assets['B04']?.href,
-        nirUrl: assets['nir']?.href ?? assets['B08']?.href
+        nirUrl: assets['nir']?.href ?? assets['B08']?.href,
+        polygonGeojson: scene.boundary_geojson
       })
     });
     

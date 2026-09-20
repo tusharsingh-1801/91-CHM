@@ -18,7 +18,6 @@ export function FieldAnalysis() {
 
   useEffect(() => {
     if (!field?.id) return;
-    setLoading(true);
     Promise.all([
       loadNdviAnalysis(field.id, language).catch(() => null),
       loadNdvi(field.id).catch(() => []),
@@ -38,7 +37,7 @@ export function FieldAnalysis() {
     try {
       const res = await askFieldAssistant(question, field.id, language);
       setAnswer(res.answer);
-    } catch (err) {
+    } catch {
       setAnswer("Sorry, I could not generate an answer right now.");
     } finally {
       setAsking(false);
@@ -52,7 +51,7 @@ export function FieldAnalysis() {
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <h2 style={{ margin: 0 }}>Health Analysis</h2>
-          <select value={language} onChange={e => setLanguage(e.target.value)} style={{ padding: '0.5rem', borderRadius: '4px' }}>
+          <select value={language} onChange={e => { setLoading(true); setLanguage(e.target.value); }} style={{ padding: '0.5rem', borderRadius: '4px' }}>
             <option value="en-IN">English</option>
             <option value="hi-IN">Hindi (हिंदी)</option>
             <option value="bn-IN">Bengali (বাংলা)</option>

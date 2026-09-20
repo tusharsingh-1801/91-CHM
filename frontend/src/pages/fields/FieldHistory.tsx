@@ -11,17 +11,12 @@ export function FieldHistory() {
   const [date, setDate] = useState('');
   const [notes, setNotes] = useState('');
 
-  const fetchEvents = () => {
+  useEffect(() => {
     if (!field?.id) return;
-    setLoading(true);
     loadFieldEvents(field.id).then(data => {
       setEvents(data);
       setLoading(false);
     });
-  };
-
-  useEffect(() => {
-    fetchEvents();
   }, [field?.id]);
 
   const handleAddEvent = async (e: React.FormEvent) => {
@@ -32,8 +27,9 @@ export function FieldHistory() {
       setType('planting');
       setDate('');
       setNotes('');
-      fetchEvents();
-    } catch (err) {
+      const updatedEvents = await loadFieldEvents(field.id);
+      setEvents(updatedEvents);
+    } catch {
       alert("Failed to add event");
     }
   };
