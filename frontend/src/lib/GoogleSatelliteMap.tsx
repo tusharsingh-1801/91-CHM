@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react'
 import { importLibrary, setOptions } from '@googlemaps/js-api-loader'
 
-type Props = { latitude: number; longitude: number; fieldName?: string; zoom?: number; stressGeojson?: Record<string, unknown> | null; overlay?: { image: string, bounds: any } | null }
+type Props = { latitude: number; longitude: number; fieldName?: string; zoom?: number; stressGeojson?: Record<string, unknown> | null; overlay?: { image: string, bounds: any } | null; tileUrl?: string | null }
 
-export function GoogleSatelliteMap({ latitude, longitude, fieldName = '', zoom = 14, stressGeojson, overlay }: Props) {
+export function GoogleSatelliteMap({ latitude, longitude, fieldName = '', zoom = 14, stressGeojson, overlay, tileUrl }: Props) {
   const mapElement = useRef<HTMLDivElement>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
   const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null)
   const overlayRef = useRef<google.maps.GroundOverlay | null>(null)
+  const tileOverlayRef = useRef<google.maps.ImageMapType | null>(null)
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID
 
@@ -59,6 +60,31 @@ export function GoogleSatelliteMap({ latitude, longitude, fieldName = '', zoom =
       overlayRef.current = null;
     }
   }, [overlay]);
+
+  
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (tileUrl) {
+      if (tileOverlayRef.current) {
+        mapRef.current.overlayMapTypes.clear();
+      }
+      const imageMapType = new google.maps.ImageMapType({
+        getTileUrl: function(coord, zoom) {
+          return tileUrl.replace('{z}', zoom.toString()).replace('{x}', coord.x.toString()).replace('{y}', coord.y.toString());
+        },
+        tileSize: new google.maps.Size(256, 256),
+        maxZoom: 20,
+        minZoom: 0,
+        opacity: 0.8,
+        name: 'NDVI'
+      });
+      tileOverlayRef.current = imageMapType;
+      mapRef.current.overlayMapTypes.push(imageMapType);
+    } else {
+      mapRef.current.overlayMapTypes.clear();
+      tileOverlayRef.current = null;
+    }
+  }, [tileUrl]);
 
   return <div ref={mapElement} className="google-map" aria-label={`Google satellite view of ${fieldName}`} />
 }

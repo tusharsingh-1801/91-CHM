@@ -12,6 +12,8 @@ import base64
 import io
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+from rio_tiler.io import Reader
+from fastapi import Response
 from sklearn.linear_model import LinearRegression
 
 app = FastAPI(title="TerraScope Engine API")
@@ -342,3 +344,53 @@ def generate_overlay(payload: GenerateOverlayRequest):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+class TileRequest(BaseModel):
+    redUrl: str
+    nirUrl: str
+
+@app.post("/tiles/{z}/{x}/{y}.png")
+def generate_tile(z: int, x: int, y: int, payload: TileRequest):
+    try:
+        with Reader(payload.redUrl) as red_src, Reader(payload.nirUrl) as nir_src:
+            red_tile, mask = red_src.tile(x, y, z)
+            nir_tile, _ = nir_src.tile(x, y, z)
+
+        red_band = red_tile[0].astype(float)
+        nir_band = nir_tile[0].astype(float)
+        
+        valid_mask = (red_band != 0) & (nir_band != 0) & (mask != 0)
+        denominator = nir_band + red_band
+        zero_mask = denominator == 0
+        
+        ndvi = np.full_like(denominator, np.nan)
+        ndvi[valid_mask & ~zero_mask] = (nir_band[valid_mask & ~zero_mask] - red_band[valid_mask & ~zero_mask]) / denominator[valid_mask & ~zero_mask]
+        
+        cmap = plt.get_cmap("RdYlGn")
+        cmap.set_bad(color='transparent')
+        norm = mcolors.Normalize(vmin=-0.2, vmax=1.0)
+        rgba_image = cmap(norm(ndvi))
+        
+        # Apply alpha to valid pixels only
+        rgba_image[~valid_mask | zero_mask, 3] = 0.0
+        
+        # Convert to 8-bit image array
+        img_array = (rgba_image * 255).astype(np.uint8)
+        
+        from PIL import Image
+        img = Image.fromarray(img_array, mode="RGBA")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        
+        return Response(content=buf.read(), media_type="image/png")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        # Return transparent 256x256 tile on error (or empty)
+        from PIL import Image
+        img = Image.new("RGBA", (256, 256), (0,0,0,0))
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        return Response(content=buf.read(), media_type="image/png")

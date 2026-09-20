@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { GoogleSatelliteMap } from '../../lib/GoogleSatelliteMap';
-import { loadFieldAlerts, loadScenes, loadFieldOverlay } from '../../lib/api';
+import { loadFieldAlerts, loadScenes } from '../../lib/api';
 
 export function FieldMap() {
   const { field } = useOutletContext<{ field: any }>();
   const { fieldId } = useParams();
   const [scenes, setScenes] = useState<any[]>([]);
   const [activeSceneId, setActiveSceneId] = useState<string>('');
-  const [overlay, setOverlay] = useState<any>(null);
+  const [tileUrl, setTileUrl] = useState<string | null>(null);
   const [stressGeojson, setStressGeojson] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!fieldId) return;
@@ -26,13 +25,7 @@ export function FieldMap() {
 
   useEffect(() => {
     if (!fieldId || !activeSceneId) return;
-    setLoading(true);
-    loadFieldOverlay(fieldId, activeSceneId).then(data => {
-      setOverlay(data);
-    }).catch(e => {
-      console.error(e);
-      setOverlay(null);
-    }).finally(() => setLoading(false));
+    setTileUrl(`/api/fields/${fieldId}/tiles/${activeSceneId}/{z}/{x}/{y}.png`);
   }, [fieldId, activeSceneId]);
 
   return (
@@ -48,14 +41,14 @@ export function FieldMap() {
             ))}
           </select>
         </label>
-        {loading && <span style={{ color: '#4f46e5' }}>Generating overlay...</span>}
+        
       </div>
       <div style={{ flex: 1, position: 'relative' }}>
         <GoogleSatelliteMap 
           latitude={field.latitude || 28.6139} 
           longitude={field.longitude || 77.2090} 
           stressGeojson={stressGeojson} 
-          overlay={overlay} 
+          tileUrl={tileUrl} 
         />
         <div style={{ position: 'absolute', bottom: '2rem', right: '1rem', background: 'white', padding: '1rem', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
           <h4 style={{ margin: '0 0 0.5rem 0' }}>NDVI Legend</h4>

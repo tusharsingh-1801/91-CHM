@@ -385,3 +385,36 @@ export async function getFieldOverlay(request: Request, response: Response) {
     response.status(503).json({ error: 'Overlay generation failed' });
   }
 }
+
+export async function getFieldTile(request: Request, response: Response) {
+  try {
+    const { fieldId, sceneId, z, x, y } = request.params;
+    
+    const sceneResult = await pool.query('select assets from public.satellite_scenes where field_id = $1 and scene_id = $2', [fieldId, sceneId]);
+    const scene = sceneResult.rows[0];
+    if (!scene) { response.status(404).json({ error: 'Scene not found' }); return; }
+    
+    const assets = scene.assets;
+    const engineResponse = await fetch(`${process.env.PYTHON_ENGINE_URL || "http://127.0.0.1:8000"}/tiles/${z}/${x}/${y}.png`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        redUrl: assets['red']?.href ?? assets['B04']?.href,
+        nirUrl: assets['nir']?.href ?? assets['B08']?.href
+      })
+    });
+    
+    if (!engineResponse.ok) {
+      response.status(502).json({ error: 'Python engine tile generation failed' });
+      return;
+    }
+    
+    const buffer = await engineResponse.arrayBuffer();
+    response.setHeader('Content-Type', 'image/png');
+    response.setHeader('Cache-Control', 'public, max-age=86400');
+    response.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error('GET tile failed:', error);
+    response.status(503).json({ error: 'Tile generation failed' });
+  }
+}

@@ -7,7 +7,8 @@ import {
   getFieldScenes, ingestSentinelScenes, ingestWeather, 
   createField, updateFieldLocation, updateField,
   getFieldEvents, createFieldEvent, deleteFieldEvent,
-  getFieldOverlay
+  getFieldOverlay,
+  getFieldTile
 } from '../controllers/fieldsController.ts';
 
 export const router = Router();
@@ -31,6 +32,7 @@ router.post('/fields/:fieldId/ingest/weather', ingestWeather);
 router.patch('/fields/:fieldId/location', updateFieldLocation);
 router.get('/fields/:fieldId/events', getFieldEvents);
 router.get('/fields/:fieldId/overlay/:sceneId', getFieldOverlay);
+router.get('/fields/:fieldId/tiles/:sceneId/:z/:x/:y.png', getFieldTile);
 router.post('/fields/:fieldId/events', createFieldEvent);
 router.delete('/fields/:fieldId/events/:eventId', deleteFieldEvent);
 
