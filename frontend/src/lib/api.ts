@@ -161,3 +161,18 @@ export async function loadFieldOverlay(fieldId: string, sceneId: string) {
   if (!response.ok) throw new Error('Unable to load overlay')
   return response.json() as Promise<{ image: string; bounds: { north: number; south: number; east: number; west: number } }>
 }
+
+export type WeatherObservation = {
+  id: string
+  observed_on: string
+  precipitation_mm: number
+  temperature_c: number
+  humidity_percent: number
+  source_url: string
+}
+
+export async function loadWeather(fieldId: string) {
+  const response = await fetch(`/api/fields/${fieldId}/weather`)
+  if (!response.ok) throw new Error('Unable to load weather')
+  return response.json() as Promise<WeatherObservation[]>
+}

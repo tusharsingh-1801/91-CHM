@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { loadNdviAnalysis, loadNdvi, askFieldAssistant } from '../../lib/api';
+import { loadNdviAnalysis, loadNdvi, askFieldAssistant, loadWeather, ingestWeather } from '../../lib/api';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 
 export function FieldAnalysis() {
   const { field } = useOutletContext<{ field: any }>();
   const [analysis, setAnalysis] = useState<any>(null);
   const [observations, setObservations] = useState<any[]>([]);
+  const [weather, setWeather] = useState<any[]>([]);
+  const [weatherLoading, setWeatherLoading] = useState(false);
   const [language, setLanguage] = useState('en-IN');
   const [loading, setLoading] = useState(true);
   
@@ -18,10 +21,12 @@ export function FieldAnalysis() {
     setLoading(true);
     Promise.all([
       loadNdviAnalysis(field.id, language).catch(() => null),
-      loadNdvi(field.id).catch(() => [])
-    ]).then(([analysisData, ndviData]) => {
+      loadNdvi(field.id).catch(() => []),
+      loadWeather(field.id).catch(() => [])
+    ]).then(([analysisData, ndviData, weatherData]) => {
       setAnalysis(analysisData);
       setObservations(ndviData);
+      setWeather(weatherData);
       setLoading(false);
     });
   }, [field?.id, language]);
@@ -95,6 +100,63 @@ export function FieldAnalysis() {
           </table>
         ) : (
           <p>No observations recorded yet.</p>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3rem', marginBottom: '1rem' }}>
+          <h3>NASA POWER Weather Insights</h3>
+          <button 
+            onClick={async () => {
+              setWeatherLoading(true);
+              try {
+                await ingestWeather(field.id);
+                const data = await loadWeather(field.id);
+                setWeather(data);
+              } catch (e) {
+                console.error(e);
+              } finally {
+                setWeatherLoading(false);
+              }
+            }}
+            disabled={weatherLoading}
+            style={{ background: '#f3f4f6', border: '1px solid #d1d5db', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer' }}
+          >
+            {weatherLoading ? 'Syncing...' : 'Sync Weather Data'}
+          </button>
+        </div>
+
+        {weather.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div style={{ height: '300px', width: '100%', background: '#fff', border: '1px solid #e5e7eb', padding: '1rem', borderRadius: '8px' }}>
+              <h4 style={{ marginTop: 0, textAlign: 'center', color: '#4b5563' }}>Temperature (°C)</h4>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={weather} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="observed_on" tickFormatter={(tick) => new Date(tick).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} />
+                  <YAxis />
+                  <Tooltip labelFormatter={(label) => new Date(label as string | number).toLocaleDateString()} />
+                  <Legend />
+                  <Line type="monotone" dataKey="temperature_c" name="Avg Temp" stroke="#ef4444" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div style={{ height: '300px', width: '100%', background: '#fff', border: '1px solid #e5e7eb', padding: '1rem', borderRadius: '8px' }}>
+              <h4 style={{ marginTop: 0, textAlign: 'center', color: '#4b5563' }}>Precipitation (mm)</h4>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={weather} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="observed_on" tickFormatter={(tick) => new Date(tick).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} />
+                  <YAxis />
+                  <Tooltip labelFormatter={(label) => new Date(label as string | number).toLocaleDateString()} />
+                  <Legend />
+                  <Bar dataKey="precipitation_mm" name="Precipitation" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: '2rem', textAlign: 'center', background: '#f9fafb', borderRadius: '8px', border: '1px dashed #d1d5db' }}>
+            <p style={{ color: '#6b7280' }}>No weather data synced yet. Click the sync button above to fetch historical climate data from NASA POWER.</p>
+          </div>
         )}
       </div>
 
