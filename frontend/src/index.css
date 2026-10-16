@@ -708,3 +708,7 @@ body:has(.field-shell) .field-shell,body:has(.simple-farm) .dashboard-shell { co
  .simple-farm .farmer-field-card { padding:20px 17px; }
 }
 @media(prefers-reduced-motion:reduce) { .simple-farm .farmer-field-card { transition:none; } }
+
+/* Sample fields remain an explicit, discoverable opt-in even when filters are collapsed. */
+.simple-farm .farmer-demo-toggle { display:inline-flex; align-items:center; gap:10px; min-height:44px; padding:8px 4px; color:#486c53; font-size:.83rem; cursor:pointer; }
+.simple-farm .farmer-demo-toggle input { width:18px; height:18px; accent-color:#176b45; }
