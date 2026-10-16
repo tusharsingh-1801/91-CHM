@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, CalendarCheck, Camera, CloudSun, MapPin, Sprout, Search, SlidersHorizontal } from 'lucide-react';
+import { ArrowRight, CalendarCheck, Camera, CloudSun, MapPin, Sprout, Search, SlidersHorizontal, ShieldCheck, ChevronRight, Satellite, Plus } from 'lucide-react';
 import { loadFields, type DatabaseField } from '../../lib/api';
 import { fieldActionHref, fieldAssessment, fieldCopy } from '../../lib/fieldCopy';
 import { usePreferences } from '../../lib/preferencesContext';
@@ -49,17 +49,19 @@ export function Dashboard() {
   const attentionCount = priority.length;
   return <main className="dashboard-shell simple-farm">
     <header className="dashboard-header overview-header farmer-hero">
-      <div><span className="eyebrow">{t('YOUR DAILY FIELD COMPANION', 'हर दिन, आपके खेत का साथी')}</span>
+      <span className="farmer-hero-art" aria-hidden="true"><Sprout size={92} strokeWidth={1.15}/></span>
+      <div className="farmer-hero-copy"><span className="farmer-brand"><Sprout size={18} aria-hidden="true"/> TerraScope <span className="farmer-brand-separator">/</span> {t('My farm', 'मेरी खेती')}</span><span className="eyebrow">{t('YOUR DAILY FIELD COMPANION', 'हर दिन, आपके खेत का साथी')}</span>
         <h1>{t('Your farm. Your next step.', 'आपके खेत। अब क्या करें?')}</h1>
         <p>{t('Choose a field, see what needs doing, and keep a note of your visit.', 'खेत चुनें, अगला काम देखें और खेत में जो दिखे उसे सेव करें।')}</p>
       </div>
-      <button className="primary-action" onClick={() => setAdding(true)}>{t('+ Add field', '+ खेत जोड़ें')}</button>
+      <button className="primary-action farmer-add-field" onClick={() => setAdding(true)}><Plus size={20} aria-hidden="true"/>{t('Add a field', 'नया खेत जोड़ें')}</button>
     </header>
     <nav className="overview-nav farmer-quick-nav" aria-label={t('Main navigation', 'मुख्य नेविगेशन')}>
-      <a href="#my-fields">{t('My fields', 'मेरे खेत')}</a><Link to="/reports">{t('Reports', 'रिपोर्ट')}</Link><Link to="/help">{t('How to use', 'कैसे इस्तेमाल करें')}</Link>
+      <a href="#my-fields"><MapPin size={17} aria-hidden="true"/>{t('My fields', 'मेरे खेत')}</a><Link to="/reports"><Camera size={17} aria-hidden="true"/>{t('Reports', 'रिपोर्ट')}</Link><Link to="/help"><ShieldCheck size={17} aria-hidden="true"/>{t('How to use', 'कैसे इस्तेमाल करें')}</Link>
     </nav>
     {error && <div className="service-error" role="alert"><strong>{t('Fields unavailable', 'खेतों की जानकारी नहीं मिली')}</strong><span>{t('Check your connection and try again. Your saved fields are safe.', 'कनेक्शन देखकर फिर कोशिश करें। आपके सेव किए खेत सुरक्षित हैं।')}</span><button onClick={() => { setLoading(true); setError(false); setReload(value => value + 1); }}>{t('Retry', 'फिर कोशिश करें')}</button></div>}
     {!error && !loading && <>
+      {real.length > 0 && <div className="farmer-today-heading"><div><span className="farmer-today-kicker">{t('TODAY AT A GLANCE', 'आज की जानकारी')}</span><h2>{t('What needs your attention?', 'आज किस खेत को देखना है?')}</h2></div><span className="farmer-reality-note"><ShieldCheck size={16} aria-hidden="true"/>{t('Based on available observations', 'उपलब्ध तस्वीरों के आधार पर')}</span></div>}
       {real.length > 0 && <section id="overview" className={`attention-panel next-step-panel farmer-priority ${inspection.length ? 'needs-visit' : ''}`} aria-labelledby="attention-heading">
         <div className="next-step-heading"><span className="next-step-symbol" aria-hidden="true">{inspection.length || due.length ? <CalendarCheck/> : dataIssues.length ? <CloudSun/> : <Sprout/>}</span>
           <div><span className="eyebrow">{t('START HERE', 'यहाँ से शुरू करें')}</span>{attentionCount > 0 && <span className="farmer-attention-count">{t(`${attentionCount} fields need attention`, `${attentionCount} खेतों पर ध्यान दें`)}</span>}<h2 id="attention-heading">{inspection.length ? t('Visit these fields first', 'पहले इन खेतों को देखें') : due.length ? t('Your planned visits are due', 'तय जाँच का समय हो गया है') : dataIssues.length ? t('Let’s get a clearer picture', 'पहले साफ़ तस्वीर देखें') : t('Keep up your regular field visits', 'खेत की नियमित जाँच करते रहें')}</h2></div>
@@ -79,7 +81,7 @@ export function Dashboard() {
         <button className="summary-tile" aria-pressed={filter === 'all'} onClick={() => choose('all')}><MapPin aria-hidden="true"/><strong>{real.length}</strong><span>{t('Your saved fields', 'आपके खेत')}</span></button>
       </section>}
       <section id="my-fields" className="farmer-fields-section" aria-labelledby="fields-heading">
-        <div className="section-heading"><div><h2 id="fields-heading">{t('My fields', 'मेरे खेत')}</h2><p className="section-caption">{t('Urgent field visits appear first, followed by fields waiting for pictures.', 'पहले ज़रूरी जाँच वाले खेत, फिर तस्वीर की प्रतीक्षा वाले खेत दिखेंगे।')}</p></div>{real.length > 0 && <span>{t(`${visible.length} shown`, `${visible.length} दिख रहे हैं`)}</span>}</div>
+        <div className="section-heading"><div><span className="farmer-today-kicker">{t('YOUR FIELDS', 'आपकी ज़मीन')}</span><h2 id="fields-heading">{t('My fields', 'मेरे खेत')}</h2><p className="section-caption">{t('Urgent field visits appear first, followed by fields waiting for pictures.', 'पहले ज़रूरी जाँच वाले खेत, फिर तस्वीर की प्रतीक्षा वाले खेत दिखेंगे।')}</p></div>{real.length > 0 && <span>{t(`${visible.length} shown`, `${visible.length} दिख रहे हैं`)}</span>}</div>
         {fields.length > 0 && <div className="farmer-filter-area"><div className="farmer-search-row"><label className="farmer-search-label"><Search size={19} aria-hidden="true"/><span className="sr-only">{t("Search fields", "खेत खोजें")}</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={t("Search your fields or crops", "खेत या फ़सल खोजें")}/></label><button type="button" className="farmer-filter-toggle" aria-expanded={showAdvancedFilters} onClick={() => setShowAdvancedFilters(value => !value)}><SlidersHorizontal size={18} aria-hidden="true"/>{t("Filters", "फ़िल्टर")}{filter !== "all" ? " •" : ""}</button></div>{showAdvancedFilters && <div className="field-filters">
 
           <label>{t('Show fields', 'कौन से खेत दिखाएँ')}<select value={filter} onChange={event => setFilter(event.target.value)}><option value="all">{t('All fields', 'सभी खेत')}</option><option value="needs_inspection">{t('Fields to visit', 'जाकर देखने वाले खेत')}</option><option value="data">{t('Waiting for pictures', 'तस्वीर चाहिए')}</option><option value="due">{t('Visits / tasks due', 'तय काम बाकी')}</option><option value="no_unusual_change">{t('No big change seen', 'बड़ा बदलाव नहीं दिखा')}</option></select></label>
@@ -97,8 +99,8 @@ export function Dashboard() {
             {field.latestJob?.status === 'failed' && <p className="job-badge job-failed">{t('Picture search stopped. Open this field to try again.', 'तस्वीर की खोज पूरी नहीं हुई। खेत खोलकर फिर कोशिश करें।')}</p>}
             {Number(field.dueTasks) > 0 && <p className="due-badge">{t(`${field.dueTasks} planned ${Number(field.dueTasks) === 1 ? 'task' : 'tasks'} due`, `${field.dueTasks} तय काम बाकी`)}</p>}
             <div className="card-next"><ActionIcon size={18} aria-hidden="true"/><span>{t('Next:', 'अगला काम:')} <strong>{copy.actionLabel}</strong></span></div>
-            <details className="card-picture-details"><summary>{t('Picture date & details', 'तस्वीर की तारीख़ और जानकारी')}</summary><dl className="evidence-facts"><div><dt>{t('Last clear picture', 'पिछली साफ़ तस्वीर')}</dt><dd>{field.latestObservation ? date(field.latestObservation.observed_on) : t('Not available yet', 'अभी उपलब्ध नहीं')}</dd></div><div><dt>{t('Field seen clearly', 'खेत का साफ़ दिखा हिस्सा')}</dt><dd>{field.latestObservation?.valid_coverage_percent != null ? `${field.latestObservation.valid_coverage_percent}%` : t('Not available', 'उपलब्ध नहीं')}</dd></div></dl></details>
-            <footer><Link className="action-link" to={fieldActionHref(field)}>{copy.actionLabel}<ArrowRight size={17} aria-hidden="true"/></Link><Link className="card-open" to={`/fields/${field.id}/overview`}>{t('Open field', 'खेत खोलें')}</Link></footer>
+            <details className="card-picture-details"><summary><Satellite size={17} aria-hidden="true"/>{t('Satellite image information', 'सैटेलाइट तस्वीर की जानकारी')}</summary><dl className="evidence-facts"><div><dt>{t('Last clear picture', 'पिछली साफ़ तस्वीर')}</dt><dd>{field.latestObservation ? date(field.latestObservation.observed_on) : t('Not available yet', 'अभी उपलब्ध नहीं')}</dd></div><div><dt>{t('Field seen clearly', 'खेत का साफ़ दिखा हिस्सा')}</dt><dd>{field.latestObservation?.valid_coverage_percent != null ? `${field.latestObservation.valid_coverage_percent}%` : t('Not available', 'उपलब्ध नहीं')}</dd></div></dl></details>
+            <footer><Link className="action-link" to={fieldActionHref(field)}>{copy.actionLabel}<ArrowRight size={17} aria-hidden="true"/></Link><Link className="card-open" to={`/fields/${field.id}/overview`}>{t('Open field', 'खेत खोलें')}<ChevronRight size={16} aria-hidden="true"/></Link></footer>
           </article>;
         })}</div> : <div className="dashboard-state">
           <span className="empty-field-icon" aria-hidden="true"><Sprout size={36}/></span>
@@ -115,7 +117,7 @@ export function Dashboard() {
       </section>
       <p className="farm-limit-note">{t('Pictures help you spot changes. Only a field visit can help explain the cause.', 'तस्वीरें बदलाव दिखाती हैं। वजह समझने के लिए खेत में जाकर देखें।')} <Link to="/help">{t('How it works', 'कैसे काम करता है')} →</Link></p>
     </>}
-    {loading && <div className="dashboard-state" role="status">{t('Loading fields…', 'खेतों की जानकारी ला रहे हैं…')}</div>}
+    {loading && <div className="farmer-loading" role="status" aria-live="polite"><div className="farmer-loading-shape" aria-hidden="true"/><div className="farmer-loading-shape" aria-hidden="true"/><p>{t('Loading your fields…', 'आपके खेतों की जानकारी ला रहे हैं…')}</p></div>}
     {adding && <AddFieldWizard onComplete={fieldId => { setAdding(false); navigate(`/fields/${fieldId}/overview`); }} onCancel={() => setAdding(false)}/>}
   </main>;
 }
