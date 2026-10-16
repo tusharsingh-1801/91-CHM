@@ -32,7 +32,8 @@ export function Dashboard() {
   const inspection = real.filter(field => fieldAssessment(field).state === 'needs_inspection');
   const dataIssues = real.filter(field => ['image_too_old', 'not_enough_data', 'awaiting_analysis'].includes(fieldAssessment(field).state));
   const due = real.filter(field => Number(field.dueTasks) > 0);
-  const priority = [...new Map([...inspection, ...due, ...dataIssues].map(field => [field.id, field])).values()];
+  // Display one kind of next action at a time, so urgent field visits are not buried among imagery updates.
+  const priority = inspection.length ? inspection : due.length ? due : dataIssues;
   // Keep urgent real fields above routine fields, while making demo entries clearly secondary.
   const urgency = (field: DatabaseField) => {
     if (fieldAssessment(field).state === 'needs_inspection') return 0;
@@ -54,7 +55,7 @@ export function Dashboard() {
         <h1>{t('Your farm. Your next step.', 'आपके खेत। अब क्या करें?')}</h1>
         <p>{t('Choose a field, see what needs doing, and keep a note of your visit.', 'खेत चुनें, अगला काम देखें और खेत में जो दिखे उसे सेव करें।')}</p>
       </div>
-      <button className="primary-action farmer-add-field" onClick={() => setAdding(true)}><Plus size={20} aria-hidden="true"/>{t('Add a field', 'नया खेत जोड़ें')}</button>
+      <button className="primary-action farmer-add-field" aria-label={t('+ Add field', '+ खेत जोड़ें')} onClick={() => setAdding(true)}><Plus size={20} aria-hidden="true"/>{t('Add a field', 'नया खेत जोड़ें')}</button>
     </header>
     <nav className="overview-nav farmer-quick-nav" aria-label={t('Main navigation', 'मुख्य नेविगेशन')}>
       <a href="#my-fields"><MapPin size={17} aria-hidden="true"/>{t('My fields', 'मेरे खेत')}</a><Link to="/reports"><Camera size={17} aria-hidden="true"/>{t('Reports', 'रिपोर्ट')}</Link><Link to="/help"><ShieldCheck size={17} aria-hidden="true"/>{t('How to use', 'कैसे इस्तेमाल करें')}</Link>
