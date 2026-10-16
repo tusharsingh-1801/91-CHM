@@ -23,6 +23,7 @@ test('dashboard retry, empty state, wizard boundary controls and saved-field ret
 });
 
 test('field management, boundary editing, navigation and deletion work on mobile',async({page})=>{
+  test.slow(); // Full mobile editing, boundary drawing and deletion can exceed default 30s on CI.
   const state=await setup(page);await page.goto('/');await page.getByRole('link',{name:'Test field',exact:true}).click();
   await expect(page).toHaveURL(new RegExp('/overview$'));
   await page.getByRole('button',{name:'Manage field',exact:true}).click();await page.getByRole('button',{name:'Cancel',exact:true}).click();
