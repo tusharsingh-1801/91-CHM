@@ -67,3 +67,5 @@
 
 /* Prevent the existing fixed AI launcher covering modal actions on small screens. */
 body:has(.wizard-modal) .crop-assistant-launch,body:has([role="dialog"][aria-modal="true"]) .crop-assistant-launch{display:none}
+
+body:has(.wizard-modal) .farmer-mobile-nav,body:has([role="dialog"][aria-modal="true"]) .farmer-mobile-nav{display:none}
