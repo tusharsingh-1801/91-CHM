@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import './features/advanced-addons.css'
 import App from './App.tsx'
 
 const params = new URLSearchParams(window.location.search);
