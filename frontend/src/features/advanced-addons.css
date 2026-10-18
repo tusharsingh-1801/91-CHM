@@ -1,0 +1,23 @@
+.advanced-weather,.advanced-comparison,.advanced-notifications{border:1px solid #d6e6d7;border-radius:18px;background:#fff;padding:18px;margin:16px 0;color:#224833}
+.advanced-weather h2,.advanced-comparison h2{display:flex;align-items:center;gap:9px;margin:0 0 9px;font-size:20px;color:#195037}
+.advanced-notifications h3{display:flex;align-items:center;gap:9px;margin:0 0 7px;color:#195037}
+.advanced-weather p,.advanced-comparison p,.advanced-notifications p{font-size:14px;line-height:1.6;color:#4e6b58}
+.advanced-weather-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin:15px 0}
+.advanced-weather-grid article{display:grid;align-content:start;gap:10px;background:#f0f7ef;border-radius:12px;padding:10px;min-width:0}
+.advanced-weather-grid article strong{font-size:11px;overflow-wrap:anywhere}
+.advanced-weather-grid article div,.advanced-weather-grid article small{display:flex;align-items:center;gap:5px}
+.advanced-weather-grid article b{font-size:14px}
+.advanced-weather-grid article small{font-size:11px;line-height:1.35;color:#4c6c55}
+.advanced-weather-grid article svg{flex-shrink:0;color:#2a7950}
+.advanced-compare-controls{display:flex;gap:14px;margin:15px 0;flex-wrap:wrap}
+.advanced-compare-controls label{display:grid;gap:6px;flex:1;min-width:180px}
+.advanced-compare-controls select{width:100%;border:1px solid #cbdccf;border-radius:9px;padding:10px;color:#214b35;background:#fff}
+.advanced-compare-maps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.advanced-compare-maps>div{min-width:0;background:#f5f8f3;border:1px solid #d9e7d7;border-radius:12px;padding:10px}
+.advanced-compare-maps h3{margin:0 0 8px;font-size:15px}
+.advanced-compare-maps .open-field-map{height:260px!important}
+.advanced-compare-maps .open-map-frame{height:auto}
+.advanced-notifications button,.advanced-weather button{cursor:pointer;background:#256b45;border:0;border-radius:9px;color:#fff;padding:9px 13px;font-weight:700}
+.advanced-notifications small{display:block;font-size:12px;color:#577261;margin-top:12px}
+@media(max-width:900px){.advanced-weather-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:650px){.advanced-weather-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.advanced-compare-maps{grid-template-columns:1fr}.advanced-weather,.advanced-comparison,.advanced-notifications{padding:13px}.advanced-compare-maps .open-field-map{height:240px!important}}
