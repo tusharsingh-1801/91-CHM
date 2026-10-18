@@ -25,7 +25,7 @@ export function FieldForecast({field}:{field:DatabaseField}){
  return <section className="advanced-weather" aria-label={t('Seven-day forecast','सात दिन का मौसम पूर्वानुमान')}>
   <h2><CloudSun size={21} aria-hidden="true"/>{t('Next 7 days: weather forecast','अगले 7 दिन: मौसम पूर्वानुमान')}</h2>
   <p>{t('Location-based forecast supplied by Open-Meteo. This is a prediction, not measured historical weather or an irrigation prescription.','Open-Meteo से स्थान आधारित अनुमान। यह पिछले मौसम का रिकॉर्ड या सिंचाई की निश्चित सलाह नहीं है।')}</p>
-  {!hasCoords?<p>{t('Add field coordinates to enable forecast.','पूर्वानुमान के लिए खेत की लोकेशन जोड़ें।')}</p>:error?<p role="alert">{error} <button onClick={()=>setReload(v=>v+1)}>{t('Retry forecast','दोबारा मौसम देखें')}</button></p>:!data?<p role="status">{t('Loading forecast…','मौसम पूर्वानुमान ला रहे हैं…')}</p>:
+  {!hasCoords?<p>{t('Add field coordinates to enable forecast.','पूर्वानुमान के लिए खेत की लोकेशन जोड़ें।')}</p>:error?<p role="alert">{error} <button onClick={()=>setReload(v=>v+1)}>{t('Retry forecast','दोबारा मौसम देखें')}</button></p>:!data?<p>{t('Loading forecast…','मौसम पूर्वानुमान ला रहे हैं…')}</p>:
   <div className="advanced-weather-grid">{data.daily.time.slice(0,7).map((day,i)=><article key={day}><strong>{date(day)}</strong>
    <div><CloudSun size={16}/><b>{Math.round(data.daily.temperature_2m_max[i])}° / {Math.round(data.daily.temperature_2m_min[i])}°C</b></div>
    <small><Droplets size={13}/>{data.daily.precipitation_sum[i]} mm · {data.daily.precipitation_probability_max[i]}% {t('rain chance','बारिश की संभावना')}</small>
