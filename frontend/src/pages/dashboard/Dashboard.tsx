@@ -7,6 +7,7 @@ import { usePreferences } from '../../lib/preferencesContext';
 import { AddFieldWizard } from '../../features/fields/AddFieldWizard';
 import { cropPhoto } from '../../lib/cropPhotos';
 import { DashboardAddons } from '../../features/dashboard/DashboardAddons';
+import { VisitNotifications } from '../../features/dashboard/VisitNotifications';
 import { FarmerWelcome } from '../../features/dashboard/FarmerWelcome';
 
 export function Dashboard() {
@@ -83,6 +84,7 @@ export function Dashboard() {
         <button className="summary-tile" aria-pressed={filter === 'all'} onClick={() => choose('all')}><MapPin aria-hidden="true"/><strong>{real.length}</strong><span>{t('Your saved fields', 'आपके खेत')}</span></button>
       </section>}
       {real.length > 0 && <DashboardAddons fields={fields}/>}
+      {real.length > 0 && <VisitNotifications fields={real}/>}
       <section id="my-fields" className="farmer-fields-section" aria-labelledby="fields-heading">
         <div className="section-heading"><div><h2 id="fields-heading">{t('My fields', 'मेरे खेत')}</h2><p className="section-caption">{t('Urgent field visits appear first, followed by fields waiting for pictures.', 'पहले ज़रूरी जाँच वाले खेत, फिर तस्वीर की प्रतीक्षा वाले खेत दिखेंगे।')}</p></div>{real.length > 0 && <span>{t(`${visible.length} shown`, `${visible.length} दिख रहे हैं`)}</span>}</div>
         {fields.some(isDemo) && <div className="sample-field-notice" role="note"><div><strong>{t('Sample fields available', 'नमूना खेत उपलब्ध हैं')}</strong><p>{t('Explore sample records separately from your own fields.', 'अपने खेतों से अलग नमूना रिकॉर्ड देखें।')}</p></div><button type="button" aria-pressed={includeDemo} onClick={() => setIncludeDemo(value => !value)}>{includeDemo ? t('Hide sample fields', 'नमूना खेत छिपाएँ') : t('Show sample fields', 'नमूना खेत देखें')}</button></div>}
