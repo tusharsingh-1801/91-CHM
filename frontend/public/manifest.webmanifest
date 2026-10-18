@@ -1,0 +1,16 @@
+{
+  "name": "TerraScope Crop Monitoring",
+  "short_name": "TerraScope",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f8f0",
+  "theme_color": "#184532",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
