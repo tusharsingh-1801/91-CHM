@@ -19,10 +19,10 @@ export function SatelliteDateComparison({field,scenes,observations}:{field:Datab
   {!valid?<p>{t('Two accepted satellite images and a saved field boundary are required.','दो साफ़ सैटेलाइट तस्वीरें और खेत की सीमा चाहिए।')}</p>:
   <>
    <div className="advanced-compare-controls">
-    <label>{t('Before','पहले')}<select value={earlier.scene_id} onChange={e=>setBefore(e.target.value)}>{available.filter(o=>o.scene_id!==later.scene_id).map(o=><option key={o.scene_id} value={o.scene_id}>{date(o.observed_on)}</option>)}</select></label>
-    <label>{t('After','बाद में')}<select value={later.scene_id} onChange={e=>setAfter(e.target.value)}>{available.filter(o=>o.scene_id!==earlier.scene_id).map(o=><option key={o.scene_id} value={o.scene_id}>{date(o.observed_on)}</option>)}</select></label>
+    <label>{t('Before','पहले')}<select value={earlier.scene_id??''} onChange={e=>setBefore(e.target.value)}>{available.filter(o=>o.scene_id!==later.scene_id).map(o=><option key={o.scene_id} value={o.scene_id??''}>{date(o.observed_on)}</option>)}</select></label>
+    <label>{t('After','बाद में')}<select value={later.scene_id??''} onChange={e=>setAfter(e.target.value)}>{available.filter(o=>o.scene_id!==earlier.scene_id).map(o=><option key={o.scene_id} value={o.scene_id??''}>{date(o.observed_on)}</option>)}</select></label>
    </div>
-   <div className="advanced-compare-maps">{[earlier,later].map((o,i)=><div key={o.scene_id}><h3>{i===0?t('Before','पहले'):t('After','बाद में')} · {date(o.observed_on)}</h3><OpenFieldMap latitude={Number(field.latitude)} longitude={Number(field.longitude)} fieldName={field.name} boundaryGeojson={field.boundary_geojson} tileUrl={tile(o.scene_id)} opacity={.82}/><p>NDVI {Number(o.ndvi_value).toFixed(3)} · {t('Usable pixels','साफ़ पिक्सल')}: {o.valid_pixel_count}</p></div>)}</div>
+   <div className="advanced-compare-maps">{[earlier,later].map((o,i)=><div key={o.scene_id}><h3>{i===0?t('Before','पहले'):t('After','बाद में')} · {date(o.observed_on)}</h3><OpenFieldMap latitude={Number(field.latitude)} longitude={Number(field.longitude)} fieldName={field.name} boundaryGeojson={field.boundary_geojson} tileUrl={tile(o.scene_id??'')} opacity={.82}/><p>NDVI {Number(o.ndvi_value).toFixed(3)} · {t('Usable pixels','साफ़ पिक्सल')}: {o.valid_pixel_count}</p></div>)}</div>
    <p><strong>{t('NDVI change','NDVI बदलाव')}: {(Number(later.ndvi_value)-Number(earlier.ndvi_value)).toFixed(3)}</strong> · {t('Differences do not establish the cause of stress or disease.','बदलाव से रोग या परेशानी का कारण निश्चित नहीं होता।')}</p>
   </>}
  </section>;
