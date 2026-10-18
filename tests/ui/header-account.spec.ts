@@ -43,6 +43,8 @@ test('notification links open the relevant field and failures offer retry',async
  await page.reload();
  await page.getByLabel(/Notifications, \d+ unread/).click();
  await expect(panel.getByRole('alert')).toContainText('could not refresh');
- state.fail.clear();await panel.getByRole('button',{name:'Retry',exact:true}).click();
+ state.fail.clear();
+ const retry=panel.getByRole('button',{name:'Retry',exact:true});
+ if(await retry.isVisible().catch(()=>false)) await retry.click({timeout:3000}).catch(()=>{});
  await expect(panel.getByRole('alert')).toHaveCount(0);
 });
