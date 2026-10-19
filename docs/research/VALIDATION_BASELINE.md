@@ -15,3 +15,6 @@ The pure TypeScript evaluator in `shared/research/metrics.ts` computes confusion
 
 ## Next PR scope
 Add authenticated reviewer verification with audit history, migration, user-facing verification state, consent-aware scoped dataset export, and group-split research runner. Do not expose farm location or photographs in generic exports.
+
+## Expert review adapter (increment 2)
+`evaluateReviewedInspections` includes a record only when its provenance is `expert_review`, review status is `expert_verified`, and both a nonempty reviewer identifier and parseable review timestamp are supplied. Owner-reported or synthetic records are excluded, even if their status string says `expert_verified`. The evaluator is intentionally pure; it does **not** authenticate reviewers. No route should accept review metadata from an untrusted client as proof of expertise. The next implementation must add role-authorized server-side verification, immutable audit history and independent label acquisition before collecting performance evidence.
