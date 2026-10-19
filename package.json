@@ -13,6 +13,7 @@
     "test": "npm run test:launcher && node --import tsx --test backend/api/**/*.test.ts",
     "test:integration": "CHM_INTEGRATION=1 node --import tsx --test backend/api/services/*.integration.test.ts",
     "test:launcher": "node --test scripts/local.test.mjs",
+    "test:research": "node --import tsx --test shared/research/*.test.ts",
     "build": "npm run typecheck && vite --config frontend/vite.config.ts build",
     "lint": "oxlint frontend backend",
     "preview": "vite --config frontend/vite.config.ts preview",
