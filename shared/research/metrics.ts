@@ -15,5 +15,27 @@ export function evaluateBinary(rows:readonly LabelledInspection[]):BinaryMetrics
 /** Assert independent field groups across training and held-out evaluation. */
 export function assertFieldDisjoint(train:readonly Pick<LabelledInspection,'fieldId'>[],test:readonly Pick<LabelledInspection,'fieldId'>[]):void{
  const trainIds=new Set(train.map(r=>r.fieldId));
- if(trainIds.has('')||trainIds.has(undefined as unknown as string)||test.some(r=>!r.fieldId||trainIds.has(r.fieldId)))throw new Error('Field leakage or invalid field ID detected');
+ if(trainIds.has('')||train.some(r=>!r.fieldId)||test.some(r=>!r.fieldId||trainIds.has(r.fieldId)))throw new Error('Field leakage or invalid field ID detected');
+}
+
+/**
+ * Research-only adapter. The caller MUST load review records from an authorized
+ * server-side query, not from editable farmer/client JSON.
+ */
+export type ReviewedInspection={
+ fieldId:string;observedOn:string;actual:boolean;predicted:boolean;
+ provenance:'owner_reported'|'expert_review'|'synthetic';
+ reviewStatus:'unverified'|'expert_verified'|'rejected';
+ reviewerId:string|null;reviewedAt:string|null;
+};
+export function toEvaluableInspections(records:readonly ReviewedInspection[]):LabelledInspection[]{
+ return records.map(record=>{
+  const verified=record.provenance==='expert_review'&&record.reviewStatus==='expert_verified'&&
+   typeof record.reviewerId==='string'&&record.reviewerId.trim().length>0&&
+   typeof record.reviewedAt==='string'&&!Number.isNaN(Date.parse(record.reviewedAt));
+  return {fieldId:record.fieldId,observedOn:record.observedOn,actual:record.actual,predicted:record.predicted,verified};
+ });
+}
+export function evaluateReviewedInspections(records:readonly ReviewedInspection[]):BinaryMetrics{
+ return evaluateBinary(toEvaluableInspections(records));
 }
