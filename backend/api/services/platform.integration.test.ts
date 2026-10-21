@@ -1,9 +1,10 @@
 import {test,after} from 'node:test';import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';import type {Request,Response} from 'express';
 import {askAssistant} from '../controllers/assistantController.ts';
 import {pool} from '../db/pool.ts';import {syncNotifications,listNotifications,readNotifications,saveNotificationPreferences} from './notifications.ts';import {assistantHistory} from './assistantHistory.ts';import {forecastFor} from './forecast.ts';import {createFieldEvent} from '../controllers/fieldsController.ts';
+import {createExpertInspectionReview,listResearchReviewQueue,setScoutingResearchConsent} from '../controllers/researchController.ts';
 const enabled=process.env.CHM_INTEGRATION==='1';
 after(async()=>{await pool.end();});
-async function invoke(handler:(request:Request,response:Response)=>Promise<void>,account:{id:string;email:string},body:unknown={},params:Record<string,string>={},query:Record<string,string>={}){let status=200;let payload:any;await handler({body,params,query} as unknown as Request,{locals:{account},status(code:number){status=code;return this;},json(value:unknown){payload=value;}} as unknown as Response);return {status,payload};}
+async function invoke(handler:(request:Request,response:Response)=>Promise<void>,account:{id:string;email:string},body:unknown={},params:Record<string,string>={},query:Record<string,string>={}){let status=200;let payload:any;await handler({body,params,query} as unknown as Request,{locals:{account},status(code:number){status=code;return this;},json(value:unknown){payload=value;},setHeader(){}} as unknown as Response);return {status,payload};}
 test('platform persistence isolates owners, deduplicates notices and notes, and caches real-mode forecasts',{skip:!enabled},async()=>{
  const url=new URL(process.env.DATABASE_URL!);assert.ok(['localhost','127.0.0.1'].includes(url.hostname));assert.equal(url.pathname,'/chm_integration');
  const users:string[]=[];const fields:string[]=[];const original=globalThis.fetch;
@@ -44,4 +45,39 @@ test('platform persistence isolates owners, deduplicates notices and notes, and 
   const privateHistory=await invoke(assistantHistory,account,{}, {},{fieldId:fields[0]});
   assert.ok(privateHistory.payload.some((item:{content:string})=>item.content==='Private fixture'));
  }finally{globalThis.fetch=original;if(fields.length)await pool.query('delete from fields where id=any($1::uuid[])',[fields]);if(users.length)await pool.query('delete from app_users where id=any($1::uuid[])',[users]);}
+});
+
+test('research reviews require owner consent and store independent reviewer labels',{skip:!enabled},async()=>{
+ const url=new URL(process.env.DATABASE_URL!);assert.ok(['localhost','127.0.0.1'].includes(url.hostname));assert.equal(url.pathname,'/chm_integration');
+ const users:string[]=[];let field:string|undefined;
+ try{
+  for(const email of [`research-owner-${randomUUID()}@example.invalid`,`research-reviewer-${randomUUID()}@example.invalid`]){
+   users.push((await pool.query("insert into app_users(email,password_hash) values($1,'unused') returning id",[email])).rows[0].id);
+  }
+  const createdField=(await pool.query("insert into fields(name,crop,owner_id,provenance,location) values('Research consent fixture','Wheat',$1,'user_reported',ST_SetSRID(ST_MakePoint(77,28),4326)) returning id",[users[0]])).rows[0].id as string;
+  field=createdField;
+  const createdCase=(await pool.query(`insert into scouting_cases(field_id,client_key,observed_on,boundary_version,observation_category,growth_stage,severity,provenance,verification_status,reported_by)
+   values($1,$2,current_date,1,'visual_symptom','vegetative','moderate','owner_reported','unverified',$3) returning id`,[createdField,randomUUID(),users[0]])).rows[0].id as string;
+  await pool.query("insert into research_role_grants(user_id,role) values($1,'field_reviewer')",[users[1]]);
+  const owner={id:users[0],email:'owner@example.invalid'},reviewer={id:users[1],email:'reviewer@example.invalid'};
+  assert.equal((await invoke(listResearchReviewQueue,reviewer)).payload.cases.length,0);
+  const consent=await invoke(setScoutingResearchConsent,owner,{consented:true},{fieldId:createdField,caseId:createdCase});
+  assert.equal(consent.status,200);assert.equal(consent.payload.consented,true);
+  const queue=await invoke(listResearchReviewQueue,reviewer);
+  assert.equal(queue.payload.cases.length,1);assert.equal(queue.payload.cases[0].case_id,createdCase);
+  assert.equal('notes' in queue.payload.cases[0],false);assert.equal('reported_by' in queue.payload.cases[0],false);assert.equal('field_name' in queue.payload.cases[0],false);assert.equal('reported_category' in queue.payload.cases[0],false);
+  await invoke(setScoutingResearchConsent,owner,{consented:true},{fieldId:createdField,caseId:createdCase});
+  assert.equal((await pool.query('select count(*)::int n from scouting_research_consent_events where case_id=$1',[createdCase])).rows[0].n,1);
+  const reviewed=await invoke(createExpertInspectionReview,reviewer,{observed_on:new Date().toISOString().slice(0,10),observation_category:'general_observation',growth_stage:'flowering',severity:'mild',attest_ground_visit:true},{caseId:createdCase});
+  assert.equal(reviewed.status,201);assert.equal(reviewed.payload.review_basis,'ground_visit');
+  await assert.rejects(pool.query('update expert_inspection_reviews set severity=$1 where id=$2',['severe',reviewed.payload.id]),{code:'55000'});
+  await assert.rejects(pool.query('update scouting_research_consent_events set action=$1 where case_id=$2',['withdraw',createdCase]),{code:'55000'});
+  const withdrawn=await invoke(setScoutingResearchConsent,owner,{consented:false},{fieldId:createdField,caseId:createdCase});
+  assert.equal(withdrawn.payload.consented,false);
+  assert.equal((await invoke(listResearchReviewQueue,reviewer)).payload.cases.length,0);
+  assert.equal((await pool.query('select count(*)::int n from expert_inspection_reviews where case_id=$1',[createdCase])).rows[0].n,1);
+ }finally{
+  if(field)await pool.query('delete from fields where id=$1',[field]);
+  if(users.length)await pool.query('delete from app_users where id=any($1::uuid[])',[users]);
+ }
 });

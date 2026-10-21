@@ -1,0 +1,12 @@
+.research-review-page{max-width:900px;margin:0 auto;padding:clamp(16px,3vw,32px)}
+.research-review-page>header p,.research-review-card p{line-height:1.6}
+.research-review-card{margin:20px 0;padding:20px;border:1px solid #d5e3d1;border-radius:14px;background:#fff;color:#254b34}
+.research-review-card form{display:grid;gap:14px}
+.research-review-card label{display:grid;gap:7px}
+.research-review-card input:not([type=checkbox]),.research-review-card select{width:100%;min-height:42px;box-sizing:border-box;padding:9px;border:1px solid #c2d4ba;border-radius:8px;background:#fff;color:#254b34;font:inherit}
+.research-review-card label:has(input[type=checkbox]){grid-template-columns:auto 1fr;align-items:start}
+.research-review-card input[type=checkbox]{width:20px;height:20px;margin:0}
+.research-review-card button{min-height:42px;padding:8px 14px;border:1px solid #b8cfae;border-radius:8px;background:#f5f9ef;color:#2a5737;font:inherit;cursor:pointer}
+.research-review-card button:disabled{cursor:not-allowed;opacity:.65}
+.research-review-page :focus-visible{outline:3px solid #96b783;outline-offset:2px}
+@media(max-width:600px){.research-review-card{padding:15px}}

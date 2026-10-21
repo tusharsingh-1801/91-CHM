@@ -34,3 +34,9 @@ playwright-report/
 test-results/
 __pycache__/
 *.py[cod]
+
+# Local ML datasets and trained artifacts
+/data/external/
+/data/models/
+/data/raw/
+/data/reports/
