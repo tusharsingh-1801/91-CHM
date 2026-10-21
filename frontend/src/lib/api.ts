@@ -181,7 +181,7 @@ export type ScoutingCase = {
   id:string; observed_on:string; crop:string|null; symptoms:string|null; notes:string|null;
   observation_category:ObservationCategory; growth_stage:GrowthStage; severity:ObservationSeverity;
   provenance:'owner_reported'; verification_status:'unverified'|'expert_verified';
-  diagnosis_status:string; diagnosis:Record<string,unknown>; photos:ScoutingPhoto[];
+  diagnosis_status:string; diagnosis:Record<string,unknown>; photos:ScoutingPhoto[]; research_consent?:boolean;
 };
 export async function loadScouting(fieldId:string) {
   const response=await fetch(`/api/fields/${fieldId}/scouting`);
@@ -195,6 +195,31 @@ export async function saveScouting(fieldId:string,entry:{client_key:string;obser
   const payload=await response.json().catch(()=>({})) as ScoutingCase&{error?:string;diagnosis?:Record<string,unknown>};
   if(!response.ok)throw new Error(payload.error??'Scouting note could not be saved. Keep the form open and retry.');
   return payload;
+}
+export async function setScoutingResearchConsent(fieldId:string,caseId:string,consented:boolean) {
+  const response=await fetch(`/api/fields/${fieldId}/scouting/${caseId}/research-consent`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({consented})});
+  const payload=await response.json().catch(()=>({})) as {error?:string;consented?:boolean};
+  if(!response.ok||payload.consented!==consented)throw new Error(payload.error??'Research consent could not be updated');
+  return payload.consented;
+}
+export type ResearchReviewCase={case_id:string;observed_on:string;latitude:number;longitude:number};
+export type ExpertReviewInput={observed_on:string;observation_category:ObservationCategory;growth_stage:GrowthStage;severity:ObservationSeverity;attest_ground_visit:true};
+function isResearchReviewCase(value:unknown):value is ResearchReviewCase{
+  if(!value||typeof value!=='object')return false;
+  const item=value as Record<string,unknown>;
+  return typeof item.case_id==='string'&&typeof item.observed_on==='string'&&typeof item.latitude==='number'&&Number.isFinite(item.latitude)&&typeof item.longitude==='number'&&Number.isFinite(item.longitude);
+}
+export async function loadResearchReviewQueue() {
+  const response=await fetch('/api/research/review-queue');
+  const payload=await response.json().catch(()=>({})) as {cases?:unknown;error?:string};
+  if(!response.ok)throw new Error(payload.error??'Research review queue is unavailable');
+  if(!Array.isArray(payload.cases)||!payload.cases.every(isResearchReviewCase))throw new Error('Research review queue returned invalid records');
+  return payload.cases as ResearchReviewCase[];
+}
+export async function submitExpertInspectionReview(caseId:string,entry:ExpertReviewInput) {
+  const response=await fetch(`/api/research/cases/${caseId}/reviews`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)});
+  const payload=await response.json().catch(()=>({})) as {error?:string};
+  if(!response.ok)throw new Error(payload.error??'Field visit review could not be saved');
 }
 export async function loadFieldTasks(fieldId:string) {
   const response=await fetch(`/api/fields/${fieldId}/tasks`);
@@ -315,4 +340,49 @@ export async function loadForecast(fieldId:string):Promise<FieldForecast>{
  }:raw;
  if(!payload||!Array.isArray(payload.days)||typeof payload.issued_at!=='string')throw new Error('Invalid forecast response');
  return payload;
+}
+
+export type MaizePredictionResult = {
+  status: 'experimental';
+  crop: 'maize';
+  prediction: string;
+  probability: number;
+  predictions: Array<{label:string;probability:number}>;
+  model: string;
+  disclaimer: string;
+};
+
+export async function predictMaizeLeaf(
+  fieldId:string,
+  image:string
+):Promise<MaizePredictionResult> {
+  const response = await fetch(
+    `/api/fields/${encodeURIComponent(fieldId)}/maize/predict`,
+    {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({image})
+    }
+  );
+
+  const payload = await response.json().catch(
+    () => ({})
+  ) as Partial<MaizePredictionResult> & {error?:string};
+
+  if (!response.ok) {
+    throw new Error(
+      payload.error || 'Maize analysis unavailable.'
+    );
+  }
+
+  if (
+    payload.status !== 'experimental' ||
+    !Array.isArray(payload.predictions) ||
+    typeof payload.prediction !== 'string' ||
+    typeof payload.probability !== 'number'
+  ) {
+    throw new Error('Invalid prediction response.');
+  }
+
+  return payload as MaizePredictionResult;
 }

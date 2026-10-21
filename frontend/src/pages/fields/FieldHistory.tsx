@@ -1,7 +1,8 @@
+import {MaizeLeafAnalysis} from '../../features/fields/MaizeLeafAnalysis';
 import {OfflineNoteDraft} from '../../features/pwa/OfflineNoteDraft';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
-import { loadFieldEvents, createFieldEvent, deleteFieldEvent, loadScouting, saveScouting, loadFieldTasks, updateFieldTask, type ScoutingCase, type DatabaseField, type FieldEvent, type FieldTask, type TaskState } from '../../lib/api';
+import { loadFieldEvents, createFieldEvent, deleteFieldEvent, loadScouting, saveScouting, loadFieldTasks, updateFieldTask, setScoutingResearchConsent, type ScoutingCase, type DatabaseField, type FieldEvent, type FieldTask, type TaskState } from '../../lib/api';
 import { usePreferences } from '../../lib/preferencesContext';
 import {PhotoQualityPreview} from '../../features/fields/PhotoQualityPreview';
 import {isScoutingDraftDate} from '../../features/fields/scoutingDraft';
@@ -27,7 +28,7 @@ function EventNotes({event}:{event:FieldEvent}) {
   return <p>{event.notes || t('No notes provided','कोई नोट नहीं')}</p>;
 }
 
-function InspectionMetadata({cases,category,setCategory,stage,setStage,severity,setSeverity,t,date}:{
+function InspectionMetadata({cases,category,setCategory,stage,setStage,severity,setSeverity,t,date,consentSaving,consentError,onConsentChange,showResearchConsent}:{
   cases:ScoutingCase[];
   category:ObservationCategory;
   setCategory:(value:ObservationCategory)=>void;
@@ -37,6 +38,10 @@ function InspectionMetadata({cases,category,setCategory,stage,setStage,severity,
   setSeverity:(value:ObservationSeverity)=>void;
   t:(english:string,hindi:string)=>string;
   date:(value:string)=>string;
+  consentSaving:string|null;
+  consentError:string|null;
+  onConsentChange:(item:ScoutingCase)=>void;
+  showResearchConsent:boolean;
 }){
   const categoryText:Record<ObservationCategory,string>={
     general_observation:t('General observation','सामान्य जाँच'),
@@ -66,6 +71,7 @@ function InspectionMetadata({cases,category,setCategory,stage,setStage,severity,
   return <section className="inspection-metadata" aria-labelledby="inspection-metadata-title">
     <h3 id="inspection-metadata-title">{t('Structured inspection details','खेत की जाँच की जानकारी')}</h3>
     <p>{t('These self-reported details are saved with the next scouting photo. They are not expert-verified and do not diagnose crop problems.','यह जानकारी आपकी रिपोर्ट है और अगली जाँच की फ़ोटो के साथ सेव होगी। विशेषज्ञ ने इसे सत्यापित नहीं किया है और इससे बीमारी का पता नहीं चलता।')}</p>
+    {showResearchConsent&&cases.length>0&&<p className="quiet">{t('Research participation is optional. If enabled, an authorized reviewer can see this field location and observation date for an independent field visit. Your report labels, photos, free-text notes and account identity are not shown in the review queue. Withdrawal stops future review access; it does not erase audit history.','शोध में भाग लेना वैकल्पिक है। अनुमति देने पर अधिकृत समीक्षक स्वतंत्र खेत-जाँच के लिए खेत का स्थान और जाँच की तारीख़ देख सकता है। आपकी रिपोर्ट की श्रेणियाँ, फ़ोटो, लिखे हुए नोट और खाते की पहचान समीक्षा सूची में नहीं दिखाई जाती। अनुमति वापस लेने पर आगे की समीक्षा रुकती है; ऑडिट इतिहास नहीं मिटता।')}</p>}
     <label>{t('Observation category','जाँच का प्रकार')}<select value={category} onChange={event=>{if(isOneOf(observationCategories,event.target.value))setCategory(event.target.value);}}>
       {observationCategories.map(value=><option key={value} value={value}>{categoryText[value]}</option>)}
     </select></label>
@@ -79,6 +85,12 @@ function InspectionMetadata({cases,category,setCategory,stage,setStage,severity,
       <h4>{t('Inspection record','जाँच रिकॉर्ड')} · {date(item.observed_on)}</h4>
       <p>{t('Category','प्रकार')}: {categoryText[item.observation_category] ?? categoryText.unknown} · {t('Growth stage','विकास अवस्था')}: {stageText[item.growth_stage] ?? stageText.unknown} · {t('Severity','गंभीरता')}: {severityText[item.severity] ?? severityText.unknown}</p>
       <p className="quiet">{item.verification_status==='expert_verified'?t('Expert-reviewed observation','विशेषज्ञ द्वारा जाँची गई जानकारी'):t('Owner-reported; not expert-verified.','खेत के मालिक की रिपोर्ट; विशेषज्ञ द्वारा सत्यापित नहीं।')}</p>
+      {showResearchConsent&&<div>
+        <button type="button" className="text-button" disabled={consentSaving===item.id} onClick={()=>onConsentChange(item)}>
+          {consentSaving===item.id?t('Saving consent…','अनुमति सेव हो रही है…'):item.research_consent?t('Withdraw research consent','शोध की अनुमति वापस लें'):t('Optionally allow a research field visit','शोध के लिए खेत-जाँच की वैकल्पिक अनुमति दें')}
+        </button>
+        {consentError===item.id&&<p role="alert">{t('Consent could not be updated. Please retry.','अनुमति अपडेट नहीं हुई। फिर कोशिश करें।')}</p>}
+      </div>}
     </article>)}
   </section>;
 }
@@ -110,6 +122,8 @@ export function FieldHistory() {
   const [photoSaving, setPhotoSaving] = useState(false);
   const [photoError, setPhotoError] = useState(false);
   const [photoSaved, setPhotoSaved] = useState(false);
+  const [consentSaving,setConsentSaving]=useState<string|null>(null);
+  const [consentError,setConsentError]=useState<string|null>(null);
   const [key, setKey] = useState<string>(() => crypto.randomUUID());
   const [draftReadyField, setDraftReadyField] = useState<string | null>(null);
   const activeFieldId = useRef(field.id);
@@ -133,6 +147,8 @@ export function FieldHistory() {
     setPhotoSaving(false);
     setSaving(false);
     setDeleting(null);
+    setConsentSaving(null);
+    setConsentError(null);
     setEventError(false);
     setEventDate('');
     setNotes('');
@@ -222,14 +238,26 @@ export function FieldHistory() {
       try { const refreshedTasks = await loadFieldTasks(submittedFieldId); if (stillOnSubmittedVisit()) setTasks(refreshedTasks); } catch { if (stillOnSubmittedVisit()) setLoadError(true); }
     } catch { if (stillOnSubmittedVisit()) setPhotoError(true); } finally { if (stillOnSubmittedVisit()) setPhotoSaving(false); }
   }
+  async function changeResearchConsent(item:ScoutingCase) {
+    if(consentSaving)return;
+    const submittedFieldId=field.id;
+    const submittedVisit=fieldVisit.current;
+    const active=()=>mounted.current&&activeFieldId.current===submittedFieldId&&fieldVisit.current===submittedVisit;
+    setConsentSaving(item.id);setConsentError(null);
+    try{
+      const consented=await setScoutingResearchConsent(submittedFieldId,item.id,!item.research_consent);
+      if(active())setCases(current=>current.map(value=>value.id===item.id?{...value,research_consent:consented}:value));
+    }catch{if(active())setConsentError(item.id);}
+    finally{if(active())setConsentSaving(null);}
+  }
   if (loading) return <div className="diary-layout" role="status">{t('Loading field diary…','खेत की डायरी ला रहे हैं…')}</div>;
   return <div className="diary-layout"><div className="content-heading"><h2>{t('Field diary','खेत की डायरी')}</h2><Link to={`/fields/${field.id}/overview?action=visit`}>{t('Plan a field visit','खेत की जाँच तय करें')} →</Link></div>
     {loadError && <p className="error-notice" role="alert">{t('Some diary records could not be loaded.','डायरी की कुछ जानकारी नहीं मिली।')} <button onClick={() => { setLoading(true); setReload(value => value+1); }}>{t('Retry loading history','फिर कोशिश करें')}</button></p>}
     <OfflineDiaryDrafts fieldId={field.id} onSynced={saved=>setEvents(current=>[saved,...current.filter(item=>item.id!==saved.id)].sort((a,b)=>b.event_date.localeCompare(a.event_date)))}/>
     <section className="diary-form"><h3>{t('Log New Event','खेत का काम दर्ज करें')}</h3><form onSubmit={addEvent}><label>{t('Event Type','किस तरह का काम')}<select value={type} onChange={event => setType(event.target.value)}>{['planting','fertilizer','irrigation','pesticide','scouting','harvest','other'].map(value => <option key={value} value={value}>{eventTitle(value)}</option>)}</select></label><label>{t('Date','तारीख़')}<input type="date" required value={eventDate} onChange={event => setEventDate(event.target.value)}/></label><label>{t('Notes (Optional)','नोट (ज़रूरी नहीं)')}<textarea value={notes} maxLength={4000} onChange={event => setNotes(event.target.value)} rows={3}/></label>{eventError && <p role="alert">{t('Event could not be saved. Your entries are still here; please retry.','काम सेव नहीं हुआ। जानकारी यहीं है; फिर कोशिश करें।')}</p>}<button type="submit" className="primary-action" disabled={saving}>{saving ? t('Saving…','सेव कर रहे हैं…') : t('Save Event','काम सेव करें')}</button></form></section>
     <section aria-labelledby="events-title"><h3 id="events-title">{t('Recorded field work','दर्ज किए गए काम')}</h3>{!events.length && <p>{t('No events recorded for this field.','इस खेत का कोई काम अभी दर्ज नहीं है।')}</p>}{events.map(item => <article className="history-event" key={item.id}><div><strong>{eventTitle(item.event_type)}</strong><EventNotes event={item}/><small>{date(item.event_date)}</small></div><button type="button" className="text-button" disabled={deleting === item.id} onClick={async () => { if (!window.confirm(t('Delete this field event?','यह काम हटाएँ?'))) return; const submittedFieldId=field.id; const submittedVisit=fieldVisit.current; const active=()=>mounted.current&&activeFieldId.current===submittedFieldId&&fieldVisit.current===submittedVisit; setDeleting(item.id); try { await deleteFieldEvent(submittedFieldId,item.id); if(active()) setEvents(current => current.filter(value => value.id !== item.id)); } catch { if(active()) setLoadError(true); } finally { if(active()) setDeleting(null); } }}>{deleting === item.id ? t('Deleting…','हटा रहे हैं…') : t('Delete','हटाएँ')}</button></article>)}</section>
-    <InspectionMetadata cases={cases} category={observationCategory} setCategory={setObservationCategory} stage={growthStage} setStage={setGrowthStage} severity={severity} setSeverity={setSeverity} t={t} date={date}/>
-    <section className="scouting-panel" aria-labelledby="scouting-title"><h2 id="scouting-title" tabIndex={-1}>{t('Photo scouting','फ़ोटो और खेत की जाँच')}</h2><p>{t('Photograph what you see and add a note. Photos are saved to this field; automatic disease diagnosis is not available.','जो दिखे उसकी फ़ोटो और नोट जोड़ें। फ़ोटो इस खेत में सेव होगी; बीमारी की अपने आप पहचान अभी उपलब्ध नहीं है।')}</p><form onSubmit={addPhoto}><label>{t('Observation date','जाँच की तारीख़')}<input aria-label={t('Scouting observation date','खेत की जाँच की तारीख़')} type="date" required max={new Date().toLocaleDateString('en-CA')} value={photoDate} onChange={event => setPhotoDate(event.target.value)}/></label><label>{t('Symptoms','क्या दिख रहा है')}<textarea value={symptoms} maxLength={4000} onChange={event => setSymptoms(event.target.value)} rows={2}/></label><label>{t('Notes','नोट')}<textarea value={photoNotes} maxLength={4000} onChange={event => setPhotoNotes(event.target.value)} rows={3}/></label><label>{t('Crop photo','फ़सल की फ़ोटो')}<input id="scouting-photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" required onChange={event => { const image = event.target.files?.[0] ?? null; setPhoto(image); setPreview(image ? URL.createObjectURL(image) : ''); setPhotoError(false); }}/></label><small>{t('JPEG, PNG or WebP up to 5 MB. Take a clear, close photo in daylight.','JPEG, PNG या WebP, 5 MB तक। दिन की रोशनी में पास से साफ़ फ़ोटो लें।')}</small>{preview && <img className="scouting-photo-preview" src={preview} alt={t('Selected crop photo preview','चुनी फ़सल की फ़ोटो का पूर्वावलोकन')}/>}<PhotoQualityPreview fieldId={field.id} file={photo}/>{photoError && <p role="alert">{t('Photo could not be saved. Your note and selected photo are still here; check the date or connection, then retry.','फ़ोटो सेव नहीं हुई। आपका नोट और चुनी हुई फ़ोटो यहीं हैं; तारीख़ या इंटरनेट जाँचकर दोबारा कोशिश करें।')}</p>}<button type="submit" className="primary-action" disabled={photoSaving || !photo}>{photoSaving ? t('Saving photo and field note…','फ़ोटो और नोट सेव कर रहे हैं…') : t('Save scouting note','फ़ोटो और नोट सेव करें')}</button></form>{photoSaved && <p className="success-notice" role="status">{t('Photo and field note saved.','फ़ोटो और नोट सेव हो गए।')}</p>}
+    <InspectionMetadata cases={cases} category={observationCategory} setCategory={setObservationCategory} stage={growthStage} setStage={setGrowthStage} severity={severity} setSeverity={setSeverity} t={t} date={date} consentSaving={consentSaving} consentError={consentError} onConsentChange={item=>void changeResearchConsent(item)} showResearchConsent={document.documentElement.dataset.showcase!=='true'}/>
+    <section className="scouting-panel" aria-labelledby="scouting-title"><h2 id="scouting-title" tabIndex={-1}>{t('Photo scouting','फ़ोटो और खेत की जाँच')}</h2><p>{t('Photograph what you see and add a note. Photos are saved to this field; automatic disease diagnosis is not available.','जो दिखे उसकी फ़ोटो और नोट जोड़ें। फ़ोटो इस खेत में सेव होगी; बीमारी की अपने आप पहचान अभी उपलब्ध नहीं है।')}</p><form onSubmit={addPhoto}><label>{t('Observation date','जाँच की तारीख़')}<input aria-label={t('Scouting observation date','खेत की जाँच की तारीख़')} type="date" required max={new Date().toLocaleDateString('en-CA')} value={photoDate} onChange={event => setPhotoDate(event.target.value)}/></label><label>{t('Symptoms','क्या दिख रहा है')}<textarea value={symptoms} maxLength={4000} onChange={event => setSymptoms(event.target.value)} rows={2}/></label><label>{t('Notes','नोट')}<textarea value={photoNotes} maxLength={4000} onChange={event => setPhotoNotes(event.target.value)} rows={3}/></label><label>{t('Crop photo','फ़सल की फ़ोटो')}<input id="scouting-photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" required onChange={event => { const image = event.target.files?.[0] ?? null; setPhoto(image); setPreview(image ? URL.createObjectURL(image) : ''); setPhotoError(false); }}/></label><small>{t('JPEG, PNG or WebP up to 5 MB. Take a clear, close photo in daylight.','JPEG, PNG या WebP, 5 MB तक। दिन की रोशनी में पास से साफ़ फ़ोटो लें।')}</small>{preview && <img className="scouting-photo-preview" src={preview} alt={t('Selected crop photo preview','चुनी फ़सल की फ़ोटो का पूर्वावलोकन')}/>}<PhotoQualityPreview fieldId={field.id} file={photo}/>{field.crop?.toLowerCase().includes('maize') || field.crop?.toLowerCase().includes('corn') ? <MaizeLeafAnalysis key={field.id} fieldId={field.id}/> : null}{photoError && <p role="alert">{t('Photo could not be saved. Your note and selected photo are still here; check the date or connection, then retry.','फ़ोटो सेव नहीं हुई। आपका नोट और चुनी हुई फ़ोटो यहीं हैं; तारीख़ या इंटरनेट जाँचकर दोबारा कोशिश करें।')}</p>}<button type="submit" className="primary-action" disabled={photoSaving || !photo}>{photoSaving ? t('Saving photo and field note…','फ़ोटो और नोट सेव कर रहे हैं…') : t('Save scouting note','फ़ोटो और नोट सेव करें')}</button></form>{photoSaved && <p className="success-notice" role="status">{t('Photo and field note saved.','फ़ोटो और नोट सेव हो गए।')}</p>}
       <p className="quiet">{t('Diagnosis unavailable: no licensed, validated provider is configured. Photo quality review is not a crop diagnosis.','बीमारी की पहचान उपलब्ध नहीं है: कोई सत्यापित सेवा जुड़ी नहीं है। फ़ोटो की गुणवत्ता जाँचना बीमारी की पहचान नहीं है।')}</p>
       {!cases.length && <p>{t('No photos or scouting notes recorded for this field.','इस खेत की कोई फ़ोटो या जाँच का नोट नहीं है।')}</p>}{cases.map(item => <article className="scouting-case" key={item.id}><h3>{t('Field note','खेत का नोट')} · {date(item.observed_on)}</h3>{item.symptoms && <p>{item.symptoms}</p>}{item.notes && <p>{item.notes}</p>}{item.photos?.map(image => <div key={image.id}><img className="scouting-photo-preview" loading="lazy" alt={t('Saved crop scouting photo','सेव की हुई फ़सल की फ़ोटो')} src={document.documentElement.dataset.showcase==='true' && (image.preview_url?.startsWith('/images/')||image.preview_url?.startsWith('data:image/')) ? image.preview_url : `/api/fields/${field.id}/scouting/${item.id}/photos/${image.id}`} /><details><summary>{t('Photo quality','फ़ोटो की गुणवत्ता')}</summary>{image.quality}</details></div>)}<button className="text-button" disabled={deleting === item.id} onClick={async () => { if (!window.confirm(t('Delete this photo note and its follow-up task?','यह फ़ोटो नोट और उससे जुड़ा काम हटाएँ?'))) return; const submittedFieldId=field.id; const submittedVisit=fieldVisit.current; const active=()=>mounted.current&&activeFieldId.current===submittedFieldId&&fieldVisit.current===submittedVisit; setDeleting(item.id); try { const response = await fetch(`/api/fields/${submittedFieldId}/scouting/${item.id}`,{method:'DELETE'}); if (!response.ok) throw new Error('Delete failed'); if(!active()) return; setCases(current => current.filter(value => value.id !== item.id)); const updatedTasks=await loadFieldTasks(submittedFieldId); if(active()) setTasks(updatedTasks); } catch { if(active()) setLoadError(true); } finally { if(active()) setDeleting(null); } }}>{t('Delete photo note','फ़ोटो नोट हटाएँ')}</button></article>)}
     </section>

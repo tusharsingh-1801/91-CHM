@@ -297,3 +297,7 @@ def inspect_photo(payload: PhotoRequest):
                 'qualityNote':'Capture quality review only; not a disease diagnosis', 'assessment':assessment}
     except Exception as exc:
         raise HTTPException(422,'Photo could not be decoded safely. Use JPEG, PNG or WebP under 5 MB and 20 megapixels.') from exc
+
+# Experimental maize leaf classification
+from backend.engine.maize_inference import router as maize_router
+app.include_router(maize_router)

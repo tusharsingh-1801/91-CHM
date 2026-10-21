@@ -4,6 +4,7 @@ import {mkdir,writeFile,readFile,unlink} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {pool} from '../db/pool.ts';
 import {growthStages, observationCategories, observationSeverities} from '../../../shared/inspection.ts';
+import {RESEARCH_CONSENT_POLICY} from '../../../shared/research/consent.ts';
 import {engineUrl} from '../services/satellite.ts';
 import {decodeScoutingImage,validSanitizedJpeg} from '../services/photoValidation.ts';
 import {shouldRemoveFailedUploadPhoto,rollbackBeforeCommit,reconcileScoutingCommit,storedJpegDecodes} from '../services/scoutingRecovery.ts';
@@ -38,7 +39,10 @@ export async function previewScoutingPhoto(request:Request,response:Response){
  }
 }
 export async function listScouting(request:Request,response:Response){
- const result=await pool.query(`select ${scoutingCaseColumns},coalesce((select jsonb_agg(jsonb_build_object('id',p.id,'width',p.width,'height',p.height,'quality',p.quality)) from scouting_photos p where p.case_id=scouting_cases.id),'[]'::jsonb) photos from scouting_cases where field_id=$1 order by observed_on desc,created_at desc`,[request.params.fieldId]);response.json({cases:result.rows,diagnosis:diagnosisAvailability()});
+ const result=await pool.query(`select ${scoutingCaseColumns},
+  coalesce((select jsonb_agg(jsonb_build_object('id',p.id,'width',p.width,'height',p.height,'quality',p.quality)) from scouting_photos p where p.case_id=scouting_cases.id),'[]'::jsonb) photos,
+  coalesce((select action='consent' and policy_version=$2 from scouting_research_consent_events e where e.case_id=scouting_cases.id order by e.id desc limit 1),false) research_consent
+  from scouting_cases where field_id=$1 order by observed_on desc,created_at desc`,[request.params.fieldId,RESEARCH_CONSENT_POLICY]);response.json({cases:result.rows,diagnosis:diagnosisAvailability()});
 }
 type StoredScoutingPhoto={id:string;width:number;height:number;quality:string;storage_key:string};
 async function confirmedScoutingPhotos(caseId:string):Promise<Array<{id:string;width:number;height:number;quality:string}>|null>{

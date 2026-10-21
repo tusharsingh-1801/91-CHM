@@ -5,7 +5,7 @@ const id='00000000-0000-0000-0000-000000000161';
 const image=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/hZsAAAAASUVORK5CYII=','base64');
 
 test('scouting photo remains retryable and never fabricates a diagnosis',async({page})=>{
- let failFirst=true;const keys:string[]=[];
+ let failFirst=true;const keys:string[]=[];const consentChanges:boolean[]=[];
  await page.route('**/api/**',async route=>{
   const request=route.request(),path=new URL(request.url()).pathname;
   if(path==='/api/auth/session')return route.fulfill({json:{mode:'local',user:null}});
@@ -18,7 +18,11 @@ test('scouting photo remains retryable and never fabricates a diagnosis',async({
    expect(body.image).toMatch(/^data:image\/png;base64,/);
    expect(body.observation_category).toBe('visual_symptom');expect(body.growth_stage).toBe('vegetative');expect(body.severity).toBe('moderate');
    if(failFirst){failFirst=false;return route.fulfill({status:503,json:{error:'Photo could not be saved. Keep your draft and retry.'}});}
-   return route.fulfill({status:201,json:{id:'case-1',observed_on:'2026-10-15',crop:'Wheat',symptoms:'Leaf spots',notes:'North row',observation_category:body.observation_category,growth_stage:body.growth_stage,severity:body.severity,provenance:'owner_reported',verification_status:'unverified',diagnosis_status:'unavailable',diagnosis:{status:'unavailable'},photos:[{id:'00000000-0000-0000-0000-000000000162',width:1,height:1,quality:'needs_review'}]}});
+   return route.fulfill({status:201,json:{id:'case-1',observed_on:'2026-10-15',crop:'Wheat',symptoms:'Leaf spots',notes:'North row',observation_category:body.observation_category,growth_stage:body.growth_stage,severity:body.severity,provenance:'owner_reported',verification_status:'unverified',research_consent:false,diagnosis_status:'unavailable',diagnosis:{status:'unavailable'},photos:[{id:'00000000-0000-0000-0000-000000000162',width:1,height:1,quality:'needs_review'}]}});
+  }
+  if(path.endsWith('/research-consent')&&request.method()==='PUT'){
+   const consented=(request.postDataJSON() as {consented:boolean}).consented;consentChanges.push(consented);
+   return route.fulfill({json:{consented,policyVersion:'field-visit-v1'}});
   }
   if(path.includes('/photos/'))return route.fulfill({status:200,contentType:'image/png',body:image});
   return route.fulfill({json:[]});
@@ -40,5 +44,10 @@ test('scouting photo remains retryable and never fabricates a diagnosis',async({
  await expect(page.getByText('Owner-reported; not expert-verified.')).toBeVisible();
  await expect(page.getByText(/Visible symptom.*Vegetative.*Moderate/)).toBeVisible();
  await expect(page.getByAltText('Saved crop scouting photo')).toBeVisible();
+ await page.getByRole('button',{name:'Optionally allow a research field visit'}).click();
+ await expect(page.getByRole('button',{name:'Withdraw research consent'})).toBeVisible();
+ await page.getByRole('button',{name:'Withdraw research consent'}).click();
+ await expect(page.getByRole('button',{name:'Optionally allow a research field visit'})).toBeVisible();
+ expect(consentChanges).toEqual([true,false]);
  expect(keys).toHaveLength(2);expect(keys[0]).toBe(keys[1]);
 });
