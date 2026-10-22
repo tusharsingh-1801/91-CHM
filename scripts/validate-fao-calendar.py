@@ -13,6 +13,7 @@ import datetime as dt
 import json
 import sys
 import uuid
+from typing import Optional
 from pathlib import Path
 
 REQUIRED = ("field_id", "country", "region", "crop", "planting_start_month",
@@ -23,7 +24,7 @@ MONTH_FIELDS = ("planting_start_month", "planting_end_month",
                 "harvest_start_month", "harvest_end_month")
 
 
-def validate(path: Path, field_id: str | None) -> int:
+def validate(path: Path, field_id: Optional[str]) -> int:
     try:
         if field_id:
             uuid.UUID(field_id)
