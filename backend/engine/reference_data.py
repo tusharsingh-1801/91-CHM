@@ -381,7 +381,7 @@ def worldcereal(field, options):
     manifest=json.loads(manifest_path.read_text())
     if manifest.get('product')!='temporarycrops' or manifest.get('version')!='2021 v100' or manifest.get('license')!='CC BY 4.0':
         raise ValueError('WorldCereal manifest must identify licensed 2021 v100 temporarycrops classification')
-    files=[]
+    files=[];selected=[]
     for item in manifest['rasters']:
         path=(manifest_path.parent/item['file']).resolve()
         if not path.is_relative_to(manifest_path.parent.resolve()) or path.stat().st_size>MAX_BYTES:
@@ -392,9 +392,44 @@ def worldcereal(field, options):
             raise ValueError('WorldCereal checksum mismatch')
         with rasterio.open(path) as src:
             if reproject(geom,4326,src.crs).intersects(Polygon.from_bounds(*src.bounds)):
-                files.append(path)
+                files.append(path);selected.append({'sha256':item['sha256'],'source_url':item['source_url'],'bounds':list(src.bounds),'crs':str(src.crs)})
+    if not files:
+        return {'status':'not_configured','availability':'aoi_export_required','period':'2021','note':'Existing official raster does not cover this field. A matching official WorldCereal AOI export is required; existing rasters are preserved.'}
     stats=categorical(files,geom,{0:'Not temporary crop',100:'Temporary crop'})
-    return dict(stats,period='2021',resolution='10 m',product='temporarycrops',source_urls=[x['source_url'] for x in manifest['rasters']],note='Historical temporary-crop extent; not current farm crop identity')
+    return dict(stats,period='2021',resolution='10 m',product='temporarycrops',raster_provenance=selected,source_urls=[x['source_url'] for x in selected],note='Historical temporary-crop extent; not current farm crop identity')
+
+def cropharvest_feature_summary(folder):
+    receipt=folder/'feature-acquisition.json'
+    if not receipt.is_file():
+        return {'feature_sample_count':0,'feature_status':'not_downloaded','training_status':'not_trained'}
+    manifest=json.loads(receipt.read_text())
+    samples=manifest.get('samples')
+    if manifest.get('record')!='10251170' or manifest.get('license')!='CC BY-SA 4.0' or not isinstance(samples,list) or not samples or len(samples)>150000:
+        raise ValueError('Invalid CropHarvest feature receipt')
+    total=0
+    seen=set()
+    for sample in samples:
+        if not isinstance(sample,dict) or not re.fullmatch(r'[0-9]+_[A-Za-z0-9._-]+',str(sample.get('id',''))):
+            raise ValueError('Invalid feature sample ID')
+        candidate=folder/str(sample.get('file',''))
+        if candidate.is_symlink():
+            raise ValueError('Symlink feature sample refused')
+        path=candidate.resolve()
+        if not path.is_relative_to(folder.resolve()) or path.name!=sample['id']+'.h5' or not path.is_file() or path.is_symlink():
+            raise ValueError('Feature sample missing or outside cache')
+        size=path.stat().st_size
+        total+=size
+        if sample['id'] in seen or size!=sample.get('size_bytes') or size>64*1024*1024 or total>1024*1024*1024:
+            raise ValueError('Feature sample size or duplicate validation failed')
+        seen.add(sample['id'])
+        if hashlib.sha256(path.read_bytes()).hexdigest()!=sample.get('sha256'):
+            raise ValueError('Feature sample checksum mismatch')
+    if manifest.get('sample_count')!=len(samples):
+        raise ValueError('Feature sample count mismatch')
+    return {'feature_sample_count':len(samples),'feature_status':'downloaded_verified','feature_bytes':total,
+            'feature_source_url':manifest.get('source_url'),'feature_receipt_sha256':hashlib.sha256(receipt.read_bytes()).hexdigest(),
+            'training_status':'not_trained','note_features':'Processed research features, not farm measurements. Source attribution and independent evaluation remain required.'}
+
 
 def cropharvest(field,options):
     metadata=json.loads(fetch('https://zenodo.org/api/records/10251170',2*1024*1024).read_text())
@@ -421,12 +456,16 @@ def cropharvest(field,options):
     temp=path.with_suffix('.tmp')
     temp.write_bytes(content)
     temp.replace(path)
-    return {'status':'downloaded','file':str(path.relative_to(ROOT)),'sha256':hashlib.sha256(content).hexdigest(),'label_count':len(json.loads(content)['features']),'record_checksum':checksum,'note':'Official CC BY-SA 4.0 benchmark labels only; constituent source terms still apply. Training requires actual local feature samples, per-source licensing and held-out groups. No model has been trained or accuracy claimed.'}
+    return {'status':'downloaded','file':str(path.relative_to(ROOT)),'sha256':hashlib.sha256(content).hexdigest(),'label_count':len(json.loads(content)['features']),'record_checksum':checksum,**cropharvest_feature_summary(folder),'note':'Official CC BY-SA 4.0 benchmark data; constituent source terms still apply. Training requires per-source licensing and held-out groups. No model or accuracy is implied by acquisition.'}
 
 def fao_calendar(field,options):
     supplied=options.get('fao_calendar_csv')
     if not supplied:
-        return {'status':'manual','availability':'manual_import_required','note':'No verified machine export or redistribution permission. Pass --fao-calendar-csv with a locally reviewed CSV based on datasets/fao-calendar-template.csv. Each row must include the exact selected field_id and source/license/permission provenance. Regional windows are recommendations only and never update farm dates.'}
+        fixture=json.loads((ROOT/'datasets/calendar/india-crop-calendar.demo.json').read_text())
+        recommendations=[dict(row,source_title=fixture['source'],source_url=fixture['source_url'],license=fixture['license'],accessed_on='2026-10-23',permission_reference='Synthetic demo fixture; not FAO source data') for row in fixture['recommendations']]
+        return {'status':'manual','mode':'demo','is_demo':True,'availability':'demo_fallback','period':'illustrative seasonal windows',
+                'recommendations':recommendations,'official_data_status':'India not listed in official FAO API country coverage on 2026-10-23',
+                'official_source_url':'https://api-cropcalendar.apps.fao.org/api/v1/countries?language=en','note':fixture['notice']}
     path=Path(supplied).expanduser().resolve()
     if not path.is_file() or path.stat().st_size>4*1024*1024:
         raise ValueError('FAO calendar CSV must be a readable file no larger than 4 MiB')
@@ -480,6 +519,8 @@ def run(field, options, handlers=None):
             payload=(handlers or HANDLERS)[provider](field,options)
             status=payload.pop('status','downloaded')
             entry.update(status=status,payload=payload)
+            if provider=='fao-calendar' and payload.get('is_demo'):
+                entry.update(source='TerraScope Indian calendar — DEMO, not FAO data',version='demo-1',license='CC0-1.0 (synthetic fixtures)',source_url='https://github.com/tusharsingh-1801/91-CHM/tree/main/datasets/calendar')
             if payload.get('coverage_percent')==0:
                 entry.update(status='blocked',availability='unavailable',error='No valid source coverage for requested field/interval')
         except Unavailable as exc:
