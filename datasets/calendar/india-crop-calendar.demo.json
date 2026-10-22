@@ -1,0 +1,13 @@
+{
+  "mode": "demo",
+  "country_iso3": "IND",
+  "source": "TerraScope Indian crop-calendar demonstration",
+  "source_url": "https://github.com/tusharsingh-1801/91-CHM/tree/main/datasets/calendar",
+  "license": "CC0-1.0 (synthetic demonstration fixtures only)",
+  "notice": "DEMO ONLY — illustrative Indian seasonal windows, not FAO records, local agronomic advice or actual field dates. Official FAO country coverage does not list India at the recorded access check.",
+  "recommendations": [
+    {"region":"India — illustrative only","agroecological_zone":"Not zone-specific","crop":"Rice","season":"Kharif (demo)","planting_start_month":6,"planting_end_month":7,"harvest_start_month":10,"harvest_end_month":11},
+    {"region":"India — illustrative only","agroecological_zone":"Not zone-specific","crop":"Wheat","season":"Rabi (demo)","planting_start_month":11,"planting_end_month":12,"harvest_start_month":3,"harvest_end_month":4},
+    {"region":"India — illustrative only","agroecological_zone":"Not zone-specific","crop":"Maize","season":"Kharif (demo)","planting_start_month":6,"planting_end_month":7,"harvest_start_month":9,"harvest_end_month":10}
+  ]
+}

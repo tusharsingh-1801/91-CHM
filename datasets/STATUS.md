@@ -1,6 +1,6 @@
 # TerraScope reference dataset status
 
-Verified on **22 October 2026**. The acquisition probes and field-polygon smoke test used public sources. The smoke test was read-only and did not persist any result to a farmer field. The three database fields with polygon boundaries are unowned public-demo parcels, so no field-specific PostgreSQL ingestion was run.
+Verified against the local PostgreSQL database and dataset cache on **23 October 2026**. Earlier test-only evidence below has been superseded: the existing public-boundary parcel `15728878-9cb6-41af-bd0c-f2660426198b` already has persisted WorldCover, SoilGrids, CHIRPS and WorldCereal results. The database contains no farmer-owned boundary, so these are real source extractions for a benchmark polygon, not verified farm observations. Existing snapshots and files are preserved.
 
 ## Integration status
 
@@ -9,9 +9,9 @@ Verified on **22 October 2026**. The acquisition probes and field-polygon smoke 
 | ESA WorldCover 2021 v200 | Official FlatGeobuf tile index and only the intersecting 10 m S3 raster tile downloaded by bounded HTTP range requests. | Rasterio 1.4.3 smoke test produced equal-area, nodata-aware, polygon-clipped class areas and cropland share for a test AOI. Historical land cover only. | Provider result persists as a boundary-versioned dataset run; authenticated field API and Hindi/English display are wired. | No owned farm field was available to run or persist actual-farm results. |
 | CHIRPS v3 | Official daily final-rnl GeoTIFFs downloaded for 1–2 September 2026 during a test-AOI run. | Daily area-weighted mm, separate preliminary-sat fallback, missing-day state, spatial/temporal coverage and month totals with final/preliminary/unavailable counts. | Daily and monthly summaries persist as JSON in a boundary-versioned, field-specific run and display in the authenticated field view. | The two-day smoke test was not a full month or farmer-field ingestion. |
 | ISRIC SoilGrids 2.0 | Official WCS capabilities and all 24 bounded native-grid coverages (six properties × mean, Q0.05, Q0.95 and uncertainty) downloaded for a test AOI. | Mean, Q0.05, Q0.95 and uncertainty; field-area clipping/weighting; 0–5 cm depth and source units/scaling. WCS nodata sentinels are excluded. Modeled estimates, not soil tests. | Persistence and Hindi/English field UI wired. | Test AOI only; no owned farm field was available. |
-| ESA WorldCereal 2021 v100 | Official Zenodo metadata is reachable. No global archive was downloaded. Import accepts a locally exported AOI raster and checksum manifest. | SHA-256 and source/license checks, field-polygon intersection, class areas/coverage; explicitly historical temporary-crop classification. | Persistence and historical-map UI wired. | Requires a CDSE-authenticated AOI export; not current crop identity. |
-| NASA Harvest CropHarvest v14 | Downloaded 113,893 licensed benchmark label features from pinned Zenodo record 10251170; verified provider MD5 and stored content SHA-256. | Reproducible local HDF5 feature-manifest baseline validates checksums, label IDs, source licenses, official test flags, source-held-out partitions and real held-out metrics. | Dataset acquisition status persists; no farm inference or deployed model. | Licensed constituent feature samples and their attribution/terms are not present. No training or performance claim is made. |
-| FAO Crop Calendar | No bulk/direct download: public redistribution permission is not established. A bounded manual CSV import is available. | Validates selected field ID, regional windows, months, source URL, license, access date and per-record permission reference. Shows regional recommendations, never actual field dates. | Imported recommendations and provenance persist and display in the authenticated field view. | Requires a user-supplied, permission-reviewed CSV; provenance is recorded, not independently certified. |
+| ESA WorldCereal 2021 v100 | Official Zenodo metadata is reachable. No global archive was downloaded. Import accepts a locally exported AOI raster and checksum manifest. | SHA-256 and source/license checks, field-polygon intersection, class areas/coverage; explicitly historical temporary-crop classification. | Persistence and historical-map UI wired. | A checksum-registered official raster is now cached and two integrated snapshots exist for the benchmark parcel. It is not current crop identity. |
+| NASA Harvest CropHarvest v14 | Downloaded 113,893 licensed benchmark label features from pinned Zenodo record 10251170; verified provider MD5 and stored content SHA-256. | Reproducible local HDF5 feature-manifest baseline validates checksums, label IDs, source licenses, official test flags, source-held-out partitions and real held-out metrics. | Dataset acquisition status persists; no farm inference or deployed model. | 87,464 official processed HDF5 samples are now acquired from the 82,479,907-byte features archive (provider MD5 verified). A per-file SHA-256 receipt is cached. Source-level training attribution and evaluation remain separate; no model or performance claim is made. |
+| FAO Crop Calendar | No bulk/direct download: public redistribution permission is not established. A bounded manual CSV import is available. | Validates selected field ID, regional windows, months, source URL, license, access date and per-record permission reference. Shows regional recommendations, never actual field dates. | Imported recommendations and provenance persist and display in the authenticated field view. | No reviewed FAO rows are present; the persisted manual status is not imported calendar data. The Telangana horticulture seasonal reference is separate and is not relabeled as FAO. |
 
 ## Verified behavior
 
@@ -44,7 +44,7 @@ CropHarvest labels are cached by the downloader. Training requires actual offici
 .venv/bin/python scripts/train-cropharvest.py
 ```
 
-The script writes `held-out-evaluation.json` only after held-out evaluation passes its checks. No local feature samples were available during this verification, so there is no trained model or reported accuracy.
+The script writes `held-out-evaluation.json` only after held-out evaluation passes its checks. The official archive is now locally available: `npm run data:acquire:cropharvest` verifies the pinned archive, safely extracts bounded HDF5 files and records their checksums. `feature-acquisition.json` and `feature-label-audit.json` are under the CropHarvest cache. Acquisition is not training; there is no trained model or reported accuracy.
 
 For FAO, copy `datasets/fao-calendar-template.csv` and add only reviewed rows with an exact `field_id`, source citation and permission reference. Import it using:
 
@@ -53,3 +53,12 @@ npm run data:sync:references -- --fields <existing-owned-field-uuid> --providers
 ```
 
 Do not enter placeholder field IDs, actual planting dates inferred from regional windows, synthetic observations, or unlicensed labels/features.
+
+## 23 October acquisition/persistence evidence
+
+- CropHarvest `features.tar.gz`: 82,479,907 bytes, official MD5 `d757e6c32cb6d65aa517f003607f6f81`; 87,464 HDF5 samples extracted without replacing prior inputs.
+- All 87,464 sample IDs matched pinned labels; no unmatched IDs. Research split and source-term checks remain separate from acquiring samples.
+- `data:sync:references` rechecked all sample hashes and saved `feature_sample_count: 87464`, `feature_status: downloaded_verified`, `training_status: not_trained` for the existing public-boundary parcel. Previous snapshots remain in PostgreSQL.
+- Existing WorldCereal raster SHA-256 matched its manifest and its GeoTIFF metadata was readable. WorldCover, CHIRPS and SoilGrids integrated snapshots were confirmed in PostgreSQL. These pre-existing records were not relabeled as farmer observations.
+- Verification: 26 reference/acquisition/training Python tests passed (1 skipped), 85 API tests passed (5 skipped), 6 dataset-panel browser tests passed, production build passed.
+- FAO is still pending actual reviewed calendar rows; a manual-status snapshot and the separate Telangana seasonal reference do not count as FAO calendar imports.

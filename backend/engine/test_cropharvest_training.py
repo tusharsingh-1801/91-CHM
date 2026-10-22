@@ -76,3 +76,13 @@ def test_training_requires_constituent_source_terms(tmp_path):
     del manifest['constituent_licenses']['Train-A']['license']
     with pytest.raises(ValueError, match='Constituent source license'):
         trainer.train(manifest)
+
+
+def test_saved_model_artifact_reproduces_evaluation(tmp_path):
+    manifest=training_fixture(tmp_path)
+    output=tmp_path/'model.joblib'
+    result=trainer.train(manifest,output)
+    assert output.is_file()
+    assert hashlib.sha256(output.read_bytes()).hexdigest()==result['model_sha256']
+    assert result['train_samples']==10 and result['test_samples']==10
+    assert 0<=result['roc_auc']<=1

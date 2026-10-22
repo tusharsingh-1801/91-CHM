@@ -11,11 +11,12 @@ import re
 import sys
 from urllib.parse import urlparse
 import h5py
-import joblib
 import numpy as np
 import sklearn
+import joblib
+import time
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, balanced_accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
+from sklearn.metrics import balanced_accuracy_score, confusion_matrix, f1_score, accuracy_score, precision_score, recall_score, roc_auc_score
 
 ROOT=Path(__file__).resolve().parents[1]/'.local/datasets/reference/cropharvest'
 MAX_SAMPLE_BYTES=64*1024*1024
@@ -29,7 +30,7 @@ def checked_file(relative,checksum,max_bytes=MAX_SAMPLE_BYTES):
         raise ValueError(f'Checksum mismatch: {relative}')
     return path
 
-def train(manifest):
+def train(manifest, model_output=None):
     if not isinstance(manifest,dict) or manifest.get('record')!='10251170' or manifest.get('license')!='CC BY-SA 4.0':
         raise ValueError('Pinned official record and license required')
     if not isinstance(manifest.get('held_out_datasets'),list) or not manifest['held_out_datasets'] or any(not isinstance(x,str) or not x.strip() for x in manifest['held_out_datasets']) or len(set(manifest['held_out_datasets']))!=len(manifest['held_out_datasets']):
@@ -48,10 +49,10 @@ def train(manifest):
     permitted=manifest['constituent_licenses']
     holdout=set(manifest['held_out_datasets'])
     samples=manifest['samples']
-    if not 20<=len(samples)<=100000: raise ValueError('Require 20–100000 real feature samples')
-    x,y,groups,ids=[],[],[],[]
-    seen_ids,seen_hashes=set(),set()
+    if not 20<=len(samples)<=150000: raise ValueError('Require 20–150000 real feature samples')
+    x,y,groups,ids,hashes=[],[],[],[],[]
     feature_shape=None
+    seen_ids=set();seen_hashes=set();started=time.monotonic()
     for entry in samples:
         if not isinstance(entry,dict):
             raise ValueError('Each feature sample must be an object')
@@ -88,8 +89,9 @@ def train(manifest):
             feature_shape=feature.shape
         elif feature.shape!=feature_shape:
             raise ValueError('Feature sample dimensions differ; no implicit padding or truncation')
-        x.append(feature);y.append(int(label['is_crop']));groups.append(dataset);ids.append(key)
+        x.append(feature.astype(np.float32));y.append(int(label['is_crop']));groups.append(dataset);ids.append(key);hashes.append(entry['sha256'])
         seen_ids.add(key);seen_hashes.add(entry['sha256'])
+        if len(ids)%5000==0: print(f'Loaded {len(ids)}/{len(samples)} training/evaluation inputs',flush=True)
     x,y=np.stack(x),np.array(y)
     test=np.array([group in holdout for group in groups])
     if sum(test)<10 or sum(~test)<10 or len(set(y[test]))!=2 or len(set(y[~test]))!=2:
@@ -99,22 +101,25 @@ def train(manifest):
     if train_groups & test_groups:
         raise ValueError('Source dataset leakage between training and held-out evaluation')
     model=RandomForestClassifier(n_estimators=100,max_depth=12,class_weight='balanced',random_state=42,n_jobs=1)
+    print(f'Training on {sum(~test)} samples; holding out {sum(test)} samples by source',flush=True)
     model.fit(x[~test],y[~test]);predicted=model.predict(x[test])
-    joblib.dump(model,ROOT/'crop-noncrop-held-out-baseline.joblib')
-    return {'purpose':'Research held-out-source crop/non-crop baseline; not farm observations or deployment validation',
+    artifact={}
+    if model_output is not None:
+        model_output=Path(model_output);model_output.parent.mkdir(parents=True,exist_ok=True)
+        joblib.dump({'model':model,'input_shape':list(feature_shape),'flatten_order':'C','classes':[0,1],'record':'10251170','purpose':'crop/non-crop research baseline'},model_output,compress=3)
+        artifact={'model_file':str(model_output),'model_sha256':hashlib.sha256(model_output.read_bytes()).hexdigest()}
+        restored=joblib.load(model_output)['model']
+        if not np.array_equal(restored.predict(x[test]),predicted): raise ValueError('Saved model predictions differ')
+    return {**artifact,'duration_seconds':round(time.monotonic()-started,2),'train_samples':int(sum(~test)),'test_samples':int(sum(test)),'feature_count':int(x.shape[1]),'accuracy':float(accuracy_score(y[test],predicted)),'precision':float(precision_score(y[test],predicted,zero_division=0)),'recall':float(recall_score(y[test],predicted,zero_division=0)),'roc_auc':float(roc_auc_score(y[test],model.predict_proba(x[test])[:,1])),'purpose':'Research held-out-source crop/non-crop baseline; not farm observations or deployment validation',
             'record':'10251170','seed':42,'sklearn':sklearn.__version__,'train_ids':[ids[i] for i in np.flatnonzero(~test)],'test_ids':[ids[i] for i in np.flatnonzero(test)],
-            'held_out_datasets':sorted(holdout),'constituent_licenses':{name:permitted[name] for name in sorted(set(groups))},'labels_sha256':hashlib.sha256(labels_path.read_bytes()).hexdigest(),'test_sample_count':int(sum(test)),'train_sample_count':int(sum(~test)),
-            'accuracy':float(accuracy_score(y[test],predicted)),
-            'precision':float(precision_score(y[test],predicted,zero_division=0)),
-            'recall':float(recall_score(y[test],predicted,zero_division=0)),
-            'balanced_accuracy':float(balanced_accuracy_score(y[test],predicted)),
+            'held_out_datasets':sorted(holdout),'constituent_licenses':{name:permitted[name] for name in sorted(set(groups))},'labels_sha256':hashlib.sha256(labels_path.read_bytes()).hexdigest(),'balanced_accuracy':float(balanced_accuracy_score(y[test],predicted)),
             'f1':float(f1_score(y[test],predicted,zero_division=0)),'confusion_matrix':confusion_matrix(y[test],predicted,labels=[0,1]).tolist(),
             'input_manifest_sha256':hashlib.sha256(json.dumps(manifest,sort_keys=True).encode()).hexdigest()}
 
 if __name__=='__main__':
     try:
         manifest=json.loads((ROOT/'training-manifest.json').read_text())
-        result=train(manifest)
+        result=train(manifest,ROOT.parents[3]/'backend/engine/models/cropharvest-rf.joblib')
         (ROOT/'held-out-evaluation.json').write_text(json.dumps(result,indent=2)+'\n')
         print('Saved actual held-out evaluation in .local/datasets/reference/cropharvest/held-out-evaluation.json')
     except (OSError,ValueError,KeyError) as exc:

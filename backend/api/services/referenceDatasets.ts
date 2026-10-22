@@ -40,6 +40,13 @@ export function extractReference(field:Record<string,unknown>,options:ReferenceO
  });
 }
 export async function persistReference(field:{id:string;boundary_version:number},result:ReferenceResult){
+ if(result.provider==='fao-calendar'&&result.payload?.is_demo){
+  const official=await pool.query(`select id from reference_dataset_runs where field_id=$1 and boundary_version=$2 and provider='fao-calendar'
+   and coalesce(payload->>'is_demo','false')!='true' and jsonb_typeof(payload->'recommendations')='array'
+   and jsonb_array_length(payload->'recommendations')>0 limit 1`,[field.id,field.boundary_version]);
+  if(official.rowCount)return {...result,persisted:false,retained_existing_reference:true};
+ }
+
  // A failed attempt is appended, so previously successful snapshots remain auditable.
  // A boundary edit during extraction must not attach results to a new boundary.
  const status=result.status==='downloaded'&&result.provider!=='cropharvest'?'integrated':result.status;

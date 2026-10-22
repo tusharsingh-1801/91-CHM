@@ -246,3 +246,22 @@ def test_fao_manual_import_rejects_missing_permission_and_unverified_hosts(tmp_p
         writer.writeheader();writer.writerow(row)
     with pytest.raises(ValueError,match='HTTPS FAO source URL'):
         ref.fao_calendar({'id':field_id},{'fao_calendar_csv':str(path)})
+
+def test_fao_demo_fallback_is_explicit_and_does_not_set_field_dates():
+    field={'id':'existing-field','planting_date':'2026-06-18'}
+    result=ref.run(field,{'providers':['fao-calendar']})[0]
+    assert result['payload']['is_demo'] is True
+    assert len(result['payload']['recommendations'])==3
+    assert 'not FAO' in result['source']
+    assert field['planting_date']=='2026-06-18'
+
+
+def test_worldcereal_missing_aoi_is_not_marked_integrated(monkeypatch,tmp_path):
+    import hashlib,json
+    folder=tmp_path/'worldcereal';folder.mkdir()
+    path=raster(folder,[[100,0],[0,100]],nodata=255)
+    (folder/'manifest.json').write_text(json.dumps({'product':'temporarycrops','version':'2021 v100','license':'CC BY 4.0','rasters':[{'file':path.name,'source_url':'https://zenodo.org/records/7875105','sha256':hashlib.sha256(path.read_bytes()).hexdigest()}]}))
+    monkeypatch.setattr(ref,'CACHE',tmp_path)
+    result=ref.worldcereal({'geometry':mapping(box(77,17,77.001,17.001))},{})
+    assert result['status']=='not_configured'
+    assert result['availability']=='aoi_export_required'

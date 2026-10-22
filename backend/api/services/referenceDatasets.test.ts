@@ -36,3 +36,11 @@ test('reference persistence never marks a changed boundary integrated',async()=>
   await assert.rejects(persistReference({id:'field',boundary_version:2},result),/boundary changed/);
  }finally{pool.query=original;}
 });
+test('demo calendar persistence preserves an existing reviewed reference',async()=>{
+ const original=pool.query;let calls=0;
+ try{
+  pool.query=(async(sql:string)=>{calls++;assert.match(sql,/recommendations/);return {rows:[{id:'reviewed'}],rowCount:1};}) as typeof pool.query;
+  const saved=await persistReference({id:'field',boundary_version:1},{provider:'fao-calendar',status:'manual',source:'DEMO',source_url:'https://example.invalid',version:'demo-1',license:'CC0',fetched_at:'2026-10-23T00:00:00Z',payload:{is_demo:true}});
+  assert.equal(saved.persisted,false);assert.equal(calls,1);
+ }finally{pool.query=original;}
+});
