@@ -1,3 +1,4 @@
+import {listReferenceDatasets} from '../controllers/referenceDatasetsController.ts';
 import {predictMaize} from '../controllers/maizeController.ts';
 import {getForecast} from '../services/forecast.ts';
 import {listNotifications,readNotifications,saveNotificationPreferences} from '../services/notifications.ts';
@@ -58,6 +59,7 @@ router.patch('/fields/:fieldId/location', updateFieldLocation);
 router.post('/fields/:fieldId/jobs',enqueue);
 router.get('/fields/:fieldId/jobs',listJobs);
 router.post('/fields/:fieldId/jobs/:jobId/retry',retryJob);
+router.get('/fields/:fieldId/datasets',listReferenceDatasets);
 router.get('/fields/:fieldId/alerts', getFieldAlerts);
 router.patch('/fields/:fieldId/alerts/:alertId',updateFieldAlert);
 router.patch('/fields/:fieldId/alerts/:alertId/resolve', resolveFieldAlert);

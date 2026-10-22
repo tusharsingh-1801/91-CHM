@@ -1,3 +1,4 @@
+import {ReferenceDatasets} from '../../features/fields/ReferenceDatasets';
 import {FieldForecast} from '../../features/weather/FieldForecast';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useOutletContext, useSearchParams } from 'react-router-dom';
@@ -61,6 +62,7 @@ export function FieldOverview() {
       {(field.isDemo || field.provenance === 'public_boundary' || field.provenance === 'demo') && <p className="demo-label">{t('Demo / public parcel. Current crop and dates are unverified.', 'डेमो / सार्वजनिक खेत। अभी की फ़सल और तारीख़ें सत्यापित नहीं हैं।')}</p>}
     </section>
     <FieldJourney field={field}/>
+    <ReferenceDatasets fieldId={field.id}/>
     <FieldNextSteps field={field}/>
     {copy.action === 'images' && <ImageCheckPanel field={field} onComplete={refreshField}/>}
     <section className="quick-actions field-shortcuts no-print" aria-label={t('Field shortcuts', 'खेत के काम')}>

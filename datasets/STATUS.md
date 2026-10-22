@@ -1,24 +1,55 @@
-# Public demo data status
+# TerraScope reference dataset status
 
-Verified on 15 October 2026 against the local native services.
+Verified on **22 October 2026**. The acquisition probes and field-polygon smoke test used public sources. The smoke test was read-only and did not persist any result to a farmer field. The three database fields with polygon boundaries are unowned public-demo parcels, so no field-specific PostgreSQL ingestion was run.
 
-| Public parcel | Area (ha) | Weather days | Satellite scenes | Processed dates | Latest observation |
-|---|---:|---:|---:|---:|---|
-| Public demo: India parcel 4054 | 1.36 | 30 | 10 | 2 | 2026-10-05 |
-| Public demo: India parcel 8681 | 1.47 | 30 | 10 | 2 | 2026-10-12 |
-| Public demo: India parcel 3178 | 2.81 | 30 | 9 | 2 | 2026-10-12 |
+## Integration status
 
-Total added for public demos: **90 daily weather records, 29 scene metadata records and 6 field-clipped vegetation observations**. Each observation contains NDVI, NDRE, NDMI, SAVI, EVI and valid-pixel coverage. The local UI was checked for a populated NDVI table, trend response, source notice and weather chart.
+| Dataset | Downloader / actual data | Processing | PostgreSQL/API/UI | Current blocker or limitation |
+|---|---|---|---|---|
+| ESA WorldCover 2021 v200 | Official FlatGeobuf tile index and only the intersecting 10 m S3 raster tile downloaded by bounded HTTP range requests. | Rasterio 1.4.3 smoke test produced equal-area, nodata-aware, polygon-clipped class areas and cropland share for a test AOI. Historical land cover only. | Provider result persists as a boundary-versioned dataset run; authenticated field API and Hindi/English display are wired. | No owned farm field was available to run or persist actual-farm results. |
+| CHIRPS v3 | Official daily final-rnl GeoTIFFs downloaded for 1–2 September 2026 during a test-AOI run. | Daily area-weighted mm, separate preliminary-sat fallback, missing-day state, spatial/temporal coverage and month totals with final/preliminary/unavailable counts. | Daily and monthly summaries persist as JSON in a boundary-versioned, field-specific run and display in the authenticated field view. | The two-day smoke test was not a full month or farmer-field ingestion. |
+| ISRIC SoilGrids 2.0 | Official WCS capabilities and all 24 bounded native-grid coverages (six properties × mean, Q0.05, Q0.95 and uncertainty) downloaded for a test AOI. | Mean, Q0.05, Q0.95 and uncertainty; field-area clipping/weighting; 0–5 cm depth and source units/scaling. WCS nodata sentinels are excluded. Modeled estimates, not soil tests. | Persistence and Hindi/English field UI wired. | Test AOI only; no owned farm field was available. |
+| ESA WorldCereal 2021 v100 | Official Zenodo metadata is reachable. No global archive was downloaded. Import accepts a locally exported AOI raster and checksum manifest. | SHA-256 and source/license checks, field-polygon intersection, class areas/coverage; explicitly historical temporary-crop classification. | Persistence and historical-map UI wired. | Requires a CDSE-authenticated AOI export; not current crop identity. |
+| NASA Harvest CropHarvest v14 | Downloaded 113,893 licensed benchmark label features from pinned Zenodo record 10251170; verified provider MD5 and stored content SHA-256. | Reproducible local HDF5 feature-manifest baseline validates checksums, label IDs, source licenses, official test flags, source-held-out partitions and real held-out metrics. | Dataset acquisition status persists; no farm inference or deployed model. | Licensed constituent feature samples and their attribution/terms are not present. No training or performance claim is made. |
+| FAO Crop Calendar | No bulk/direct download: public redistribution permission is not established. A bounded manual CSV import is available. | Validates selected field ID, regional windows, months, source URL, license, access date and per-record permission reference. Shows regional recommendations, never actual field dates. | Imported recommendations and provenance persist and display in the authenticated field view. | Requires a user-supplied, permission-reviewed CSV; provenance is recorded, not independently certified. |
 
-The three original fields remain separate and unchanged by the public-demo import. Repeat import was checked: three demos and one source-attribution event per demo, without duplicates.
+## Verified behavior
 
-## Data meaning
+- `npm run data:sync:references -- --fields UUID[,UUID]` requires explicit existing UUIDs, selects geometry/boundary revision from PostgreSQL and isolates provider failures. Providers and date range can be selected; a missing field is reported and causes a non-zero exit.
+- HTTP range responses are validated, global-raster fallback is refused, byte/pixel bounds are enforced, and temporary downloads are atomically cached under ignored `.local/datasets/reference/`.
+- Persistence rechecks the field boundary version at insert time. Historical snapshots are retained; boundary edits cannot attach an old extraction to a new boundary.
+- API reads require account authentication and field ownership. Old-boundary runs are filtered out.
+- `npm run migrate` successfully applied `1792600000000_reference-datasets` to the local loopback PostgreSQL/PostGIS database. No actual farmer-field records were written.
+- Public source access probes returned HTTP 200 for WorldCover, CHIRPS, SoilGrids WCS capabilities, WorldCereal metadata, CropHarvest metadata and FAO site. A metadata response is not evidence that the corresponding full dataset was downloaded.
 
-- Boundaries: FTW India reference year **2016**, CC BY 4.0; see [attribution](ATTRIBUTION.md).
-- Weather: NASA POWER, **13 September–12 October 2026**, 30 available daily records per demo.
-- Imagery: real Sentinel-2 L2A scenes from Earth Search; indices calculated by the local Python engine.
-- Crop identity, actual planting/harvest dates and expected yield: **unknown**, not filled with guesses.
-- Trend is based on only two processed dates per demo; it is a small-sample indicator, not a calibrated yield forecast or crop-stage diagnosis.
-- Source catalog: nine sources; soil, crop classification, alternate rainfall and calendars remain reference-only rather than silently imported data.
+## Reproduction and local-only input formats
 
-Validation: production build, TypeScript, lint, 14 Node tests, nine browser workflows (plus the updated history/provenance paths) passed. Live local checks confirmed all five vegetation indices, coverage, trend responses and weather data for the three demos.
+Use Node 24, Python 3.11 where available, PostGIS and the repository Python environment:
+
+```bash
+npm ci
+.venv/bin/python -m pip install -r backend/engine/requirements.txt
+.venv/bin/python -m pip install -r datasets/requirements.txt
+cp .env.example .env  # only for a new local setup; preserve an existing .env
+npm run migrate
+npm start
+npm run data:sync:references -- --fields <existing-owned-field-uuid> --providers worldcover,chirps,soilgrids --start 2026-09-01 --end 2026-09-30
+```
+
+The WorldCereal manual export belongs in `.local/datasets/reference/worldcereal/` with a `manifest.json` containing `product: "temporarycrops"`, `version: "2021 v100"`, `license: "CC BY 4.0"`, and `rasters: [{"file":"<relative GeoTIFF>","source_url":"<official ESA/Zenodo HTTPS URL>","sha256":"<64 lowercase hex>"}]`. Never use a global archive or an unverified checksum.
+
+CropHarvest labels are cached by the downloader. Training requires actual official `{index}_{dataset}.h5` feature samples under `.local/datasets/reference/cropharvest/`, each with a SHA-256 in `training-manifest.json`, a source-specific HTTPS URL/license in `constituent_licenses`, and source dataset names in `held_out_datasets`. Run:
+
+```bash
+.venv/bin/python scripts/train-cropharvest.py
+```
+
+The script writes `held-out-evaluation.json` only after held-out evaluation passes its checks. No local feature samples were available during this verification, so there is no trained model or reported accuracy.
+
+For FAO, copy `datasets/fao-calendar-template.csv` and add only reviewed rows with an exact `field_id`, source citation and permission reference. Import it using:
+
+```bash
+npm run data:sync:references -- --fields <existing-owned-field-uuid> --providers fao-calendar --fao-calendar-csv /absolute/path/to/reviewed-calendar.csv
+```
+
+Do not enter placeholder field IDs, actual planting dates inferred from regional windows, synthetic observations, or unlicensed labels/features.

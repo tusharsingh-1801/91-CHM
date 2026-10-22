@@ -1,23 +1,29 @@
-# Remaining public datasets: acquisition status
+# Remaining dataset access and verification
 
-This is an **opt-in reference-data fetcher**, not an ML training pipeline or PostgreSQL ingestion. It never fills missing farmer observations with guesses.
+All six requested connectors now have a shared Python extraction/persistence/API/UI path. The scripts do not replace missing measurements with fabricated values. See [STATUS.md](STATUS.md) for verification evidence and exact completion limits.
 
-Run from repository root:
+## Provider-specific acquisition
+
+- **ESA WorldCover 2021:** Download the official FlatGeobuf index once, select intersecting tiles for the submitted polygon, and retrieve only clipped raster blocks using validated HTTP byte ranges. The engine applies source CRS transforms, nodata masks, equal-area fractional clipping, coverage accounting and land-cover class aggregation. Cropland share is historical map context, not crop identity.
+- **CHIRPS v3:** Advertised official daily files are looked up from the provider's year directories. Final `rnl` is preferred; preliminary `sat` is used when final is absent or returns 404. Each daily estimate includes source URL, revision, spatial coverage and missing status. Monthly totals distinguish requested, available, final, preliminary and unavailable days; missing is never converted to zero. Preliminary data is eligible for refresh on a later sync.
+- **ISRIC SoilGrids:** Uses the provider's official WCS `GetCoverage` endpoint, rather than the unavailable REST endpoint. Requests are bounded to the submitted field bbox and native 250 m-scale dimensions for 0–5 cm pH, SOC, nitrogen, sand, silt and clay, including mean, Q0.05, Q0.95 and uncertainty. Native integer scale factors are converted to pH, g/kg or percent. Results are model predictions and cannot replace laboratory tests.
+- **ESA WorldCereal:** Zenodo metadata is checked, but its large global archive is not downloaded automatically. Use the authenticated WorldCereal/CDSE workflow to export a 2021 v100 `temporarycrops` map for the AOI, then provide the relative raster filename, official HTTPS source URL, declared product/license and SHA-256 in the local manifest. The importer rejects path escapes and changed checksums, intersects the actual field polygon, and reports coverage/classes as a historical map.
+- **NASA Harvest CropHarvest:** Fetches `labels.geojson` from pinned Zenodo record 10251170 after size, record license, and provider MD5 checks; the verified label cache also reports SHA-256. Full satellite archives are tens of GB and are not downloaded. Training needs actual official feature HDF5 samples and each constituent dataset's license/citation. It blocks sample/label mismatch, missing attribution, duplicate data, incompatible shapes, checksum failure, source-dataset leakage and invalid held-out partitions. No score is emitted until real held-out evaluation runs.
+- **FAO Crop Calendar:** No verified permission for automated bulk extraction or redistribution was found. The direct-fetcher reports that blocker. Its opt-in manual CSV import validates field-scoped regional recommendations, month/date ranges, FAO HTTPS source, license and per-row permission reference. These records remain clearly labeled regional guidance, not actual farm dates.
+
+## Cache, sync and API
+
+Local source files and reports are ignored under `.local/datasets/reference/`. The sync command needs existing, actual PostgreSQL field IDs:
 
 ```bash
-python3 scripts/fetch-reference-datasets.py --source all
-python3 scripts/fetch-reference-datasets.py --source soilgrids --lat 26.23 --lon 81.24
+npm run data:sync:references -- --fields <owned-field-uuid>[,<owned-field-uuid>] \
+  --providers worldcover,chirps,soilgrids --start YYYY-MM-DD --end YYYY-MM-DD
 ```
 
-The coordinates above are an example only; use actual field coordinates. SoilGrids point data is a coarse modeled estimate, not a laboratory soil test. Its public REST service may return 429/5xx or be unavailable. WorldCover acquisition fetches the official GeoJSON tile **index only**, not raster pixels. All outputs and the machine-readable failure/status report are stored in ignored `.local/datasets/reference/`.
+Supported providers: `worldcover`, `chirps`, `soilgrids`, `worldcereal`, `cropharvest`, `fao-calendar`. The date interval is optional, but `--start` and `--end` must be supplied together. The command requires explicit real UUIDs, refuses more than 50 IDs, reads current PostGIS field polygons and records a JSON summary at `.local/datasets/reference/sync-report.json`. One provider failure does not stop other providers. Missing fields, extraction failures and persistence errors are reported; the process exits non-zero when a requested field cannot be synchronized.
 
-| Source | Current acquisition scope |
-|---|---|
-| SoilGrids | Point-query downloader with actual coordinates; no automatic DB import |
-| WorldCover | Official FlatGeobuf tile index downloader; 516,760-byte index confirmed by local run on 2026-10-22; raster tiles not fetched |
-| CropHarvest | Reference only; no training data downloaded |
-| WorldCereal | Reference only; no geospatial extraction implemented |
-| CHIRPS v3 | Reference only; no time-series extraction implemented |
-| FAO Crop Calendar | Reference only; no crop/region extraction implemented |
+`reference_dataset_runs` stores provider, license, source URL, fetch timestamp, status, period, coverage, diagnostics and JSON statistics against `field_id` and `boundary_version`. A boundary edit during acquisition prevents insertion. Authenticated `GET /api/fields/:fieldId/datasets` validates field ownership, paginates, and hides results for prior boundary versions. The field overview exposes provider status and source caveats in Hindi/English.
 
-No verified crop-disease, crop-yield, or independent expert-labelled ground truth is supplied by these connectors. Do not claim trained-model performance from these reference files.
+## Known non-completions
+
+This implementation does not automatically obtain CDSE credentials, certify FAO permissions, download very large global archives, invent CropHarvest constituent licenses, or claim crop identity from 2021 rasters. No farmer-owned field was available in the verified local database; no real farmer dataset run was persisted. See [STATUS.md](STATUS.md) and [catalog.json](catalog.json) for the latest per-provider evidence.

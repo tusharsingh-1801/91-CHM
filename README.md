@@ -131,6 +131,20 @@ The web interface adapts to phones, tablets, laptops, and desktops, including po
 
 To use the running app from another device on the same trusted Wi-Fi, set `WEB_HOST=0.0.0.0` in `.env`, restart with `npm run stop` then `npm start`, and open `http://<computer-LAN-IP>:5173` on that device (or your configured `WEB_PORT`). Allow the web port through the computer's firewall if needed. Keep the API and Python engine local: the frontend proxies `/api` to them, so devices share the same data. Automatic geolocation requires HTTPS on remote devices; otherwise pan and zoom the OpenStreetMap view to draw a boundary manually. For access outside your Wi-Fi, deploy the services behind HTTPS.
 
+## Reference datasets (opt-in)
+
+TerraScope integrates field-boundary-aware public reference datasets: ESA WorldCover, CHIRPS v3, SoilGrids WCS, ESA WorldCereal AOI exports, NASA Harvest CropHarvest labels, and permission-reviewed FAO crop-calendar CSVs. These sources provide historical maps, modeled estimates or regional guidance; they do not establish current crop identity, laboratory soil results or actual farm dates.
+
+After migrations, synchronize explicit, existing field UUIDs (select only fields you are authorized to manage):
+
+```bash
+npm run migrate
+npm start
+npm run data:sync:references -- --fields <owned-field-uuid> --providers worldcover,chirps,soilgrids --start YYYY-MM-DD --end YYYY-MM-DD
+```
+
+The command records source, license, retrieval timestamp, coverage, provider errors and the field boundary version. It never substitutes synthetic values. Review [dataset status and reproduction commands](datasets/STATUS.md) for verified acquisitions, manual WorldCereal/FAO workflows and remaining data requirements.
+
 ## Evidence-first monitoring
 
 The overview prioritizes field visits, old images and missing evidence. Universal farm-average health has been removed. Field-level coverage, valid pixels, acquisition date, source, freshness and descriptive change are separate. Demo/public parcels are hidden from real-farm summaries by default. Legacy scores are preserved in PostgreSQL but are not verified imagery.

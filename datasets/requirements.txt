@@ -1,2 +1,4 @@
 # Optional public GeoParquet import tooling. Install into the project virtualenv.
 pyarrow==19.0.1
+# Optional local CropHarvest HDF5 baseline.
+h5py==3.14.0

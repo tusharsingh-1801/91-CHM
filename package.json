@@ -32,7 +32,8 @@
     "data:download": "node scripts/download-public-boundaries.mjs",
     "photos:audit": "tsx scripts/cleanup-orphan-photos.ts",
     "photos:cleanup": "tsx scripts/cleanup-orphan-photos.ts --apply",
-    "photos:test": "node --import tsx --test scripts/cleanup-orphan-photos.test.ts"
+    "photos:test": "node --import tsx --test scripts/cleanup-orphan-photos.test.ts",
+    "data:sync:references": "node --import tsx scripts/sync-reference-datasets.ts"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.1.1",
