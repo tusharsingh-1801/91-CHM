@@ -34,7 +34,7 @@ export function Dashboard() {
     return () => { cancelled = true; };
   }, [reload]);
   const isDemo = (field: DatabaseField) => field.isDemo || field.provenance === 'demo' || field.provenance === 'public_boundary';
-  const real = fields.filter(field => !isDemo(field));
+  const real = fields; // Include saved demonstration fields in the farmer home summary.
   const inspection = real.filter(field => fieldAssessment(field).state === 'needs_inspection');
   const dataIssues = real.filter(field => ['image_too_old', 'not_enough_data', 'awaiting_analysis'].includes(fieldAssessment(field).state));
   const due = real.filter(field => Number(field.dueTasks) > 0);
