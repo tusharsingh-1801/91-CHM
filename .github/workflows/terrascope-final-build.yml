@@ -1,0 +1,25 @@
+name: TerraScope final build
+on:
+  push:
+    branches:
+      - feat/cropharvest-evaluation-metrics-20261023
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run test:research
+      - uses: actions/upload-artifact@v4
+        with:
+          name: terrascope-dist
+          path: frontend/dist/
+          if-no-files-found: warn
