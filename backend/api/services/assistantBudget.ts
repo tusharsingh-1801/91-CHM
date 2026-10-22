@@ -19,4 +19,5 @@ export class AssistantBudget {
  }
 }
 export const assistantBudget=new AssistantBudget();
-export const sarvamConfigured=()=>Boolean(process.env.SARVAM_API_KEY?.trim()&&!process.env.SARVAM_API_KEY?.trim().startsWith('your-'));
+export const configuredKey=(key:string|undefined)=>Boolean(key?.trim()&&!/^(your[-_ ]|placeholder|changeme|replace[-_ ]|example)/i.test(key.trim()));
+export const geminiConfigured=()=>configuredKey(process.env.GEMINI_API_KEY);

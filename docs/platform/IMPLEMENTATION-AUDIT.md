@@ -4,7 +4,7 @@ Baseline: `6618b16`, fetched from `origin/main`; working branch `feat/terrascope
 
 Implemented: authenticated accounts and editable profiles; field ownership and boundary versions; Sentinel discovery and clipped NDVI/NDMI/NDRE/SAVI/EVI engine; quality checks and durable jobs; eight additive dashboard panels; Hindi/English; historical NASA POWER records; manual photo scouting; visits; CSV/GeoJSON and browser PDF reports. Demo mode has 24 fictional parcels and local reference photos.
 
-Partial: dashboard comparison currently illustrates NDVI averages rather than rendering each selected scene's pixels; Sarvam lacks task/alert context, persistent conversations and application rate limiting; notification read state is browser-local and covers only a subset of events; reports omit weather/scouting/tasks. A separate remote `feat/advanced-monitoring-addons` branch contains reusable preliminary comparison/forecast components but has no complete server forecast integration or demo fixtures.
+Partial: dashboard comparison currently illustrates NDVI averages rather than rendering each selected scene's pixels; Gemini lacks task/alert context, persistent conversations and application rate limiting; notification read state is browser-local and covers only a subset of events; reports omit weather/scouting/tasks. A separate remote `feat/advanced-monitoring-addons` branch contains reusable preliminary comparison/forecast components but has no complete server forecast integration or demo fixtures.
 
 Missing: genuine seven-day forecast module; persistent notification history and preferences; opt-in browser notifications; installable PWA, safe offline shell and recoverable offline note drafts; complete deployment/operational runbook.
 
@@ -17,9 +17,9 @@ Baseline verification:
 - Python raster suite: 14 passed; dependency deprecation warnings remain.
 - Separate loopback `chm_integration` database: all migrations applied; four integration tests passed, covering evidence transactions, owner isolation and durable jobs.
 - Full baseline browser suite running; final outcome will be recorded before feature wiring.
-- Sarvam direct and authenticated application English/Hindi requests previously returned HTTP 200 with nonempty real `sarvam-105b` replies on 18 October.
+- Gemini direct and authenticated application English/Hindi requests previously returned HTTP 200 with nonempty real `gemini-2.5-flash-lite` replies on 18 October.
 
-Implementation order follows the supplied master prompt: finish baseline and live pipeline checks, comparison, Sarvam, forecast, notifications, supported photo-analysis scope, PWA/offline drafts, reports, hardening, final regression, PR/CI and merge. No public deployment or paid service is authorized.
+Implementation order follows the supplied master prompt: finish baseline and live pipeline checks, comparison, Gemini, forecast, notifications, supported photo-analysis scope, PWA/offline drafts, reports, hardening, final regression, PR/CI and merge. No public deployment or paid service is authorized.
 
 Live satellite check: catalog ingestion succeeded (15 candidate scenes). Two recent overlapping/cloudy scenes produced only 2 usable pixels / 1.38% field coverage and were correctly rejected; two other scenes had no usable pixels. Low-cloud public benchmark scenes `S2B_43REM_20261005_0_L2A` and `S2C_43REM_20261003_0_L2A` were subsequently accepted with 125 valid pixels and 100% coverage each. NDVI values were 0.3355 and 0.3951, respectively; NDMI/NDRE/SAVI/EVI were also calculated. Full source/version results are kept under ignored `.local/complete-platform-evidence/`. Existing legacy observations remain unchanged. These are measurements of a historical public boundary, not validation of current crop identity or disease accuracy.
 

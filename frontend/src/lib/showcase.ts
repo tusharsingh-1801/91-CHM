@@ -75,7 +75,7 @@ async function respond(path:string,method:string,body:Record<string,unknown>,sea
   }
   return json(fields.map(f=>({...f,latestJob:jobs.get(f.id)?.[0]||null,dueTasks:(tasks.get(f.id)||[]).filter(t=>t.status!=='resolved'&&String(t.due_on)<=date(0)).length})));
  }
- if(path==='/api/assistant/status')return json({configured:true,model:'showcase',mode:'demo'});
+ if(path==='/api/assistant/status')return json({configured:true,provider:'gemini',history:true,model:'showcase',mode:'demo'});
  if(path==='/api/assistant/history'){
   if(method==='DELETE'){conversations.clear();return json({ok:true});}
   return json(conversations.get(new URLSearchParams(search).get('fieldId')||'general')||[]);

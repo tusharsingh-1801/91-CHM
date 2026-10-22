@@ -1,5 +1,5 @@
 import {useAccountSettings} from '../auth/AccountSettingsContext';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Bot, MessageCircle, Send, X } from 'lucide-react';
 import { useLocation, useParams } from 'react-router-dom';
 import { askFieldAssistant } from '../../lib/api';
@@ -22,9 +22,12 @@ export function CropAssistant() {
   const selectedField = fieldId || match?.[1];
   const isDemo = document.documentElement.dataset.showcase === 'true';
   const [open, setOpen] = useState(false);
-  const [question, setQuestion] = useState('');
+  const [drafts,setDrafts]=useState<Record<string,string>>({});
   const account=useAccountSettings();
   const contextKey=(account.email||'local')+':'+(selectedField||'general');
+  const question=drafts[contextKey]||'';
+  const setQuestion=(text:string)=>setDrafts(current=>({...current,[contextKey]:text}));
+  const activeContext=useRef(contextKey);activeContext.current=contextKey;
   const [busyContext,setBusyContext]=useState<string|null>(null);const busy=busyContext===contextKey;
   const [errorValue,setErrorValue]=useState({key:'',text:''});const error=errorValue.key===contextKey?errorValue.text:'';
   const setError=(text:string)=>setErrorValue({key:contextKey,text});
@@ -33,10 +36,10 @@ export function CropAssistant() {
   const setMessages=(update:(items:Message[])=>Message[])=>setConversations(current=>({...current,[contextKey]:update(current[contextKey]||[])}));
   const [saveHistory,setSaveHistory]=useState(false);
   const [contextName,setContextName]=useState('');
-  const [availability,setAvailability]=useState<boolean|null>(null);
+  const [availability,setAvailability]=useState<boolean|undefined>(undefined);
   useEffect(()=>{
     if(!open)return;let active=true;
-    void fetch('/api/assistant/status').then(response=>response.json()).then(value=>{if(active&&typeof value.configured==='boolean')setAvailability(value.configured);}).catch(()=>{});
+    void fetch('/api/assistant/status').then(response=>response.json()).then(value=>{if(active)setAvailability(value.configured);}).catch(()=>{});
     if(selectedField)void fetch('/api/fields').then(response=>response.json()).then(value=>{if(active&&Array.isArray(value))setContextName(value.find(item=>item.id===selectedField)?.name||'');}).catch(()=>{});
     if(saveHistory)void fetch('/api/assistant/history'+(selectedField?'?fieldId='+selectedField:'')).then(response=>{if(!response.ok)throw Error('History unavailable');return response.json();}).then(value=>{if(active&&Array.isArray(value))setConversations(current=>current[contextKey]?.length?current:({...current,[contextKey]:value.filter(item=>['user','assistant'].includes(item.role)&&typeof item.content==='string').map(item=>({role:item.role,text:item.content}))}));}).catch(()=>{if(active)setErrorValue({key:contextKey,text:'Saved conversation could not load. Your current chat remains available.'});});
     return()=>{active=false;};
@@ -50,12 +53,12 @@ export function CropAssistant() {
     };
     window.addEventListener('terrascope:assistant-question',onQuestion);
     return ()=>window.removeEventListener('terrascope:assistant-question',onQuestion);
-  },[]);
+  },[contextKey]);
 
 
   async function send(text:string) {
     const value = text.trim();
-    if (!value || busy) return;
+    if (!value || busyContext) return;
     setError('');
     setMessages(current => [...current, { role:'user', text:value }]);
     setQuestion('');
@@ -65,6 +68,7 @@ export function CropAssistant() {
       setMessages(current => [...current, { role:'assistant', text:response.answer }]);
       if(saveHistory&&response.historySaved===false&&!isDemo)setError(t('Reply received, but the conversation could not be saved.','जवाब मिल गया, पर बातचीत सेव नहीं हुई।'));
     } catch (reason) {
+      if(activeContext.current===contextKey)setQuestion(value);
       setError(reason instanceof Error ? reason.message : t('Assistant unavailable','सहायक उपलब्ध नहीं है'));
     } finally { setBusyContext(current=>current===contextKey?null:current); }
   }
@@ -75,13 +79,15 @@ export function CropAssistant() {
     </button>
     {open && <section id="crop-assistant-window" className="crop-assistant-window no-print" aria-label={t('Crop assistant chat','फ़सल सहायक चैट')}>
       <header className="crop-assistant-header">
-        <div><strong><Bot size={21} aria-hidden="true"/> {t('Crop assistant','फ़सल सहायक')}</strong><small>{isDemo ? t('Sarvam AI interface · example answers','Sarvam AI इंटरफ़ेस · नमूना जवाब') : 'Sarvam AI'}{selectedField ? ' · '+(contextName||t('Selected field','चुना हुआ खेत')) : ''}</small></div>
+        <div><strong><Bot size={21} aria-hidden="true"/> {t('Crop assistant','फ़सल सहायक')}</strong><small>Gemini AI{isDemo?' · '+t('example answers','नमूना जवाब'):''}{selectedField ? ' · '+(contextName||t('Selected field','चुना हुआ खेत')) : ''}</small></div>
         <button type="button" aria-label={t('Close assistant','सहायक बंद करें')} onClick={() => setOpen(false)}><X size={20}/></button>
       </header>
-      <div className="assistant-history-controls"><small>{isDemo?t('Demo replies · no provider request','डेमो जवाब · सेवा को अनुरोध नहीं'):availability===false?t('Provider not configured','सेवा कॉन्फ़िगर नहीं है'):availability===true?t('Provider configured · availability checked on send','सेवा कॉन्फ़िगर है · भेजने पर कनेक्शन जाँचा जाएगा'):t('Provider status unavailable','सेवा की स्थिति उपलब्ध नहीं')}</small>{(account.signedIn||isDemo)&&<label><input type="checkbox" disabled={busy} checked={saveHistory} onChange={event=>setSaveHistory(event.target.checked)}/>{t('Save conversation history','बातचीत का इतिहास सेव करें')}</label>}{saveHistory&&<button type="button" disabled={busy} onClick={async()=>{try{const response=await fetch('/api/assistant/history',{method:'DELETE'});if(!response.ok)throw Error('Could not clear saved history');setConversations({});}catch{setError(t('Could not clear saved history','इतिहास हट नहीं पाया'));}}}>{t('Clear all saved history','पूरा सेव किया इतिहास हटाएँ')}</button>}</div>
+
+      <div className="assistant-history-controls"><small>{isDemo?t('Demo replies · no provider request','डेमो जवाब · सेवा को अनुरोध नहीं'):availability===false?t('Provider not configured','सेवा कॉन्फ़िगर नहीं है'):availability===true?t('Provider configured · availability checked on send','सेवा कॉन्फ़िगर है · भेजने पर कनेक्शन जाँचा जाएगा'):t('Provider status unavailable','सेवा की स्थिति उपलब्ध नहीं')}</small>{(account.signedIn||isDemo)&&<label><input type="checkbox" disabled={busyContext!==null} checked={saveHistory} onChange={event=>setSaveHistory(event.target.checked)}/>{t('Save conversation history','बातचीत का इतिहास सेव करें')}</label>}{saveHistory&&<button type="button" disabled={busyContext!==null} onClick={async()=>{try{const response=await fetch('/api/assistant/history',{method:'DELETE'});if(!response.ok)throw Error('Could not clear saved history');setConversations({});}catch{setError(t('Could not clear saved history','इतिहास हट नहीं पाया'));}}}>{t('Clear all saved history','पूरा सेव किया इतिहास हटाएँ')}</button>}</div>
+      <p className="crop-assistant-intro">{t('Your question and selected field context are sent to Google Gemini. Avoid personal information.','आपका सवाल और चुने हुए खेत की जानकारी Google Gemini को भेजी जाती है। निजी जानकारी न लिखें।')}</p>
       <div className="crop-assistant-messages" role="log" aria-live="polite" aria-relevant="additions text">
         {!messages.length && <><p className="crop-assistant-intro">{t('Ask about your crop, satellite pictures or weather.', 'फ़सल, सैटेलाइट तस्वीर और मौसम के बारे में पूछें।')}</p>
-          <div className="crop-assistant-prompts">{prompts.map(([en,hi])=><button key={en} type="button" onClick={() => void send(t(en,hi))} disabled={busy}>{t(en,hi)}</button>)}</div>
+          <div className="crop-assistant-prompts">{prompts.map(([en,hi])=><button key={en} type="button" onClick={() => void send(t(en,hi))} disabled={busyContext!==null}>{t(en,hi)}</button>)}</div>
         </>}
         {messages.map((message,index)=><p key={index} className={message.role === 'user' ? 'assistant-user-message' : 'assistant-answer-message'}><span>{message.role==='user' ? t('You','आप') : t('Assistant','सहायक')}</span>{message.text}</p>)}
         {busy && <p role="status">{t('Writing reply…','जवाब तैयार हो रहा है…')}</p>}
@@ -90,7 +96,7 @@ export function CropAssistant() {
       <form className="crop-assistant-input" onSubmit={submit}>
         <label className="sr-only" htmlFor="crop-assistant-question">{t('Your question','आपका सवाल')}</label>
         <input id="crop-assistant-question" value={question} onChange={e=>setQuestion(e.target.value)} placeholder={t('Ask a question…','अपना सवाल लिखें…')} maxLength={2000}/>
-        <button type="submit" disabled={busy || !question.trim()} aria-label={t('Send question','सवाल भेजें')}><Send size={18}/></button>
+        <button type="submit" disabled={busyContext!==null || !question.trim()} aria-label={t('Send question','सवाल भेजें')}><Send size={18}/></button>
       </form>
     </section>}
   </>;

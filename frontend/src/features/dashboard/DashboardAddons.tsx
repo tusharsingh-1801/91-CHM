@@ -161,7 +161,7 @@ export function DashboardAddons({fields}:{fields:DatabaseField[]}){
    <article className="addon-card addon-calendar"><h3><CalendarDays size={19}/>{t('Upcoming field visits','आने वाली खेत-जाँच')}</h3>
     {visits.length?<ul>{visits.map(visit=><li key={visit.fieldId+visit.id}><span className="addon-calendar-day">{date(visit.due)}</span><div><b>{visit.title}</b><small>{visit.fieldName} · {visit.status}</small></div><Link to={'/fields/'+visit.fieldId+'/overview?action=visit'} aria-label={t('Open field visit','जाँच खोलें')+': '+visit.fieldName}><ArrowRight size={17}/></Link></li>)}</ul>:<p>{t('No visits scheduled. Plan one from a field overview.','कोई जाँच तय नहीं है। खेत खोलकर तारीख़ तय करें।')}</p>}
    </article>
-   <article className="addon-card addon-ai"><h3><Bot size={19}/>{t('Ask Sarvam AI','Sarvam AI से पूछें')}</h3><p>{t('Get a simple explanation of your field changes, vegetation or weather.','खेत, हरियाली और मौसम के बारे में आसान भाषा में पूछें।')}</p>
+   <article className="addon-card addon-ai"><h3><Bot size={19}/>{t('Ask Gemini AI','Gemini AI से पूछें')}</h3><p>{t('Get a simple explanation of your field changes, vegetation or weather.','खेत, हरियाली और मौसम के बारे में आसान भाषा में पूछें।')}</p>
     <div className="addon-ai-prompts">{[
      [t('Why is greenness changing?','हरियाली क्यों बदल रही है?'),'greenness'],
      [t('Explain NDVI in simple terms','NDVI आसान शब्दों में बताएँ'),'ndvi'],

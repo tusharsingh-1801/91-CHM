@@ -7,7 +7,7 @@
     "dev": "concurrently --kill-others --names web,api,engine \"npm run dev:client\" \"npm run dev:server\" \"npm run dev:engine\"",
     "dev:client": "vite --config frontend/vite.config.ts",
     "demo": "vite --config frontend/vite.config.ts --mode showcase",
-    "sarvam:check": "node scripts/check-sarvam.mjs",
+    "gemini:check": "node --import tsx scripts/check-gemini.mjs",
     "dev:server": "tsx backend/api/server.ts",
     "typecheck": "tsc -b",
     "test": "npm run test:launcher && node --import tsx --test backend/api/**/*.test.ts",

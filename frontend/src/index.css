@@ -639,7 +639,7 @@ body:has(.field-shell) .field-shell,body:has(.simple-farm) .dashboard-shell { co
 /* Standalone in-browser showcase, visually separated from connected farm data. */
 
 
-/* Field-aware Sarvam assistant and example-mode assistant */
+/* Field-aware Gemini assistant and example-mode assistant */
 .crop-assistant-launch{position:fixed;right:20px;bottom:24px;z-index:1100;display:flex;align-items:center;gap:9px;border:0;border-radius:100px;background:#126e44;color:#fff;font:700 14px inherit;padding:13px 19px;box-shadow:0 8px 28px #092e2160;cursor:pointer}
 .crop-assistant-window{position:fixed;right:18px;bottom:85px;z-index:1101;width:min(390px,calc(100vw - 30px));height:min(540px,calc(100dvh - 120px));display:flex;flex-direction:column;border-radius:20px;overflow:hidden;background:#fff;color:#193528;border:1px solid #c9dfce;box-shadow:0 12px 55px #08271f45}
 .crop-assistant-header{background:#14583a;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}

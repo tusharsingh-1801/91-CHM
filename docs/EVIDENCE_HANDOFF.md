@@ -29,7 +29,7 @@ The database CI uses disposable PostGIS, applies all migrations, and runs the se
 
 - No new successful live external satellite observation is claimed by this revision. Existing quality, recency, reflectance scaling/masking and observation versioning rules are preserved; agronomic calibration remains separate from software validation.
 - No validated/licensed photo diagnosis provider, forecast weather adapter or offline/PWA synchronization is implemented.
-- Sarvam still needs configured credentials. In-app visits do not send phone notifications. Device preferences are local, not account-synced.
+- Gemini still needs configured credentials. In-app visits do not send phone notifications. Device preferences are local, not account-synced.
 - Public/shared production hardening remains a separate release task. Authentication is not disabled to make tests pass.
 
 ## Plain-language submission revision

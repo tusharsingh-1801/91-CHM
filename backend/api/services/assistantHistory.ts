@@ -1,7 +1,11 @@
+import {geminiConfigured} from './assistantBudget.ts';
 import type {Request,Response} from 'express';import {pool} from '../db/pool.ts';import {actor} from './auth.ts';
 let lastSuccessAt:string|null=null;
 export function recordAssistantSuccess(){lastSuccessAt=new Date().toISOString();}
-export async function assistantAvailability(_request:Request,response:Response){response.json({configured:Boolean(process.env.SARVAM_API_KEY?.trim()&&!process.env.SARVAM_API_KEY.trim().startsWith('your-')),model:process.env.SARVAM_MODEL?.trim()||'sarvam-105b',mode:'provider',lastSuccessAt,availability:'Connectivity is verified only when a request succeeds'});}
+export async function assistantAvailability(_request:Request,response:Response){
+ if(!actor(response)){response.status(401).json({error:'Sign in to view provider status'});return;}
+ response.json({configured:geminiConfigured(),provider:'gemini',model:process.env.GEMINI_MODEL?.trim()||'gemini-3.5-flash-lite',history:true,lastSuccessAt,availability:'Configuration only; availability is checked on send'});
+}
 export async function assistantHistory(request:Request,response:Response){
  const account=actor(response);if(!account){response.json([]);return;}
  const fieldId=request.query.fieldId;

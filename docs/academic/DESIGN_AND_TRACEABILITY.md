@@ -17,7 +17,7 @@ flowchart TD
     J --> D
 ```
 
-Leaflet/OpenStreetMap supplies the interactive basemap; it is not the Sentinel acquisition. Sarvam is an optional credential-dependent assistant. An independent forecast provider and automatic disease classifier are not implemented.
+Leaflet/OpenStreetMap supplies the interactive basemap; it is not the Sentinel acquisition. Gemini is the credential-dependent crop assistant. An independent forecast provider and automatic disease classifier are not implemented.
 
 ## Ownership and evidence data model
 

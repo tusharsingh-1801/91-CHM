@@ -4,7 +4,7 @@ test('dashboard preserves existing fields and shows all eight additive panels in
  await expect(page.locator('.farmer-field-card')).toHaveCount(24);
  const addons=page.getByRole('region',{name:'Farm insights and previews'});
  await expect(addons).toBeVisible();
- for(const heading of ['All fields on one map','Weather · last 7 days','Crop insights','Compare two satellite dates','Recent field activity','Upcoming field visits','Ask Sarvam AI','Crop photo gallery']){
+ for(const heading of ['All fields on one map','Weather · last 7 days','Crop insights','Compare two satellite dates','Recent field activity','Upcoming field visits','Ask Gemini AI','Crop photo gallery']){
   await expect(addons.getByRole('heading',{name:heading})).toBeVisible();
  }
  await expect(addons.locator('.addon-map .leaflet-interactive').first()).toBeVisible();

@@ -1,3 +1,4 @@
+import { getFieldFaoCalendar } from '../controllers/faoCalendarController.ts';
 import {listReferenceDatasets} from '../controllers/referenceDatasetsController.ts';
 import {predictMaize} from '../controllers/maizeController.ts';
 import {getForecast} from '../services/forecast.ts';
@@ -65,6 +66,7 @@ router.patch('/fields/:fieldId/alerts/:alertId',updateFieldAlert);
 router.patch('/fields/:fieldId/alerts/:alertId/resolve', resolveFieldAlert);
 router.get('/fields/:fieldId/ndvi', getFieldNdvi);
 router.get('/fields/:fieldId/ndvi/analysis', getFieldNdviAnalysis);
+router.get('/fields/:fieldId/fao-calendar', getFieldFaoCalendar);
 router.get('/fields/:fieldId/weather', getFieldWeather);
 router.get('/fields/:fieldId/forecast',rateLimit('forecast',60),getForecast);
 router.post('/fields/:fieldId/ndvi/from-scene/:sceneId', calculateNdviFromScene);

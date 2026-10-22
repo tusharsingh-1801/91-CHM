@@ -8,7 +8,7 @@ test('farmer landing is additive and provides primary decision and AI actions', 
   const home = page.getByRole('region', {name:'Personalized farm home'});
   await expect(home.getByRole('heading', {name:/Hello,/})).toBeVisible();
   await expect(home.getByRole('heading', {name:'What would you like to see?'})).toBeVisible();
-  await expect(home.getByRole('heading', {name:'Need advice? Ask Sarvam AI'})).toBeVisible();
+  await expect(home.getByRole('heading', {name:'Need advice? Ask Gemini AI'})).toBeVisible();
   await expect(home.getByRole('heading', {name:'Follow up on your fields'})).toBeVisible();
   await expect(page.getByRole('heading', {name:'Your farm. Your next step.'})).toBeVisible();
   await home.getByRole('button', {name:'Explain NDVI'}).click();

@@ -56,7 +56,7 @@ The frontend and backend both load the root `.env`. Restart after changing it. O
 | `LOCAL_PG_BIN` | Optional native PostgreSQL bin directory managed by start/stop | unset |
 | `LOCAL_PG_DATA` | Data directory for that managed database | .local/postgres-data |
 | `VITE_GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAPS_MAP_ID` | Legacy optional Google map settings; current core maps use Leaflet/OpenStreetMap and do not require these values | unset |
-| `SARVAM_API_KEY`, `SARVAM_MODEL` | Field assistant | unset / sarvam-105b |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | Google AI Studio chat credentials and model | unset / gemini-3.5-flash-lite |
 | `SENTINEL_HUB_CLIENT_ID`, `SENTINEL_HUB_CLIENT_SECRET` | Optional Sentinel Hub processing endpoint | unset |
 | `AUTH_MODE` | `required` enables accounts; `local` disables ownership checks for isolated development only | required |
 | `APP_ORIGIN` | Comma-separated browser origins allowed for write requests | http://localhost:5173 |
@@ -68,7 +68,7 @@ This machine is configured with a project-managed native database on port **5435
 
 When `LOCAL_PG_BIN` is set, its data directory must already be initialized. The launcher starts/stops only that configured cluster, leaving any system PostgreSQL installation alone. Otherwise PostgreSQL runs independently and `npm stop` stops the three app services only.
 
-Field drawing, boundary editing and satellite-map viewing use Leaflet with OpenStreetMap; no Google Maps key is required. The basemap is not the selected Sentinel acquisition. Sarvam needs its own server key. Public STAC scene ingestion and NASA POWER weather do not require Google credentials. Placeholder credentials will not enable these services. In shared deployments, keep `AUTH_MODE=required`, set `APP_ORIGIN` to the exact HTTPS frontend origin(s), and set `AUTH_SECURE_COOKIE=1`. Do not use `AUTH_MODE=local` on a shared or network-exposed service.
+Field drawing, boundary editing and satellite-map viewing use Leaflet with OpenStreetMap; no Google Maps key is required. The basemap is not the selected Sentinel acquisition. Gemini is the only chat provider and requires server-side `GEMINI_API_KEY`; the default `GEMINI_MODEL` is `gemini-3.5-flash-lite`. Run `npm run gemini:check` to verify access. `/api/assistant` provides field-aware answers and optional saved history. Public STAC scene ingestion and NASA POWER weather do not require Google credentials. Placeholder credentials will not enable these services. In shared deployments, keep `AUTH_MODE=required`, set `APP_ORIGIN` to the exact HTTPS frontend origin(s), and set `AUTH_SECURE_COOKIE=1`. Do not use `AUTH_MODE=local` on a shared or network-exposed service.
 
 Accounts are created in the app. Migrations preserve legacy fields with `owner_id = NULL`; they are never assigned to the first account automatically. For an explicit local claim, sign in/create the intended account, identify the exact legacy field UUIDs with your database administrator, then run `node scripts/claim-fields.mjs account@example.com <field-uuid> [...]`. The script only operates on a loopback TerraScope database, claims only listed unowned fields, and writes an audit record. Back up the database before migrations or claims.
 

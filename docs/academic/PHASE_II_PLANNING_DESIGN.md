@@ -19,7 +19,7 @@ flowchart LR
  A --> S[Sentinel-2 STAC / optional Sentinel Hub]
  A --> N[NASA POWER Weather]
  W --> M[Leaflet + OpenStreetMap]
- A --> O[Optional Sarvam assistant]
+ A --> O[Optional Gemini assistant]
 ```
 This diagram represents components described in the repository README, not a claim that every external integration has been tested live.
 

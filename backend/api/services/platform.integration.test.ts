@@ -27,19 +27,19 @@ test('platform persistence isolates owners, deduplicates notices and notes, and 
   await invoke(saveNotificationPreferences,account,{imagery:false,browser:false});assert.equal((await invoke(listNotifications,account)).payload.preferences.imagery,false);
   const client_key=randomUUID(),body={event_type:'scouting',event_date:new Date().toISOString().slice(0,10),notes:'Offline replay test',client_key};
   const first=await invoke(createFieldEvent,account,body,{fieldId:fields[0]}),second=await invoke(createFieldEvent,account,body,{fieldId:fields[0]});assert.equal(first.status,201);assert.equal(second.payload.id,first.payload.id);assert.equal((await pool.query('select count(*)::int n from field_events where field_id=$1 and client_key=$2',[fields[0],client_key])).rows[0].n,1);
-  const previousKey=process.env.SARVAM_API_KEY;process.env.SARVAM_API_KEY='fixture-key';
-  let assistantRequest:{messages:Array<{role:string;content:string}>}|undefined;
-  globalThis.fetch=(async(_input,init)=>{assistantRequest=JSON.parse(String(init?.body));return new Response(JSON.stringify({choices:[{message:{content:'A controlled fixture reply.'}}],model:'fixture'}));}) as typeof fetch;
+  const previousKey=process.env.GEMINI_API_KEY;process.env.GEMINI_API_KEY='fixture-key';
+  let assistantRequest:{systemInstruction:{parts:Array<{text:string}>};contents:Array<{role:string;parts:Array<{text:string}>}>}|undefined;
+  globalThis.fetch=(async(_input,init)=>{assistantRequest=JSON.parse(String(init?.body));return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:'A controlled fixture reply.'}]}}],modelVersion:'fixture'}));}) as typeof fetch;
   try{
    const answer=await invoke(askAssistant,account,{message:'Review this field',fieldId:fields[0],saveHistory:true});
    assert.equal(answer.status,200);assert.equal(answer.payload.historySaved,true);
-   const systemPrompt=assistantRequest?.messages.find(message=>message.role==='system')?.content??'';
-   const fieldContext=assistantRequest?.messages.find(message=>message.role==='user'&&message.content.includes('Field context:'))?.content??'';
+   const systemPrompt=assistantRequest?.systemInstruction.parts[0]?.text??'';
+   const fieldContext=assistantRequest?.contents.find(message=>message.role==='user'&&message.parts[0]?.text.includes('Field context:'))?.parts[0]?.text??'';
    assert.match(systemPrompt,/scouting stages\/symptoms are account-reported and unverified/);
    assert.match(fieldContext,/accountReportedScouting/);assert.match(fieldContext,/visual_symptom/);assert.match(fieldContext,/owner_reported/);
    assert.doesNotMatch(fieldContext,/reported_by|reviewed_by/);
    const history=await invoke(assistantHistory,account,{}, {},{fieldId:fields[0]});assert.deepEqual(history.payload.map((item:{role:string})=>item.role),['user','assistant']);
-  }finally{if(previousKey===undefined)delete process.env.SARVAM_API_KEY;else process.env.SARVAM_API_KEY=previousKey;}
+  }finally{if(previousKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=previousKey;}
   await pool.query("insert into assistant_messages(owner_id,field_id,role,content) values($1,$2,'user','Private fixture')",[users[0],fields[0]]);
   assert.equal((await invoke(assistantHistory,other,{}, {},{fieldId:fields[0]})).status,404);
   const privateHistory=await invoke(assistantHistory,account,{}, {},{fieldId:fields[0]});
