@@ -115,6 +115,7 @@ async function respond(path:string,method:string,body:Record<string,unknown>,sea
  if(section==='boundary'&&method==='PATCH'){field.boundary_geojson=body.boundary_geojson as Record<string,unknown>;field.boundary_version=(field.boundary_version||1)+1;return json({boundary_version:field.boundary_version});}
  if(section==='ndvi')return json(data);
  if(section==='ndvi/analysis')return json({status:'analysed',statusLabel:'Illustrative vegetation trend',trend:field.assessment?.change!=null&&field.assessment.change<-.1?'declining':'stable',summary:`${data.length} sample satellite observations show seasonal crop development.`,recommendation:'Inspect the field before taking action.',observations:data.length,average:field.ndvi_average,slopePerDay:data.length>1?Number((Number(data[0].ndvi_value)-Number(data[1].ndvi_value))/9):null,languageCode:new URLSearchParams(search).get('language')||'en-IN',source:'showcase'});
+ if(section==='datasets')return json({items:[],hasMore:false,offset:0,limit:1});
  if(section==='forecast')return json(demoForecast());
  if(section==='weather')return json(weather(fieldId));
  if(section==='scenes')return json(data.map(o=>({scene_id:o.scene_id,observed_at:o.acquired_at,cloud_cover:o.cloud_cover,processing_status:o.accepted?'processed':'rejected',valid_coverage_percent:o.valid_coverage_percent,valid_pixel_count:o.valid_pixel_count})));

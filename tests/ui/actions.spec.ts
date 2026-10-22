@@ -19,7 +19,7 @@ test('dashboard retry, empty state, wizard boundary controls and saved-field ret
   await expect(page.getByRole('status')).toContainText('Your field is saved');await expect(page.getByRole('button',{name:'Open saved field'})).toBeVisible();
   state.fail.clear();await page.getByRole('button',{name:'Retry image check',exact:true}).click();
   await expect(page).toHaveURL(new RegExp(`/fields/${id}/overview`));expect(state.created).toBe(1);
-  await expect(page.getByRole('status')).toContainText('waiting');expect(state.errors).toEqual([]);
+  await expect(page.getByText('Image check is waiting. You can leave this page.')).toBeVisible();expect(state.errors).toEqual([]);
 });
 
 test('field management, boundary editing, navigation and deletion work on mobile',async({page})=>{

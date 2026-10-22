@@ -28,9 +28,9 @@ test('onboarding leaves a saved field available while its image check runs in th
   await page.getByLabel('Import GeoJSON Polygon').setInputFiles({name:'field.geojson',mimeType:'application/geo+json',buffer:Buffer.from(JSON.stringify(boundary))});
   await page.getByRole('button',{name:'Finish boundary'}).click();await page.getByRole('button',{name:'Review',exact:true}).click();
   await page.getByRole('button',{name:'Save & check images'}).click();await expect(page).toHaveURL(new RegExp(`/fields/${id}/overview`));
-  await expect(page.getByRole('status')).toContainText('waiting');expect(state.created).toBe(1);expect(state.fields[0].planting_date).toBeNull();
+  await expect(page.getByRole('status').filter({hasText:'Image check is waiting.'})).toBeVisible();expect(state.created).toBe(1);expect(state.fields[0].planting_date).toBeNull();
   state.jobs[0].status='succeeded';state.jobs[0].result={accepted:false,message:'No usable image available'};
-  await expect(page.getByRole('status')).toContainText('No usable new image');
+  await expect(page.getByRole('status').filter({hasText:'No usable new image'})).toBeVisible();
   await page.getByRole('button',{name:'Check for a new image'}).click();expect(state.created).toBe(1);await expect.poll(()=>state.jobs.length).toBe(2);
 });
 
@@ -93,7 +93,7 @@ test('same-date map scenes select exact latest evidence and keep scene/boundary 
   await observationSelect.selectOption('historical-a');
   await expect(evidence).toContainText('Older clear picture');
   await page.getByRole('button', { name: 'Check for a new image' }).click();
-  await expect(page.getByRole('status')).toContainText('No usable new image');
+  await expect(page.getByRole('status').filter({hasText:'No usable new image'})).toBeVisible();
   await expect(observationSelect).toHaveValue('historical-a');
   expect(sceneReads).toBeGreaterThanOrEqual(2);
 });

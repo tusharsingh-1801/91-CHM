@@ -39,6 +39,7 @@ export async function setup(page:Page) {
     } else if(path.endsWith('/tasks')){
       if(method==='POST'){const body=req.postDataJSON();let task=state.tasks.find(item=>item.client_key===body.client_key);if(!task){task={id:crypto.randomUUID(),...body,status:'open'};state.tasks.push(task!);}json=task;}else json=state.tasks;
     } else if(path.includes('/tasks/')){const task=state.tasks.find(item=>item.id===path.split('/').at(-1));if(task)task.status=req.postDataJSON().status;json=task;}
+    else if(path.endsWith('/datasets'))json={items:[],hasMore:false,offset:0,limit:1};
     else if(path.endsWith('/scouting'))json={cases:state.scouting,diagnosis:{status:'unavailable',provider:null,reason:'No provider'}};
     else if(path.endsWith('/alerts'))json=state.alerts;
     else if(path.includes('/alerts/')){Object.assign(state.alerts[0],{action_status:req.postDataJSON().status,resolved:req.postDataJSON().status==='resolved'});json=state.alerts[0];}

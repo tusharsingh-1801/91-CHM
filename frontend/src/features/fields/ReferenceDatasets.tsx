@@ -8,7 +8,15 @@ export function ReferenceDatasets({fieldId}:{fieldId:string}){
  const [rows,setRows]=useState<Row[]>([]),[error,setError]=useState(false),[loading,setLoading]=useState(true);
  useEffect(()=>{const controller=new AbortController();setLoading(true);setRows([]);setError(false);
   // Provider-filtered pagination ensures frequent rainfall runs cannot hide other sources.
-  void Promise.all(providers.map(async provider=>{const response=await fetch(`/api/fields/${fieldId}/datasets?provider=${provider}&limit=1`,{signal:controller.signal});if(!response.ok)throw new Error();return (await response.json() as {items:Row[]}).items;})).then(value=>setRows(value.flat())).catch(()=>{if(!controller.signal.aborted)setError(true);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});return()=>controller.abort();
+  void Promise.all(providers.map(async provider=>{
+   const response=await fetch(`/api/fields/${fieldId}/datasets?provider=${provider}&limit=1`,{signal:controller.signal});
+   if(!response.ok)throw new Error('Reference request failed');
+   const data:unknown=await response.json();
+   if(!data||typeof data!=='object'||!('items' in data)||!Array.isArray(data.items))throw new Error('Invalid reference response');
+   const items:unknown[]=data.items;
+   if(items.some(item=>!item||typeof item!=='object'||!('provider' in item)||typeof item.provider!=='string'||!('payload' in item)||!item.payload||typeof item.payload!=='object'||Array.isArray(item.payload)))throw new Error('Invalid reference row');
+   return items as Row[];
+  })).then(value=>{if(!controller.signal.aborted)setRows(value.flat());}).catch(()=>{if(!controller.signal.aborted)setError(true);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});return()=>controller.abort();
  },[fieldId]);
  const label=(status:string,hasManualRows=false)=>({integrated:t('Available','उपलब्ध'),downloaded:t('Downloaded; integration pending','डाउनलोड हुआ; जोड़ना बाकी'),blocked:t('Unavailable','उपलब्ध नहीं'),failed:t('Could not process','प्रक्रिया पूरी नहीं हुई'),manual:hasManualRows?t('Regional recommendation (manual)','क्षेत्रीय सुझाव (मैन्युअल)'):t('Manual reference pending','मैन्युअल संदर्भ बाकी'),not_configured:t('Not configured','अभी सेट नहीं')}[status]??status);
  return <section className="help-guide"><h2>{t('Land, rainfall and soil references','भूमि, बारिश और मिट्टी के संदर्भ')}</h2><p>{t('Historical maps and modeled estimates help provide context. They do not confirm today’s crop, soil test results or yield.','पुराने नक्शे और मॉडल के अनुमान संदर्भ देते हैं। ये आज की फ़सल, मिट्टी की जाँच या उपज की पुष्टि नहीं करते।')}</p>
