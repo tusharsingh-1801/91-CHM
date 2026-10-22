@@ -14,7 +14,7 @@ The coordinates above are an example only; use actual field coordinates. SoilGri
 | Source | Current acquisition scope |
 |---|---|
 | SoilGrids | Point-query downloader with actual coordinates; no automatic DB import |
-| WorldCover | Official tile index downloader; imagery tiles not fetched |
+| WorldCover | Official FlatGeobuf tile index downloader; 516,760-byte index confirmed by local run on 2026-10-22; raster tiles not fetched |
 | CropHarvest | Reference only; no training data downloaded |
 | WorldCereal | Reference only; no geospatial extraction implemented |
 | CHIRPS v3 | Reference only; no time-series extraction implemented |
