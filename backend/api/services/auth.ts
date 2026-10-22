@@ -40,6 +40,22 @@ export function sameOrigin(request:Request,response:Response,next:NextFunction){
 }
 export const authRouter=Router();
 authRouter.get('/session',(_req,res)=>res.json({mode:authRequired()?'required':'local',user:actor(res)}));
+// Explicitly opt-in local demo account: the launcher sets this only for loopback development.
+// The account must already exist (created by scripts/seed-tushar-farmer.mjs).
+authRouter.post('/demo/tushar',async(req,res)=>{
+ if(process.env.TERRASCOPE_TUSHAR_DEMO!=='1'||process.env.NODE_ENV==='production'||!['localhost','127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.hostname)||!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress||'')){
+  res.status(404).json({error:'Demo sign-in is not enabled'});return;
+ }
+ try{
+  const result=await pool.query<Account>('select id,email,profile from app_users where email=$1',['tushar.fieldtest.7586e28d@example.invalid']);
+  const account=result.rows[0];if(!account){res.status(404).json({error:'Run the Tushar farmer seed script first'});return;}
+  const value=randomBytes(32).toString('hex');
+  await pool.query("insert into app_sessions(token_hash,user_id,expires_at) values($1,$2,now()+interval '7 days')",[hashToken(value),account.id]);
+  res.cookie(cookieName,value,{httpOnly:true,sameSite:'strict',secure:false,path:'/api',maxAge:7*86400000});
+  res.json({user:account});
+ }catch{res.status(503).json({error:'Demo sign-in unavailable'});}
+});
+
 authRouter.post('/logout',async(req,res)=>{await pool.query('delete from app_sessions where token_hash=$1',[hashToken(token(req))]);res.clearCookie(cookieName,{path:'/api'});res.json({ok:true});});
 for(const action of ['register','login'] as const)authRouter.post('/'+action,async(req,res)=>{
  const {email,password,name}=(req.body ?? {}) as {email?:unknown;password?:unknown;name?:unknown};
