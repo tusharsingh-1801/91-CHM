@@ -14,7 +14,7 @@ import h5py
 import numpy as np
 import sklearn
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import balanced_accuracy_score, confusion_matrix, f1_score
+from sklearn.metrics import accuracy_score, balanced_accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
 
 ROOT=Path(__file__).resolve().parents[1]/'.local/datasets/reference/cropharvest'
 MAX_SAMPLE_BYTES=64*1024*1024
@@ -99,7 +99,11 @@ def train(manifest):
     model.fit(x[~test],y[~test]);predicted=model.predict(x[test])
     return {'purpose':'Research held-out-source crop/non-crop baseline; not farm observations or deployment validation',
             'record':'10251170','seed':42,'sklearn':sklearn.__version__,'train_ids':[ids[i] for i in np.flatnonzero(~test)],'test_ids':[ids[i] for i in np.flatnonzero(test)],
-            'held_out_datasets':sorted(holdout),'constituent_licenses':{name:permitted[name] for name in sorted(set(groups))},'labels_sha256':hashlib.sha256(labels_path.read_bytes()).hexdigest(),'balanced_accuracy':float(balanced_accuracy_score(y[test],predicted)),
+            'held_out_datasets':sorted(holdout),'constituent_licenses':{name:permitted[name] for name in sorted(set(groups))},'labels_sha256':hashlib.sha256(labels_path.read_bytes()).hexdigest(),'test_sample_count':int(sum(test)),'train_sample_count':int(sum(~test)),
+            'accuracy':float(accuracy_score(y[test],predicted)),
+            'precision':float(precision_score(y[test],predicted,zero_division=0)),
+            'recall':float(recall_score(y[test],predicted,zero_division=0)),
+            'balanced_accuracy':float(balanced_accuracy_score(y[test],predicted)),
             'f1':float(f1_score(y[test],predicted,zero_division=0)),'confusion_matrix':confusion_matrix(y[test],predicted,labels=[0,1]).tolist(),
             'input_manifest_sha256':hashlib.sha256(json.dumps(manifest,sort_keys=True).encode()).hexdigest()}
 
