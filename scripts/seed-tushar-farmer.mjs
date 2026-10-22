@@ -2,19 +2,20 @@
 // Run locally: node scripts/seed-tushar-farmer.mjs
 // Non-destructive: creates one uniquely named field and one photo observation.
 // Never treats a web photo as a real on-farm diagnosis.
-import { readFile, stat } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
+import { readFile, stat, writeFile, mkdir } from 'node:fs/promises';
+import { randomUUID, randomBytes } from 'node:crypto';
 import path from 'node:path';
 
 const origin = process.env.CHМ_API_ORIGIN || process.env.CHM_API_ORIGIN || 'http://localhost:3001';
 const photoPath = path.resolve(process.env.CHM_TEST_PHOTO || '.local/test-photos/tushar-wheat-demo.jpg');
 const runId = randomUUID().slice(0, 8);
+let cookie = '';
 const name = 'Tushar Wheat Field ' + runId;
 const boundary = { type:'Polygon', coordinates:[[
   [81.23950,26.22950],[81.24015,26.22950],[81.24015,26.23010],[81.23950,26.23010],[81.23950,26.22950]
 ]] }; // illustrative polygon, not a verified farm boundary
 async function request(url, options={}) {
-  const response = await fetch(origin+url, options);
+  const response = await fetch(origin+url, {...options, headers: {...(options.headers||{}), ...(cookie?{Cookie:cookie}:{})}});
   const raw = await response.text();
   let data; try {data=JSON.parse(raw)} catch {data={raw:raw.slice(0,500)}}
   if(!response.ok) throw new Error(`${options.method||'GET'} ${url}: HTTP ${response.status} ${JSON.stringify(data)}`);
@@ -29,6 +30,24 @@ try {
   console.log('Photo verified:',photoPath,info.size,'bytes');
   const health=await request('/api/health');
   console.log('API health: OK');
+  const session=await request('/api/auth/session');
+  if(session.mode==='required'){
+    const email='tushar.fieldtest.'+runId+'@example.invalid';
+    const password=randomBytes(24).toString('base64url');
+    const response=await fetch(origin+'/api/auth/register',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:'Tushar',email,password})
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error('Farmer account registration failed: '+response.status+' '+JSON.stringify(data));
+    cookie=(response.headers.get('set-cookie')||'').split(';')[0];
+    assert(cookie.startsWith('chm_session='),'Authentication cookie missing');
+    await mkdir('.local',{recursive:true});
+    await writeFile('.local/tushar-test-account-'+runId+'.json',JSON.stringify({email,password},null,2),{mode:0o600,flag:'wx'});
+    console.log('Farmer account registered: Tushar ('+email+')');
+    console.log('Credentials saved locally: .local/tushar-test-account-'+runId+'.json');
+  } else console.log('Local authentication mode; no account registration needed');
+
   const field=await request('/api/fields',{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':randomUUID()},body:JSON.stringify({
     name,crop:'Wheat',planting_date:null,harvest_date:null,boundary_geojson:boundary
   })});
