@@ -20,9 +20,9 @@ for(const field of fields){
  const id=encodeURIComponent(field.id);
  const result={fieldId:field.id,name:field.name,crop:field.crop,source:'Copernicus Sentinel-2 L2A / Earth Search',ingestion:null,processing:null,weather:[],ndvi:[],errors:[]};
  console.log('\nFIELD',field.name,field.id);
- try{result.ingestion=(await req('/api/fields/'+id+'/ingest/sentinel-scenes?days=90','POST',cookie)).data;console.log('Scenes imported',result.ingestion.imported)}
+ try{const existing=(await req('/api/fields/'+id+'/scenes','GET',cookie)).data;if(Array.isArray(existing)&&existing.length){result.ingestion={reused:existing.length};console.log('Reusing existing scenes',existing.length)}else{result.ingestion=(await req('/api/fields/'+id+'/ingest/sentinel-scenes?days=90','POST',cookie)).data;console.log('Scenes imported',result.ingestion.imported)}}
  catch(e){result.errors.push('Scene ingestion: '+e.message);console.warn(result.errors.at(-1))}
- try{result.processing=(await req('/api/fields/'+id+'/process/latest','POST',cookie,undefined,180000)).data;console.log('Scene accepted',result.processing.accepted,'attempts',result.processing.attempts?.length)}
+ try{result.processing=(await req('/api/fields/'+id+'/ndvi/process-latest','POST',cookie,undefined,180000)).data;console.log('Scene accepted',result.processing.accepted,'attempts',result.processing.attempts?.length)}
  catch(e){result.errors.push('Raster processing: '+e.message);console.warn(result.errors.at(-1))}
  for(const [key,url] of [['weather','/weather'],['ndvi','/ndvi']]){
   try{result[key]=(await req('/api/fields/'+id+url,'GET',cookie)).data}catch(e){result.errors.push(key+': '+e.message)}
