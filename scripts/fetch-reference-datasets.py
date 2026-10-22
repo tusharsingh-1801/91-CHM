@@ -13,7 +13,7 @@ ROOT = pathlib.Path(".local/datasets/reference")
 USER_AGENT = "TerraScope/1.0 (academic geospatial research)"
 SOURCES = {
     "soilgrids": "https://rest.isric.org/soilgrids/v2.0/properties/query",
-    "worldcover": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/esa_worldcover_2021_grid.geojson",
+    "worldcover": "https://esa-worldcover.s3.amazonaws.com/v200/2021/esa_worldcover_grid.fgb",
     "chirps": "https://data.chc.ucsb.edu/products/CHIRPS/v3.0/",
     "cropharvest": "https://github.com/nasaharvest/cropharvest",
     "worldcereal": "https://esa-worldcereal.org/en/products/global-maps",
@@ -52,10 +52,14 @@ def main():
                 output.write_text(json.dumps({"coordinates": {"lat": args.lat, "lon": args.lon}, "source": SOURCES[name], "data": data}, indent=2))
                 entry.update(status="downloaded", file=str(output))
             elif name == "worldcover":
-                data = get_json(SOURCES[name])
-                output = ROOT / "worldcover-grid.geojson"
-                output.write_text(json.dumps(data))
-                entry.update(status="downloaded_index_only", file=str(output), note="Tile index only; actual raster tiles not downloaded")
+                req = urllib.request.Request(SOURCES[name], headers={"User-Agent": USER_AGENT})
+                output = ROOT / "worldcover-grid.fgb"
+                with urllib.request.urlopen(req, timeout=90) as response, output.open("wb") as target:
+                    while chunk := response.read(1024 * 1024):
+                        target.write(chunk)
+                if output.stat().st_size < 1000:
+                    raise ValueError("WorldCover tile index unexpectedly small")
+                entry.update(status="downloaded_index_only", file=str(output), bytes=output.stat().st_size, note="Official FlatGeobuf tile index only; raster tiles not downloaded")
             else:
                 entry.update(status="manual_or_specialized_access_required", note="Catalogued but not imported; requires dataset-specific access, licensing, or geospatial subset workflow" if name != "soilgrids" else "Provide --lat and --lon for a point query")
         except (urllib.error.URLError, TimeoutError, ValueError, OSError, json.JSONDecodeError) as exc:
