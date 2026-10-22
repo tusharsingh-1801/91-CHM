@@ -25,7 +25,7 @@ export function Dashboard() {
   const [error, setError] = useState(false);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
-  const [includeDemo, setIncludeDemo] = useState(false);
+  const [includeDemo, setIncludeDemo] = useState(true);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [reload, setReload] = useState(0);
   useEffect(() => {
