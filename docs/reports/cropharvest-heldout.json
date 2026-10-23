@@ -1,0 +1,185 @@
+{
+  "model_file": "backend/engine/models/cropharvest-rf.joblib",
+  "model_sha256": "411885d2bf56ca0db23965a903b0816cd5d6959768932781d7c1252e917a7049",
+  "duration_seconds": 445.84,
+  "train_samples": 79220,
+  "test_samples": 5101,
+  "feature_count": 216,
+  "accuracy": 0.7518133699274652,
+  "precision": 0.7204225352112676,
+  "recall": 0.812549642573471,
+  "roc_auc": 0.7931861560757898,
+  "purpose": "Research held-out-source crop/non-crop baseline; not farm observations or deployment validation",
+  "record": "10251170",
+  "seed": 42,
+  "sklearn": "1.5.1",
+  "held_out_datasets": [
+    "china-crop",
+    "kenya",
+    "lem-brazil",
+    "togo-eval"
+  ],
+  "constituent_licenses": {
+    "brazil-non-crop": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "canada": {
+      "license": "Open Government Licence – Canada",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "central-asia": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "china-crop": {
+      "license": "CC BY-SA 4.0 (CropHarvest archive; separate constituent terms not specified upstream)",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "croplands": {
+      "license": "LP DAAC open data terms",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "ethiopia": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "geowiki-landcover-2017": {
+      "license": "CC BY 3.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "germany": {
+      "license": "DL-DE-BY-2.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "ile-de-france": {
+      "license": "Etalab Open Licence",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "jecam": {
+      "license": "CC BY-SA 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "kenya": {
+      "license": "CC BY-SA 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "kenya-non-crop": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "lem-brazil": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "mali": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "mali-helmets-labelling-crops": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "mali-non-crop": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "martinique-france": {
+      "license": "Etalab Open Licence",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "reunion-france": {
+      "license": "Etalab Open Licence",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "rwanda-ceo": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "sudan": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "tanzania": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "tanzania-ceo": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "tanzania-rice-ecaas": {
+      "license": "CC BY-SA 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "togo": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "togo-eval": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "uganda": {
+      "license": "CC BY 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    },
+    "zimbabwe": {
+      "license": "CC BY-SA 4.0",
+      "source_url": "https://github.com/nasaharvest/cropharvest/blob/main/datasets.md",
+      "archive_url": "https://zenodo.org/records/10251170"
+    }
+  },
+  "labels_sha256": "57e71cf88c6ed2069748ad8f5fcd29bdaf82b8279f560b275164f80e2093157f",
+  "balanced_accuracy": 0.7525775700285087,
+  "f1": 0.7637178051511758,
+  "confusion_matrix": [
+    [
+      1789,
+      794
+    ],
+    [
+      472,
+      2046
+    ]
+  ],
+  "input_manifest_sha256": "78f176f5420cbfd7fb6ad46b575563a9b22b998b49d6ff0ee5b1f07e17369dfc",
+  "input_sample_count": 87464,
+  "excluded_sample_count": 3143,
+  "exclusions": {
+    "duplicate_feature_checksum": 3143
+  },
+  "split_policy": "Preselected held-out sources, all official test samples kept out of training; duplicate feature and cross-split location/date overlap excluded. No hyperparameter tuning on test set.",
+  "evaluated_on": "2026-10-23",
+  "limitations": [
+    "Source-held-out crop/non-crop research benchmark; not crop-health, disease, yield or farm inference.",
+    "Test data was not used for tuning. Official test rows never enter training.",
+    "Record-level license and constituent attribution are recorded; feature data is not redistributed."
+  ]
+}

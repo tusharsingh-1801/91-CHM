@@ -1,0 +1,43 @@
+{
+  "verified_at": "2026-10-23T17:26:40.756Z",
+  "scope": "Existing local PostgreSQL fields at their current boundary versions; no new field data created",
+  "providers": [
+    {
+      "provider": "cropharvest",
+      "status": "downloaded",
+      "fields": 29,
+      "minimum_coverage_percent": null,
+      "maximum_coverage_percent": null,
+      "evaluated_model_references": 29,
+      "demo_references": 0
+    },
+    {
+      "provider": "fao-calendar",
+      "status": "manual",
+      "fields": 29,
+      "minimum_coverage_percent": null,
+      "maximum_coverage_percent": null,
+      "evaluated_model_references": 0,
+      "demo_references": 29
+    },
+    {
+      "provider": "worldcereal",
+      "status": "integrated",
+      "fields": 29,
+      "minimum_coverage_percent": 99.2767578794265,
+      "maximum_coverage_percent": 100,
+      "evaluated_model_references": 0,
+      "demo_references": 0
+    }
+  ],
+  "checks": {
+    "worldcereal_python_tests_passed": 13,
+    "dataset_browser_tests_passed": 9,
+    "authenticated_api": "WorldCereal integrated with coverage, trained model actual metrics and demo calendar returned",
+    "production_build": "passed"
+  },
+  "remaining_blocked": [
+    "Official Indian FAO crop-calendar records unavailable; explicitly synthetic demo fallback active"
+  ],
+  "preserved": "Other providers, existing snapshots and legacy AOIs; CropHarvest samples not downloaded or retrained"
+}

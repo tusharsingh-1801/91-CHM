@@ -12,6 +12,10 @@ const {train_ids,test_ids,...report}=metrics;
 Object.assign(report,{model_file:modelPath,input_sample_count:manifest.input_sample_count,excluded_sample_count:manifest.excluded_samples.length,exclusions:manifest.excluded_samples.reduce((out,row)=>(out[row.reason]=(out[row.reason]??0)+1,out),{}),split_policy:manifest.split_policy,evaluated_on:'2026-10-23',limitations:['Source-held-out crop/non-crop research benchmark; not crop-health, disease, yield or farm inference.','Test data was not used for tuning. Official test rows never enter training.','Record-level license and constituent attribution are recorded; feature data is not redistributed.']});
 await mkdir('docs/reports',{recursive:true});
 await writeFile('docs/reports/cropharvest-heldout.json',JSON.stringify(report,null,2)+'\n');
+if(process.argv.includes('--report-only')){
+ console.log(JSON.stringify({report:'docs/reports/cropharvest-heldout.json',model:modelPath,model_sha256:digest,accuracy:report.accuracy,balanced_accuracy:report.balanced_accuracy,f1:report.f1,database_updated:false}));
+ await pool.end();
+}else{
 const client=await pool.connect();
 try{
  await client.query('BEGIN');
@@ -24,3 +28,5 @@ try{
  }
  await client.query('COMMIT');console.log(JSON.stringify({published_fields:rows.length,report:'docs/reports/cropharvest-heldout.json',model:modelPath,accuracy:report.accuracy,balanced_accuracy:report.balanced_accuracy,f1:report.f1}));
 }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();await pool.end();}
+
+}

@@ -382,7 +382,11 @@ def worldcereal(field, options):
     if manifest.get('product')!='temporarycrops' or manifest.get('version')!='2021 v100' or manifest.get('license')!='CC BY 4.0':
         raise ValueError('WorldCereal manifest must identify licensed 2021 v100 temporarycrops classification')
     files=[];selected=[]
-    for item in manifest['rasters']:
+    # A field-specific export supersedes legacy shared AOIs without deleting them.
+    scoped=[item for item in manifest['rasters'] if str(field.get('id')) in item.get('field_ids',[])]
+    for item in scoped or manifest['rasters']:
+        if item.get('field_ids') and str(field.get('id')) not in item['field_ids']:
+            continue
         path=(manifest_path.parent/item['file']).resolve()
         if not path.is_relative_to(manifest_path.parent.resolve()) or path.stat().st_size>MAX_BYTES:
             raise ValueError('WorldCereal raster path/size invalid')
@@ -395,7 +399,16 @@ def worldcereal(field, options):
                 files.append(path);selected.append({'sha256':item['sha256'],'source_url':item['source_url'],'bounds':list(src.bounds),'crs':str(src.crs)})
     if not files:
         return {'status':'not_configured','availability':'aoi_export_required','period':'2021','note':'Existing official raster does not cover this field. A matching official WorldCereal AOI export is required; existing rasters are preserved.'}
-    stats=categorical(files,geom,{0:'Not temporary crop',100:'Temporary crop'})
+    large=False
+    if len(files)==1:
+        with rasterio.open(files[0]) as src:
+            window=from_bounds(*reproject(geom,4326,src.crs).bounds,transform=src.transform)
+            large=window.width*window.height>MAX_PIXELS
+    if large:
+        from worldcereal_zonal import aggregate
+        stats=aggregate(files[0],geom)
+    else:
+        stats=categorical(files,geom,{0:'Not temporary crop',100:'Temporary crop'})
     return dict(stats,period='2021',resolution='10 m',product='temporarycrops',raster_provenance=selected,source_urls=[x['source_url'] for x in selected],note='Historical temporary-crop extent; not current farm crop identity')
 
 def cropharvest_feature_summary(folder):

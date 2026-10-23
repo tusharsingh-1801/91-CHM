@@ -62,3 +62,28 @@ Do not enter placeholder field IDs, actual planting dates inferred from regional
 - Existing WorldCereal raster SHA-256 matched its manifest and its GeoTIFF metadata was readable. WorldCover, CHIRPS and SoilGrids integrated snapshots were confirmed in PostgreSQL. These pre-existing records were not relabeled as farmer observations.
 - Verification: 26 reference/acquisition/training Python tests passed (1 skipped), 85 API tests passed (5 skipped), 6 dataset-panel browser tests passed, production build passed.
 - FAO is still pending actual reviewed calendar rows; a manual-status snapshot and the separate Telangana seasonal reference do not count as FAO calendar imports.
+
+## Completed training and calendar fallback — 23 October 2026
+
+CropHarvest training has completed using the existing verified acquisition. Of 87,464 inputs, 3,143 byte-identical feature files were excluded before fitting. The model fit 79,220 samples; 5,101 samples from China, Togo-eval, Kenya and LEM-Brazil sources were held out. No official test labels entered fitting and the test set was not used for tuning.
+
+The saved model is `backend/engine/models/cropharvest-rf.joblib`; full measured results, split policy and artifact checksum are in `docs/reports/cropharvest-heldout.json`. Held-out accuracy is 75.1813%, balanced accuracy 75.2578%, F1 0.763718 and ROC-AUC 0.793186. The persisted model was reloaded and reproduced its evaluation predictions. This is a crop/non-crop research baseline, not a validated crop-health or disease model. Earlier acquisition-only notes are historical. Database publication is a separate step via `scripts/publish-cropharvest-training.mjs`; `--report-only` writes the artifact report without database access.
+
+The official FAO API returned a country list without India, and the India calendar endpoint returned HTTP 204. The explicitly synthetic Indian fallback (rice, wheat and maize) is stored in PostgreSQL for the three existing public-boundary parcels and exposed by both dataset and calendar APIs. Every layer labels it DEMO, not FAO data. Reviewed calendar records take priority. No farm planting or harvest date is changed.
+
+The existing WorldCereal AOI is integrated for parcel 3178 with 99.2768% coverage and source/checksum/bounds provenance. The other two public parcels have explicit `aoi_export_required` status. Additional AOI exports remain unavailable without matching official exports or configured CDSE/openEO access. Registration now appends immutable AOI rasters rather than replacing existing files.
+
+Targeted checks completed: 29 reference/training/acquisition Python tests passed (1 skipped), 2 AOI-registration tests passed, 7 calendar/reference API tests passed, and 9 dataset-panel browser tests passed. No other datasets were reacquired and no entire regression suite was run for this continuation.
+
+
+## Pending integration completion — 23 October 2026
+
+The existing trained CropHarvest model and held-out metrics are now published in PostgreSQL for all 29 existing boundary fields. These are explicitly global research-model references, with `field_inference: false`; attaching them does not claim a prediction for a field. The authenticated API and frontend expose the actual metrics and this scope.
+
+The Indian rice/wheat/maize DEMO calendar fallback is also persisted for all 29 fields and accessible through the authenticated calendar API and frontend. Official Indian FAO records remain unavailable (India absent from country list; calendar request HTTP 204). Reviewed records take priority over fallback records.
+
+WorldCereal acquisition now obtains only relevant official ZIP members using validated, resumable byte ranges, verifies member CRC/size and SHA-256, crops bounded immutable field AOIs, and preserves earlier exports. All 29 existing boundaries now have usable matching official AEZ AOIs. The final cache-only acquisition pass reused 28 and registered the remaining large AOI with zero raster-download bytes. The large field is covered by official AEZ 25147; neighboring AEZ data is not substituted. Large WorldCereal AOIs use bounded equal-area aggregation with fractional boundary clipping.
+
+Use `npm run data:publish:cropharvest` to publish an already trained artifact, `npm run data:acquire:worldcereal` for missing field AOIs, and `npm run data:integrate:pending` to link just CropHarvest, calendar and WorldCereal references. Existing current references are preserved. These commands do not reacquire other providers or retrain CropHarvest.
+
+Earlier blocked/acquisition-only notes above describe prior checkpoints. Current persistence totals and verification are recorded in `docs/reports/pending-dataset-integration.json`.
