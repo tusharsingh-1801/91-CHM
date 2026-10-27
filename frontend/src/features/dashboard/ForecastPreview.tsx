@@ -6,7 +6,7 @@ import './forecast-preview.css';
 
 export function ForecastPreview({fields}:{fields:DatabaseField[]}){
  const {t,date}=usePreferences();
- const eligible=fields.filter(field=>field.latitude!=null&&field.longitude!=null&&!field.isDemo);
+ const eligible=fields.filter(field=>field.latitude!=null&&field.longitude!=null);
  const [selected,setSelected]=useState('');
  const [reload,setReload]=useState(0);
  const [forecast,setForecast]=useState<FieldForecast|null>(null);

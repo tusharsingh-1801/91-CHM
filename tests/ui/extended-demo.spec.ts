@@ -26,19 +26,15 @@ test.beforeEach(async({page})=>{
  await page.route('**/api/auth/session',r=>r.fulfill({json:{mode:'local',user:null}}));
  await page.route('**/api/fields',r=>r.fulfill({json:fields}));
 });
-test('15 labelled synthetic plots remain separate from real-farm statistics',async({page})=>{
+test('15 fixture scenarios render as supplied records',async({page})=>{
  await page.goto('/');
  await expect(page.getByRole('heading',{name:'Your farm. Your next step.'})).toBeVisible();
- await expect(page.getByRole('button',{name:'Add your first field'})).toBeVisible();
- await expect(page.locator('.farmer-field-card')).toHaveCount(0);
- await page.getByRole('button',{name:'Or explore a sample field'}).click();
  await expect(page.locator('.farmer-field-card')).toHaveCount(15);
  await expect(page.getByText('DEMO • Wheat - inspect').first()).toBeVisible();
- await expect(page.locator('.field-card .demo-label').first()).toBeVisible();
+ await expect(page.locator('.field-card .demo-label')).toHaveCount(0);
 });
 test('synthetic crop search narrows sample plot list without touching a database',async({page})=>{
  await page.goto('/');
- await page.getByRole('button',{name:'Or explore a sample field'}).click();
  await page.getByPlaceholder('Search your fields or crops').fill('Tomato');
  await expect(page.locator('.farmer-field-card')).toHaveCount(1);
  await expect(page.locator('.farmer-field-card').first()).toContainText('incompatible method');

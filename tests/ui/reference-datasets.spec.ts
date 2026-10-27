@@ -31,12 +31,12 @@ test('empty references show unconfigured sources while valid reference results r
  expect(state.errors).toEqual([]);
 });
 
-test('demo references use the same paginated response without a live backend',async({page})=>{
- const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
- await page.goto('/fields/00000000-0000-4000-8000-000000000001/overview?demo=1');
+test('demo query parameters do not inject reference results',async({page})=>{
+ const state=await setup(page);
+ await page.goto(`/fields/${id}/overview?demo=1`);
  await expect(page.getByText('worldcover — Not configured',{exact:true})).toBeVisible();
- await expect(page.getByText('Reference data unavailable. Other field readings remain available.',{exact:true})).toHaveCount(0);
- expect(errors).toEqual([]);
+ await expect(page.getByText(/DEMO ONLY — not FAO data/)).toHaveCount(0);
+ expect(state.errors).toEqual([]);
 });
 
 test('CropHarvest shows verified labels and feature counts without claiming a model',async({page})=>{

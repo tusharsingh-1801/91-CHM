@@ -28,7 +28,7 @@ export async function getForecast(request:Request,response:Response){
 
 /** Seven-day field forecast. Separate from historical NASA POWER observations. */
 export type ForecastDay={date:string;min_c:number|null;max_c:number|null;rain_probability_percent:number|null;precipitation_mm:number|null;humidity_percent:number|null;wind_speed_kmh:number|null};
-export type FieldForecast={source:'Open-Meteo'|'Synthetic showcase';source_url:string;field_id:string;issued_at:string;timezone:string;units:{temperature:'°C';precipitation:'mm';wind_speed:'km/h'};days:ForecastDay[]};
+export type FieldForecast={source:'Open-Meteo';source_url:string;field_id:string;issued_at:string;timezone:string;units:{temperature:'°C';precipitation:'mm';wind_speed:'km/h'};days:ForecastDay[]};
 const num=(value:unknown, min=-Infinity,max=Infinity):number|null=>typeof value==='number'&&Number.isFinite(value)&&value>=min&&value<=max?value:null;
 const iso=(value:unknown)=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)?value:'';
 export function normaliseForecast(payload:unknown,fieldId:string,issuedAt:string):FieldForecast{

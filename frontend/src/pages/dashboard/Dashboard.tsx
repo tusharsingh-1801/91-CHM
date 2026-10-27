@@ -25,7 +25,6 @@ export function Dashboard() {
   const [error, setError] = useState(false);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
-  const [includeDemo, setIncludeDemo] = useState(true);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [reload, setReload] = useState(0);
   useEffect(() => {
@@ -33,23 +32,20 @@ export function Dashboard() {
     loadFields().then(data => { if (!cancelled) setFields(data); }).catch(() => { if (!cancelled) setError(true); }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [reload]);
-  const isDemo = (field: DatabaseField) => field.isDemo || field.provenance === 'demo' || field.provenance === 'public_boundary';
-  const real = fields; // Include saved demonstration fields in the farmer home summary.
+  const real = fields;
   const inspection = real.filter(field => fieldAssessment(field).state === 'needs_inspection');
   const dataIssues = real.filter(field => ['image_too_old', 'not_enough_data', 'awaiting_analysis'].includes(fieldAssessment(field).state));
   const due = real.filter(field => Number(field.dueTasks) > 0);
   const priority = [...new Map([...inspection, ...due, ...dataIssues].map(field => [field.id, field])).values()];
-  // Keep urgent real fields above routine fields, while making demo entries clearly secondary.
   const urgency = (field: DatabaseField) => {
     if (fieldAssessment(field).state === 'needs_inspection') return 0;
     if (Number(field.dueTasks) > 0) return 1;
     if (['image_too_old', 'not_enough_data', 'awaiting_analysis'].includes(fieldAssessment(field).state)) return 2;
     return 3;
   };
-  const visible = fields.filter(field => (includeDemo || !isDemo(field))
-    && `${field.name} ${field.crop}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())
+  const visible = fields.filter(field => `${field.name} ${field.crop}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())
     && (filter === 'all' || (filter === 'data' ? ['image_too_old', 'not_enough_data', 'awaiting_analysis'].includes(fieldAssessment(field).state) : filter === 'due' ? Number(field.dueTasks) > 0 : fieldAssessment(field).state === filter)))
-    .sort((a, b) => Number(isDemo(a)) - Number(isDemo(b)) || urgency(a) - urgency(b) || a.name.localeCompare(b.name, language === 'hi' ? 'hi' : 'en'));
+    .sort((a, b) => urgency(a) - urgency(b) || a.name.localeCompare(b.name, language === 'hi' ? 'hi' : 'en'));
   const choose = (value: string) => { setFilter(value); document.getElementById('my-fields')?.scrollIntoView({ behavior: 'smooth' }); };
   const hasFilters = Boolean(query.trim() || filter !== 'all');
   const attentionCount = priority.length;
@@ -91,11 +87,9 @@ export function Dashboard() {
       {real.length > 0 && <FieldAlertWatch fields={real}/>}
       <section id="my-fields" className="farmer-fields-section" aria-labelledby="fields-heading">
         <div className="section-heading"><div><h2 id="fields-heading">{t('My fields', 'मेरे खेत')}</h2><p className="section-caption">{t('Urgent field visits appear first, followed by fields waiting for pictures.', 'पहले ज़रूरी जाँच वाले खेत, फिर तस्वीर की प्रतीक्षा वाले खेत दिखेंगे।')}</p></div>{real.length > 0 && <span>{t(`${visible.length} shown`, `${visible.length} दिख रहे हैं`)}</span>}</div>
-        {fields.some(isDemo) && <div className="sample-field-notice" role="note"><div><strong>{t('Sample fields available', 'नमूना खेत उपलब्ध हैं')}</strong><p>{t('Explore sample records separately from your own fields.', 'अपने खेतों से अलग नमूना रिकॉर्ड देखें।')}</p></div><button type="button" aria-pressed={includeDemo} onClick={() => setIncludeDemo(value => !value)}>{includeDemo ? t('Hide sample fields', 'नमूना खेत छिपाएँ') : t('Show sample fields', 'नमूना खेत देखें')}</button></div>}
         {fields.length > 0 && <div className="farmer-filter-area"><div className="farmer-search-row"><label className="farmer-search-label"><Search size={19} aria-hidden="true"/><span className="sr-only">{t("Search fields", "खेत खोजें")}</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={t("Search your fields or crops", "खेत या फ़सल खोजें")}/></label><button type="button" className="farmer-filter-toggle" aria-expanded={showAdvancedFilters} onClick={() => setShowAdvancedFilters(value => !value)}><SlidersHorizontal size={18} aria-hidden="true"/>{t("Filters", "फ़िल्टर")}{filter !== "all" ? " •" : ""}</button></div>{showAdvancedFilters && <div className="field-filters">
 
           <label>{t('Show fields', 'कौन से खेत दिखाएँ')}<select value={filter} onChange={event => setFilter(event.target.value)}><option value="all">{t('All fields', 'सभी खेत')}</option><option value="needs_inspection">{t('Fields to visit', 'जाकर देखने वाले खेत')}</option><option value="data">{t('Waiting for pictures', 'तस्वीर चाहिए')}</option><option value="due">{t('Visits / tasks due', 'तय काम बाकी')}</option><option value="no_unusual_change">{t('No big change seen', 'बड़ा बदलाव नहीं दिखा')}</option></select></label>
-          {fields.some(isDemo) && <label className="checkbox-label"><input type="checkbox" checked={includeDemo} onChange={event => setIncludeDemo(event.target.checked)}/>{t('Show demo & public parcels', 'डेमो और सार्वजनिक खेत दिखाएँ')}</label>}
         </div>}</div>}
         {visible.length ? <div className="field-grid farmer-field-grid">{visible.map(field => {
           const copy = fieldCopy(field, language);
@@ -104,7 +98,6 @@ export function Dashboard() {
           return <article className={`field-card simple-field-card farmer-field-card card-${copy.assessment.state}`} key={field.id}>
             <div className="field-crop-photo"><img loading="lazy" src={cropPhoto(field.crop).src} alt={cropPhoto(field.crop).alt} onError={event => { event.currentTarget.style.display = "none"; }}/><span>{t("Crop photo", "फ़सल तस्वीर")}</span></div><div className="field-card-top"><div className="field-card-name"><span className="field-avatar" aria-hidden="true"><Sprout size={24}/></span><div><h3><Link to={`/fields/${field.id}/overview`}>{field.name}</Link></h3><small>{!field.crop || field.crop === 'Unknown' ? t('Crop not added', 'फ़सल का नाम नहीं जोड़ा') : field.crop} · {area(field.area_hectares)}</small></div></div></div>
             <div className="farmer-status-line"><span className={`evidence-status status-${copy.assessment.state}`}>{copy.title}</span></div><p className="card-explanation">{copy.explanation}</p>
-            {isDemo(field) && <p className="demo-label">{t('Sample field · current crop is unverified', 'नमूना खेत · अभी की फ़सल सत्यापित नहीं')}</p>}
             {active && <p className="job-badge" role="status">{t('Looking for a clear picture…', 'साफ़ तस्वीर खोज रहे हैं…')}</p>}
             {field.latestJob?.status === 'failed' && <p className="job-badge job-failed">{t('Picture search stopped. Open this field to try again.', 'तस्वीर की खोज पूरी नहीं हुई। खेत खोलकर फिर कोशिश करें।')}</p>}
             {Number(field.dueTasks) > 0 && <p className="due-badge">{t(`${field.dueTasks} planned ${Number(field.dueTasks) === 1 ? 'task' : 'tasks'} due`, `${field.dueTasks} तय काम बाकी`)}</p>}
@@ -117,7 +110,6 @@ export function Dashboard() {
           <h2>{hasFilters ? t('No fields match this view', 'इस खोज में कोई खेत नहीं') : t('Start with your first field', 'अपना पहला खेत जोड़ें')}</h2>
           <p>{hasFilters ? t('Clear the search to see your fields again.', 'अपने खेत फिर देखने के लिए खोज हटाएँ।') : t('Give your field a name and mark its corners on the map. Dates can wait.', 'खेत का नाम दें और नक्शे पर उसके कोने चुनें। तारीख़ें बाद में जोड़ सकते हैं।')}</p>
           {hasFilters ? <button onClick={() => { setQuery(''); setFilter('all'); }}>{t('Clear filters', 'फ़िल्टर हटाएँ')}</button> : <button className="primary-action" onClick={() => setAdding(true)}>{t('Add your first field', 'अपना पहला खेत जोड़ें')}</button>}
-          {!hasFilters && fields.some(isDemo) && !includeDemo && <button className="text-button" onClick={() => setIncludeDemo(true)}>{t('Or explore a sample field', 'या नमूना खेत देखकर समझें')}</button>}
         </div>}
       </section>
       <section className="farm-how-it-works" aria-label={t('Three simple steps', 'तीन आसान कदम')}>

@@ -1,28 +1,21 @@
 # TerraScope public data package
 
-This is a curated source catalog and a reproducible Indian public-farm demo. It covers the project's weather, imagery, boundary, vegetation, crop-map, soil and agronomy-reference needs. It is not an exhaustive list of every internet dataset.
+This is a curated source catalog and a static, attributable Indian public-boundary research sample. It covers the project's weather, imagery, boundary, vegetation, crop-map, soil and agronomy-reference needs. It is not an exhaustive list of every internet dataset.
 
 ## What is actually included
 
-- `catalog.json`: nine reviewed sources, their use, access links, integration status and limitations.
+- `catalog.json`: ten reviewed sources, their use, access links, integration status and limitations.
 - `demo/ftw-india-sample.geojson`: three genuine public parcel polygons, extracted from the 10,013-row FTW India benchmark.
 - `demo/manifest.json`: source checksum, file size and reproducible selection rules.
 - `ATTRIBUTION.md`: authors, source publication, redistribution license and changes.
-- The full 7.47 MB GeoParquet is downloaded to ignored `.local/datasets/`; it is not bundled into the frontend.
+- The original 7.47 MB GeoParquet is not bundled or currently stored in the workspace; the three-polygon extract and its source manifest are included.
 - `requirements.txt`: optional GeoParquet tooling. The regular app does not require PyArrow.
 
-Demo fields are named **Public demo: India parcel ...** and have a visible historical-data notice. Source attribution is also recorded as a `dataset_import` event. They are separate from the three original seeded fields. The source polygons refer to 2016 and may have changed since then.
+The app does not import these sample polygons. They represent 2016 reference boundaries and may have changed; they are not user farms, current crop records, or evidence of current ownership.
 
-## Reproduce the demo
+## Reproduce the research extract
 
-The three-parcel sample is already included. With Node dependencies installed and local services running:
-
-```bash
-npm run data:import-demo
-SYNC_DEMO_ONLY=1 SYNC_SCENE_LIMIT=2 npm run sync:data
-```
-
-To re-download and regenerate the sample from the full source:
+To re-download and regenerate the static sample from the full source:
 
 ```bash
 npm run data:download
@@ -30,15 +23,13 @@ npm run data:download
 .venv/bin/python scripts/prepare-public-demo.py
 ```
 
-The importer adds missing demo records and source events without changing original fields. Reruns identify demos by their source-labelled names; do not rename them between imports. Weather and scene writes are upserts. Demo-only sync excludes original fields and uses public sample coordinates for NASA POWER/Earth Search requests.
-
-`SYNC_WEATHER_DAYS` selects 1–365 available weather days (default 30); `SYNC_SCENE_LIMIT` selects 1–6 candidate scene dates (default 6). Weather imports use a three-day availability lag. At least two successful dated observations are needed for the trend panel. Cloud/no-data scenes may be rejected. Current sync progress and results are in `.local/public-demo-sync-report.json`.
+These commands only regenerate the local research files; no app fields or observations are created.
 
 ## Which app values each source can fill
 
 | App value | Suitable source | What remains unknown |
 |---|---|---|
-| Coordinates and polygon | User-drawn boundary, or a labelled FTW public demo | A benchmark polygon is not the user's actual farm |
+| Coordinates and polygon | User-drawn field boundary | Research sample polygons are not user's farms |
 | Area | PostGIS geodesic calculation on that polygon | Exact surveyed/legal area |
 | Temperature, rain, humidity | NASA POWER daily API | Actual irrigation, on-site sensor readings |
 | Observation dates and cloud cover | Earth Search Sentinel-2 catalog | Whether every field pixel is cloud-free |
@@ -53,7 +44,7 @@ The importer adds missing demo records and source events without changing origin
 
 ## Official sources
 
-The UI at `/datasets` and `catalog.json` link to the relevant official pages. Sources connected in this app are NASA POWER and Sentinel-2/Earth Search. FTW is the boundary source for demo records. CropHarvest, ESA WorldCereal, ESA WorldCover, ISRIC SoilGrids, UCSB CHIRPS v3 and FAO Crop Calendar are documented reference sources; their databases are not silently copied or declared integrated.
+The UI at `/datasets` and `catalog.json` link to the relevant official pages. Sources connected in this app are NASA POWER, Sentinel-2/Earth Search, and Open-Meteo forecasts. FTW is retained only as a static research sample. CropHarvest, ESA WorldCereal, ESA WorldCover, ISRIC SoilGrids, UCSB CHIRPS v3 and FAO Crop Calendar are documented reference sources; their databases are not silently copied or declared integrated.
 
 References: [FTW India](https://source.coop/kerner-lab/fields-of-the-world-india/boundaries_india_2016.parquet), [FTW source licenses](https://github.com/fieldsoftheworld/ftw-datasets-list), [NASA POWER](https://power.larc.nasa.gov/docs/services/api/temporal/daily/), [Earth Search](https://element84.com/earth-search/), [CropHarvest](https://github.com/nasaharvest/cropharvest), [WorldCereal](https://esa-worldcereal.org/en/products/global-maps), [WorldCover](https://esa-worldcover.org/en/data-access), [SoilGrids](https://isric.org/explore/soilgrids), [CHIRPS v3](https://chc.ucsb.edu/data/chirps3), [FAO calendar](https://cropcalendar.apps.fao.org/).
 

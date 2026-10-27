@@ -29,9 +29,7 @@ function FarmMap({fields}:{fields:DatabaseField[]}){
  useEffect(()=>{
   if(!element.current)return;
   const map=L.map(element.current,{scrollWheelZoom:false,zoomControl:true,attributionControl:true}).setView([28.6,77.4],11);
-  const preview=document.documentElement.dataset.showcase==='true';
-  if(!preview)L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(map);
-  else map.getContainer().style.background='linear-gradient(125deg,#e3edda,#a9c89e)';
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(map);
   const all:L.LatLngBounds[]=[];
   fields.forEach(field=>{
    const state=field.assessment?.state;
@@ -79,7 +77,7 @@ export function DashboardAddons({fields}:{fields:DatabaseField[]}){
  const [newScene,setNewScene]=useState('');
  const [pending,setPending]=useState(true);
  const [expanded,setExpanded]=useState(true);
- const dataset=useMemo(()=>fields.filter(f=>!f.isDemo&&f.provenance!=='demo'&&f.provenance!=='public_boundary'),[fields]);
+ const dataset=useMemo(()=>fields,[fields]);
  useEffect(()=>{
   if(!dataset.length){setPending(false);return;}
   let cancelled=false;setPending(true);

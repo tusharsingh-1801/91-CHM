@@ -9,7 +9,7 @@ import './FarmerWelcome.css';
 export function FarmerWelcome({fields}:{fields:DatabaseField[]}) {
   const {t,language}=usePreferences();
   const account=useFarmerAccount();
-  const real=fields; // Count saved demo fields too; individual field cards retain evidence labels.
+  const real=fields;
   const inspect=real.filter(field=>fieldAssessment(field).state==='needs_inspection');
   const waiting=real.filter(field=>['image_too_old','not_enough_data','awaiting_analysis'].includes(fieldAssessment(field).state));
   const due=real.filter(field=>Number(field.dueTasks)>0);

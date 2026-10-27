@@ -16,7 +16,7 @@ export function NotificationCenter({fields}:{fields:DatabaseField[]}){
  const [view,setView]=useState<'unread'|'all'>('unread');
  const [refresh,setRefresh]=useState(0);
  const [expanded,setExpanded]=useState(false);
- const ids=useMemo(()=>fields.filter(field=>!field.isDemo&&field.provenance!=='public_boundary').map(field=>({id:field.id,name:field.name})),[fields]);
+ const ids=useMemo(()=>fields.map(field=>({id:field.id,name:field.name})),[fields]);
  useEffect(()=>{
   if(!expanded)return;
   let mounted=true;setLoading(true);setError('');

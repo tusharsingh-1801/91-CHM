@@ -28,7 +28,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [registering, setRegistering] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const localKey='terrascope:profile:'+(document.documentElement.dataset.showcase==='true'?'demo':'local');
+  const localKey='terrascope:profile:local';
   const [localProfile,setLocalProfile]=useState<ProfileValues>(()=>{try{return validateProfile(JSON.parse(sessionStorage.getItem(localKey)||'{}'));}catch{return {...emptyProfile};}});
   const profile=session?.user?{...emptyProfile,...session.user.profile}:localProfile;
   async function saveProfile(value:ProfileValues){
@@ -140,7 +140,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     <AccountSettingsContext.Provider value={{email:session.user?.email||'',signedIn:Boolean(session.user),profile,saveProfile,changePassword,signOut}}>
     <FarmerAccountContext.Provider value={farmerAccount}>
       <PreferencesBar>
-        <Notifications key={session.user?.id||'local'} accountId={session.user?.id||(document.documentElement.dataset.showcase==='true'?'demo':'local')}/>
+        <Notifications key={session.user?.id||'local'} accountId={session.user?.id||'local'}/>
         <Link to="/profile" aria-label={t('Your account','आपका खाता')} className="header-profile-button header-profile-link"><span className="header-avatar"><UserRound size={20} aria-hidden="true"/></span><span className="header-profile-copy"><small>{session.user?t('Signed in','साइन इन है'):t('Your profile','आपकी प्रोफ़ाइल')}</small><strong>{farmerAccount.displayName}</strong></span></Link>
       </PreferencesBar>
       {children}

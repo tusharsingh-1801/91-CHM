@@ -18,7 +18,7 @@ for(const width of [320,390,768,1440]){
    if(path==='/api/fields')return route.fulfill({json:[seed,
     {...seed,id:'00000000-0000-0000-0000-000000000072',name:'Older orchard',last_observation:day(40),latestObservation:{...measured,observed_on:day(40)},assessment:assessEvidence({...measured,observed_on:day(40)},before,undefined,now)},
     {...seed,id:'00000000-0000-0000-0000-000000000073',name:'New field',last_observation:null,latestObservation:null,assessment:assessEvidence(null,null)},
-    {...seed,id:'00000000-0000-0000-0000-000000000074',name:'Public demo parcel',provenance:'public_boundary',isDemo:true}]});
+    ]});
    if(path.endsWith('/ndvi'))return route.fulfill({json:[before,measured]});
    if(path.endsWith('/ndvi/analysis'))return route.fulfill({json:{status:'analysed',statusLabel:'Decreasing vegetation',summary:'Vegetation decreased. Inspect the field to understand why.',observations:2,slopePerDay:-.025,dateStart:before.observed_on,dateEnd:measured.observed_on}});
    return route.fulfill({json:[]});
@@ -27,10 +27,9 @@ for(const width of [320,390,768,1440]){
   await expect(page.getByRole('heading',{name:'Visit these fields first'})).toBeVisible();
   const summary=page.getByRole('region',{name:'Farm summary'});
   await expect(summary).toContainText('Fields to visit');await expect(summary).toContainText('Waiting for pictures');await expect(summary.getByRole('button',{name:/Your saved fields/}).locator('strong')).toHaveText('3');
-  await expect(page.getByRole('heading',{name:'Public demo parcel'})).toHaveCount(0);
   await page.screenshot({path:test.info().outputPath(`overview-${width}.png`),fullPage:true});
   await page.getByLabel('Search fields').fill('River');await expect(page.locator('.field-card')).toHaveCount(1);
-  await page.getByLabel('Search fields').fill('');await page.getByRole('button',{name:'Filters'}).click();await page.getByLabel('Show demo & public parcels').check();await expect(page.getByRole('heading',{name:'Public demo parcel'})).toBeVisible();
+  await page.getByLabel('Search fields').fill('');
   await page.goto(`/fields/${seed.id}/analysis`,{waitUntil:'domcontentloaded'});
   await expect(page.getByRole('region',{name:'Field evidence'})).toContainText('Visit this field');
   await expect(page.getByRole('region',{name:'Field evidence'})).toContainText('91%');

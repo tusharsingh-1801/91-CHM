@@ -22,8 +22,6 @@ export type DatabaseField = {
   stress_geojson?: Record<string, unknown> | null
   boundary_version?: number
   provenance?: Provenance
-  provenanceNote?: string
-  isDemo?: boolean
   assessment?: Assessment
   policy?: EvidencePolicy
   latestObservation?: Observation | null
@@ -336,13 +334,13 @@ export interface SatelliteScene {
 
 
 export type ForecastDay={date:string;min_c:number|null;max_c:number|null;rain_probability_percent:number|null;precipitation_mm:number|null;humidity_percent:number|null;wind_speed_kmh:number|null};
-export type FieldForecast={source:'Open-Meteo'|'Synthetic showcase';source_url:string;field_id:string;issued_at:string;timezone:string;units:{temperature:'°C';precipitation:'mm';wind_speed:'km/h'};days:ForecastDay[]};
+export type FieldForecast={source:'Open-Meteo';source_url:string;field_id:string;issued_at:string;timezone:string;units:{temperature:'°C';precipitation:'mm';wind_speed:'km/h'};days:ForecastDay[]};
 export async function loadForecast(fieldId:string):Promise<FieldForecast>{
  const response=await fetch(`/api/fields/${encodeURIComponent(fieldId)}/forecast`);
  if(!response.ok){const payload=await response.json().catch(()=>({})) as {error?:string};throw new Error(payload.error||'Forecast temporarily unavailable');}
  const raw=await response.json();
  const payload:FieldForecast=typeof raw.retrievedAt==='string'?{
-  source:raw.provenance==='demo'?'Synthetic showcase':'Open-Meteo',source_url:raw.sourceUrl,field_id:fieldId,
+  source:'Open-Meteo',source_url:raw.sourceUrl,field_id:fieldId,
   issued_at:raw.retrievedAt,timezone:raw.timezone,units:{temperature:'°C',precipitation:'mm',wind_speed:'km/h'},
   days:raw.days.map((day:import('../../../shared/forecast').ForecastDay)=>({date:day.date,min_c:day.minC,max_c:day.maxC,rain_probability_percent:day.rainChance,precipitation_mm:day.rainMm,humidity_percent:day.humidity,wind_speed_kmh:day.windKph}))
  }:raw;

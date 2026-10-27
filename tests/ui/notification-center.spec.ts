@@ -1,7 +1,9 @@
 import {test,expect} from '@playwright/test';
+import {setup} from './fixtures';
 
 test('notification center supports unread filtering and saves seen state',async({page})=>{
- await page.goto('/?demo=1');
+ await setup(page);
+ await page.goto('/');
  const center=page.getByRole('region',{name:'Notification center'});
  await expect(center).toBeVisible();
  await center.getByRole('button',{name:'Show notifications'}).click();

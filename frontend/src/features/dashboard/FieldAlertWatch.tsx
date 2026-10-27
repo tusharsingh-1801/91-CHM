@@ -8,7 +8,6 @@ import './field-alert-watch.css';
 const CHECK_INTERVAL_MS=15*60*1000;
 export function FieldAlertWatch({fields}:{fields:DatabaseField[]}){
  const {t}=usePreferences();
- const isDemo=document.documentElement.dataset.showcase==='true';
  const [permission,setPermission]=useState<NotificationPermission|'unsupported'>(()=>typeof Notification==='undefined'?'unsupported':Notification.permission);
  const [enabled,setEnabled]=useState(false);
  const [checking,setChecking]=useState(false);
@@ -16,9 +15,9 @@ export function FieldAlertWatch({fields}:{fields:DatabaseField[]}){
  const seen=useRef(new Set<string>());
  const running=useRef(false);
  const active=useRef(false);
- const fieldList=useMemo(()=>fields.filter(field=>!field.isDemo&&field.provenance!=='demo'&&field.provenance!=='public_boundary'),[fields]);
+ const fieldList=useMemo(()=>fields,[fields]);
  const check=useCallback(async()=>{
-  if(!active.current||running.current||document.visibilityState==='hidden'||!navigator.onLine||isDemo||Notification.permission!=='granted')return;
+  if(!active.current||running.current||document.visibilityState==='hidden'||!navigator.onLine||Notification.permission!=='granted')return;
   running.current=true;setChecking(true);
   try{
    const results=await Promise.allSettled(fieldList.map(async field=>{
@@ -45,7 +44,7 @@ export function FieldAlertWatch({fields}:{fields:DatabaseField[]}){
    if(failures)setMessage(t(`Could not check ${failures} field(s). Retry while online.`,`${failures} खेत की जानकारी नहीं मिली। इंटरनेट आने पर फिर कोशिश करें।`));
   }catch{if(active.current)setMessage(t('Notifications could not be shown. Please check browser permissions.','सूचनाएँ नहीं दिखीं। ब्राउज़र की अनुमति जाँचें।'));}
   finally{running.current=false;if(active.current)setChecking(false);}
- },[fieldList,isDemo,t]);
+ },[fieldList,t]);
  useEffect(()=>{
   if(!enabled)return;
   active.current=true;
@@ -58,7 +57,6 @@ export function FieldAlertWatch({fields}:{fields:DatabaseField[]}){
  },[enabled,check]);
  async function toggle(){
   if(enabled){active.current=false;setEnabled(false);setMessage(t('Alert watch paused.','अलर्ट जाँच बंद कर दी गई।'));return;}
-  if(isDemo){setMessage(t('Sample mode does not send real field notifications.','नमूना मोड में असली खेतों की सूचनाएँ नहीं भेजी जातीं।'));return;}
   if(typeof Notification==='undefined'){setPermission('unsupported');return;}
   const next=Notification.permission==='default'?await Notification.requestPermission():Notification.permission;
   setPermission(next);
@@ -68,8 +66,7 @@ export function FieldAlertWatch({fields}:{fields:DatabaseField[]}){
  return <section className="field-alert-watch" aria-label={t('Automatic field alert watcher','खेत अलर्ट की स्वतः जाँच')}>
   <h3><BellRing size={19}/>{t('Automatic field alert watch','खेत अलर्ट की स्वतः जाँच')}</h3>
   <p>{t('Opt in to check open satellite alerts and overdue field visits while TerraScope stays open and online. Checks on enable, on return, and approximately every 15 minutes.','TerraScope खुला और ऑनलाइन होने पर खुले सैटेलाइट अलर्ट और बकाया खेत-जाँच देखें। शुरू करते समय, वापस आने पर और लगभग हर 15 मिनट में जाँच होती है।')}</p>
-  {isDemo&&<p>{t('Sample mode does not send real field notifications.','नमूना मोड असली खेतों की सूचनाएँ नहीं भेजता।')}</p>}
-  {permission==='unsupported'?<p><BellOff size={15}/>{t('Browser notifications unavailable.','ब्राउज़र सूचनाएँ उपलब्ध नहीं हैं।')}</p>:<button type="button" onClick={()=>void toggle()} disabled={isDemo||permission==='denied'&&!enabled} aria-pressed={enabled}>{enabled?t('Pause alert watch','अलर्ट जाँच रोकें'):t('Enable alert watch','अलर्ट जाँच चालू करें')}</button>}
+  {permission==='unsupported'?<p><BellOff size={15}/>{t('Browser notifications unavailable.','ब्राउज़र सूचनाएँ उपलब्ध नहीं हैं।')}</p>:<button type="button" onClick={()=>void toggle()} disabled={permission==='denied'&&!enabled} aria-pressed={enabled}>{enabled?t('Pause alert watch','अलर्ट जाँच रोकें'):t('Enable alert watch','अलर्ट जाँच चालू करें')}</button>}
   {enabled&&<button type="button" onClick={()=>void check()} disabled={checking}>{checking?t('Checking…','जाँच रहे हैं…'):t('Check now','अभी जाँचें')}</button>}
   {message&&<p className="field-alert-watch-status" role="status">{message}</p>}
   <small>{t('Notifications are optional and stop when this tab closes. This does not provide background push or SMS. No browser permission is requested until you enable it.','सूचनाएँ वैकल्पिक हैं और टैब बंद होने पर रुक जाती हैं। यह बैकग्राउंड पुश या SMS नहीं है। आपकी अनुमति बिना पूछे नहीं ली जाती।')}</small>

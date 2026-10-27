@@ -275,7 +275,6 @@ input[type=range] { padding:0; accent-color:var(--green); }
 .evidence-facts { font-size:.85rem; }
 .evidence-facts dt { color:var(--muted); opacity:1; }
 .evidence-facts dd { font-weight:600; }
-.demo-label { color:#82541d !important; background:#fff6df; border:1px solid #e7d7a8; padding:.65rem .8rem; border-radius:6px; font-size:.9rem !important; }
 .job-badge,.due-badge { background:#eef3ea; padding:8px 10px; border-radius:6px; }
 .job-failed { color:#8c3e30 !important; background:#fff0e9; }
 .dashboard-state { background:#fff; border-color:var(--line); color:var(--muted); min-height:240px; }
@@ -636,10 +635,7 @@ body:has(.field-shell) .field-shell,body:has(.simple-farm) .dashboard-shell { co
 }
 
 
-/* Standalone in-browser showcase, visually separated from connected farm data. */
-
-
-/* Field-aware Gemini assistant and example-mode assistant */
+/* Field-aware Sarvam assistant */
 .crop-assistant-launch{position:fixed;right:20px;bottom:24px;z-index:1100;display:flex;align-items:center;gap:9px;border:0;border-radius:100px;background:#126e44;color:#fff;font:700 14px inherit;padding:13px 19px;box-shadow:0 8px 28px #092e2160;cursor:pointer}
 .crop-assistant-window{position:fixed;right:18px;bottom:85px;z-index:1101;width:min(390px,calc(100vw - 30px));height:min(540px,calc(100dvh - 120px));display:flex;flex-direction:column;border-radius:20px;overflow:hidden;background:#fff;color:#193528;border:1px solid #c9dfce;box-shadow:0 12px 55px #08271f45}
 .crop-assistant-header{background:#14583a;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -660,8 +656,6 @@ body:has(.field-shell) .field-shell,body:has(.simple-farm) .dashboard-shell { co
 .crop-assistant-input button{display:grid;place-items:center;min-width:44px;border:0;border-radius:12px;background:#146d47;color:#fff;cursor:pointer}
 .crop-assistant-input button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:760px){.crop-assistant-launch{bottom:82px;right:13px;padding:12px 14px}.crop-assistant-window{bottom:140px;right:8px;height:min(510px,calc(100dvh - 165px));width:calc(100vw - 16px)}}
-html[data-showcase="true"] .crop-assistant-launch{bottom:105px}
-@media(min-width:761px){html[data-showcase="true"] .crop-assistant-launch{bottom:48px}}
 
 
 /* Crop photography and NDVI visual reference gallery */

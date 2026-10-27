@@ -8,7 +8,6 @@ import { usePreferences } from '../../lib/preferencesContext';
 import './field-health-leaderboard.css';
 
 type Sort = 'priority' | 'change' | 'date' | 'name';
-const isReal = (field: DatabaseField) => !field.isDemo && field.provenance !== 'demo' && field.provenance !== 'public_boundary';
 const usable = (field: DatabaseField, which: 'latestObservation' | 'previousObservation') => {
   const observation = field[which];
   return observation && observation.accepted === true && observation.provenance === 'measured_imagery'
@@ -28,7 +27,7 @@ export function FieldHealthLeaderboard({ fields }: { fields: DatabaseField[] }) 
   const { t, date } = usePreferences();
   const [sort, setSort] = useState<Sort>('priority');
   const [showAll, setShowAll] = useState(false);
-  const rows = useMemo(() => fields.filter(isReal).map(field => {
+  const rows = useMemo(() => fields.map(field => {
     const latest = usable(field, 'latestObservation');
     const previous = usable(field, 'previousObservation');
     const compatible = !!(latest && previous && previous.observed_on < latest.observed_on && previous.calculation_version === latest.calculation_version);

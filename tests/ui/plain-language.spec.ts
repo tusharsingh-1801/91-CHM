@@ -16,16 +16,12 @@ test('missing pictures never produce a reassuring crop summary and lead to the i
   expect(state.errors).toEqual([]);
 });
 
-test('a demo-only account offers a real first field and an explicit sample view', async ({ page }) => {
+test('dashboard has no demo-field toggle', async ({ page }) => {
   const state = await setup(page);
-  state.fields = [{ ...seed, name: 'Sample plot', isDemo: true, provenance: 'demo' }];
+  state.fields = [{ ...seed }];
   await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Add your first field' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Sample plot' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Or explore a sample field' }).click();
-  await expect(page.getByRole('heading', { name: 'Sample plot' })).toBeVisible();
-  await expect(page.locator('.field-card .demo-label')).toContainText('Sample field');
-  await expect(page.getByRole('region', { name: 'Farm summary' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Test field' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Show sample fields' })).toHaveCount(0);
   expect(state.errors).toEqual([]);
 });
 

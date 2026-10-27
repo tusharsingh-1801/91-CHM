@@ -59,7 +59,10 @@ export async function getFields(_request: Request, response: Response) {
         select jsonb_build_object('id',j.id,'field_id',j.field_id,'boundary_version',j.boundary_version,'kind',j.kind,'status',j.status,'progress',j.progress,'result',j.result,'error',j.error,'created_at',j.created_at,'finished_at',j.finished_at) as job
         from ingestion_jobs j where j.field_id=fields.id and j.boundary_version=fields.boundary_version and j.kind='satellite'
         order by j.created_at desc limit 1
-      ) latest_job on true where (not $4::boolean or fields.owner_id=$3::uuid) order by fields.created_at asc`, [policy.minCoverage,policy.minPixels,actor(response)?.id??null,authRequired()]);
+      ) latest_job on true
+      where fields.provenance not in ('demo','public_boundary')
+        and (not $4::boolean or fields.owner_id=$3::uuid)
+      order by fields.created_at asc`, [policy.minCoverage,policy.minPixels,actor(response)?.id??null,authRequired()]);
     response.json(result.rows.map((row: Record<string, unknown> & { evidence: Observation[] }) => {
       const [latest,previous] = row.evidence;
       const assessment = assessEvidence(latest??null,previous??null,policy);
@@ -71,9 +74,7 @@ export async function getFields(_request: Request, response: Response) {
       // Legacy stored scores/dates remain in the database, but cannot masquerade as verified evidence.
       return {...row, boundary_geom:undefined, health_delta:latest&&previous&&latest.calculation_version===previous.calculation_version?Number(latest.ndvi_value)-Number(previous.ndvi_value):null, health_score:latest ? vegetationScore(Number(latest.ndvi_value),latest.ndmi_value==null?null:Number(latest.ndmi_value)) : null,
         ndvi_average:latest?.ndvi_value??null, last_observation:latest?.observed_on??null,
-        latestObservation:latest??null,previousObservation:previous??null,assessment,policy,
-        isDemo:row.provenance==='demo'||row.provenance==='public_boundary',
-        provenanceNote:row.provenance==='public_boundary'?'Historical public boundary; current crop, dates and yield unverified':row.provenance==='demo'?'Legacy example field; excluded from farm summaries':'Crop, dates, yield and field name are user-reported; satellite evidence is labelled separately'};
+        latestObservation:latest??null,previousObservation:previous??null,assessment,policy};
     }));
   } catch {
     console.error('GET /api/fields failed:');
@@ -293,7 +294,7 @@ export async function createField(request: Request, response: Response) {
   }
   if(clientKey!==null&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clientKey)){response.status(400).json({error:'Idempotency-Key must be a UUID'});return;}
   if ((planting_date!==undefined&&!validCalendarDate(planting_date))||(harvest_date!==undefined&&!validCalendarDate(harvest_date))||(planting_date&&harvest_date&&planting_date>harvest_date)) { response.status(400).json({error:'Use valid planting/harvest dates, or leave them unknown'});return; }
-  if(provenance!==undefined&&!['user_reported','demo','public_boundary'].includes(provenance)) { response.status(400).json({error:'Choose a supported field provenance'});return; }
+  if(provenance!==undefined&&provenance!=='user_reported') { response.status(400).json({error:'Field provenance must be user-reported'});return; }
   try {
     const result = await pool.query(
       `with boundary as (

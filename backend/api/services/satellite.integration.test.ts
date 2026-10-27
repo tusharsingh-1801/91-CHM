@@ -83,7 +83,7 @@ test('PostGIS transactions preserve recency, deduplicate evidence, reject qualit
   assert.equal(version.boundary_version,2);assert.equal(version.latest_scene_id,null);assert.equal(version.last_observation,null);
   assert.equal((await pool.query('select count(*)::int as count from field_boundary_versions where field_id=$1',[field.id])).rows[0].count,2);
   assert.equal((await pool.query('select count(*)::int as count from vegetation_indices where field_id=$1 and boundary_version=1',[field.id])).rows[0].count,5);
-  let responseFields:Array<{id:string;last_observation:string|null;assessment:{state:string};isDemo:boolean}> = [];
+  let responseFields:Array<{id:string;last_observation:string|null;assessment:{state:string}}> = [];
   await getFields({} as Request,{locals:{account},json(value:typeof responseFields){responseFields=value;},status(){throw new Error('Fields request failed');}} as unknown as Response);
   assert.equal(responseFields.find(item=>item.id===field.id)?.last_observation,null);
   assert.equal(responseFields.find(item=>item.id===field.id)?.assessment.state,'awaiting_analysis');

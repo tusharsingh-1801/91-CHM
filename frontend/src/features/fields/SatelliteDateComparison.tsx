@@ -12,14 +12,13 @@ export function SatelliteDateComparison({field,observations}:{field:DatabaseFiel
   .slice().sort((a,b)=>(a.acquired_at||a.observed_on).localeCompare(b.acquired_at||b.observed_on));
  const older=available.find(o=>o.scene_id===before)||available.at(-2);
  const newer=available.find(o=>o.scene_id===after)||available.at(-1);
- const demo=document.documentElement.dataset.showcase==='true';
  const position=field.latitude!=null&&field.longitude!=null&&Number.isFinite(Number(field.latitude))&&Number.isFinite(Number(field.longitude))&&field.boundary_geojson;
  const distinct=older&&newer&&older.scene_id!==newer.scene_id;
  const chronological=distinct&&(older.acquired_at||older.observed_on)<(newer.acquired_at||newer.observed_on);
  const comparable=chronological&&Boolean(older.calculation_version)&&older.calculation_version===newer.calculation_version;
  return <section className="platform-panel satellite-comparison" aria-label={t('Processed satellite image comparison','प्रोसेस की गई सैटेलाइट तस्वीरों की तुलना')}>
   <h3>{t('Compare processed image layers','प्रोसेस की गई तस्वीरों की तुलना')}</h3>
-  <p>{demo?t('Illustrative demo layers and synthetic values.','डेमो की उदाहरण परतें और काल्पनिक मान।'):t('Each panel uses the selected scene’s processed NDVI pixels, clipped to this boundary. These are vegetation visualizations, not natural-colour photographs.','हर नक्शा चुनी तस्वीर के NDVI पिक्सल खेत की सीमा में दिखाता है। ये हरियाली के रंग हैं, असली रंगों वाली फ़ोटो नहीं।')}</p>
+  <p>{t('Each panel uses the selected scene’s processed NDVI pixels, clipped to this boundary. These are vegetation visualizations, not natural-colour photographs.','हर नक्शा चुनी तस्वीर के NDVI पिक्सल खेत की सीमा में दिखाता है। ये हरियाली के रंग हैं, असली रंगों वाली फ़ोटो नहीं।')}</p>
   {available.length<2||!position?<p>{t('Two quality-accepted images and a saved field boundary are needed.','दो साफ़ स्वीकृत तस्वीरें और खेत की सीमा चाहिए।')}</p>:<>
    <div className="platform-two-column">{([['before',older,setBefore],['after',newer,setAfter]] as const).map(([side,reading,set])=><label key={side}>{side==='before'?t('Before acquisition','पहली तस्वीर'):t('After acquisition','दूसरी तस्वीर')}<select value={reading?.scene_id||''} onChange={event=>set(event.target.value)}>{available.map(o=><option value={o.scene_id!} key={o.scene_id}>{date(o.observed_on)} · {(o.acquired_at||'').slice(11,16)} · {o.scene_id}</option>)}</select></label>)}</div>
    {!chronological&&<p role="alert">{t('Choose two different acquisitions with Before earlier than After.','दो अलग तस्वीरें चुनें; पहली तस्वीर दूसरी से पुरानी हो।')}</p>}

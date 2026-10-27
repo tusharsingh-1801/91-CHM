@@ -1,4 +1,4 @@
-"""Extract three unmodified, validated public India parcel polygons for a labelled demo."""
+"""Extract a small, unmodified public India parcel research sample."""
 import argparse
 import hashlib
 import json
@@ -32,14 +32,14 @@ for row in table.to_pylist():
         candidates.append((row, geom, hectares, point))
 features = []
 used = set()
-# Geographic diversity for the demo, not presumed crop labels or user farm locations.
+# Geographic diversity for the sample, not presumed crop labels or user farm locations.
 for lat, lon in [(29, 76), (22, 78), (17, 78)]:
     available = [item for item in candidates if str(item[0]['id']) not in used]
     row, geom, hectares, point = min(available, key=lambda item: (item[3].y-lat)**2+(item[3].x-lon)**2)
     source_id = str(row['id'])
     used.add(source_id)
     features.append({'type': 'Feature', 'geometry': mapping(geom), 'properties': {
-        'source_id': source_id, 'name': f'Public demo: India parcel {source_id}',
+        'source_id': source_id, 'name': f'Research sample: India parcel {source_id}',
         'dataset': 'Fields of the World — India', 'boundary_year': 2016,
         'determination_datetime': str(row.get('determination_datetime')),
         'area_hectares': round(hectares, 4), 'latitude': point.y, 'longitude': point.x,
@@ -56,7 +56,7 @@ output.mkdir(parents=True, exist_ok=True)
     'source_file_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
     'source_file_bytes': path.stat().st_size, 'sample_count': len(features),
     'selection': 'Valid 1–10 ha source polygons nearest (29,76), (22,78), (17,78), without changing polygon coordinates.',
-    'license': 'CC BY 4.0', 'status': 'Historical public demo, not user field ground truth',
+    'license': 'CC BY 4.0', 'status': 'Historical research sample, not user field ground truth',
 }, indent=2)+'\n')
 for feature in features:
     p = feature['properties']

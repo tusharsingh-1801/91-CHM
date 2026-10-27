@@ -11,11 +11,3 @@ test('alert watch is opt-in and existing reminder stays present',async({page})=>
  await expect(region.getByRole('button',{name:'Enable alert watch'})).toBeVisible();
  await expect(region.getByRole('button',{name:'Check now'})).toHaveCount(0);
 });
-
-test('showcase warns rather than issuing live field notifications',async({page})=>{
- await page.goto('/?demo=1');
- const region=page.getByRole('region',{name:'Automatic field alert watcher'});
- await expect(region).toBeVisible();
- await expect(region).toContainText('Sample mode does not send real field notifications.');
- await expect(region.getByRole('button',{name:'Enable alert watch'})).toBeDisabled();
-});

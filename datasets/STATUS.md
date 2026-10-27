@@ -2,6 +2,8 @@
 
 Verified against the local PostgreSQL database and dataset cache on **23 October 2026**. Earlier test-only evidence below has been superseded: the existing public-boundary parcel `15728878-9cb6-41af-bd0c-f2660426198b` already has persisted WorldCover, SoilGrids, CHIRPS and WorldCereal results. The database contains no farmer-owned boundary, so these are real source extractions for a benchmark polygon, not verified farm observations. Existing snapshots and files are preserved.
 
+On 27 October 2026, direct HTTP GETs to the ten catalog URLs returned **200 OK**. This confirms endpoint/page reachability only; it does not establish field-specific data coverage or mean every source is downloaded and integrated.
+
 ## Integration status
 
 | Dataset | Downloader / actual data | Processing | PostgreSQL/API/UI | Current blocker or limitation |

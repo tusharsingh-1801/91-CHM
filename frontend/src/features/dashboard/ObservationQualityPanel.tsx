@@ -7,7 +7,7 @@ import type { DatabaseField } from '../../lib/api';
 
 export function ObservationQualityPanel({ fields }: { fields: DatabaseField[] }) {
   const { t, date } = usePreferences();
-  const real = fields.filter(field => !field.isDemo && field.provenance !== 'demo' && field.provenance !== 'public_boundary');
+  const real = fields;
   if (!real.length) return null;
   const rows = real.map(field => {
     const reading = field.latestObservation;

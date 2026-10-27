@@ -59,7 +59,6 @@ export function FieldOverview() {
         <div><dt>{t('Image age', 'तस्वीर कितनी पुरानी')}</dt><dd>{copy.assessment.ageDays == null ? t('Not available', 'उपलब्ध नहीं') : t(`${copy.assessment.ageDays} days`, `${copy.assessment.ageDays} दिन`)}</dd></div>
         <div><dt>{t('Field visible clearly', 'खेत का साफ़ दिखा हिस्सा')}</dt><dd>{field.latestObservation?.valid_coverage_percent != null ? `${field.latestObservation.valid_coverage_percent}%` : t('Not available', 'उपलब्ध नहीं')}</dd></div>
         <div><dt>{t('Field area', 'खेत का क्षेत्रफल')}</dt><dd>{area(field.area_hectares)}</dd></div></dl><p className="quiet">{t('Pictures show changes in greenness. A field visit helps explain why. The clear-view percentage describes the picture, not crop health.', 'तस्वीरें हरियाली का बदलाव दिखाती हैं। वजह खेत जाकर समझें। साफ़ दिखा प्रतिशत तस्वीर का है, फ़सल की सेहत का नहीं।')}</p></details>
-      {(field.isDemo || field.provenance === 'public_boundary' || field.provenance === 'demo') && <p className="demo-label">{t('Demo / public parcel. Current crop and dates are unverified.', 'डेमो / सार्वजनिक खेत। अभी की फ़सल और तारीख़ें सत्यापित नहीं हैं।')}</p>}
     </section>
     <FieldJourney field={field}/>
     <ReferenceDatasets fieldId={field.id}/>

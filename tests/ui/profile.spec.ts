@@ -1,7 +1,9 @@
 import {test,expect} from '@playwright/test';
+import {setup} from './fixtures';
 
-test('demo profile personalizes the greeting, persists changes and restores the default when name is blank',async({page})=>{
- await page.goto('/?demo=1');
+test('local profile personalizes the greeting, persists changes and restores the default when name is blank',async({page})=>{
+ await setup(page);
+ await page.goto('/');
  await expect(page.getByRole('heading',{name:'Hello, Farmer!',exact:true})).toBeVisible();
  await page.getByLabel('Your account',{exact:true}).click();
  await expect(page).toHaveURL(/\/profile$/);

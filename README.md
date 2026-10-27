@@ -102,28 +102,15 @@ npm test
 
 For the full submission check use `npm run submission:check`. A timestamped report is written to ignored `.local/submission-evidence/`. See [repository gap audit](docs/academic/REPOSITORY_GAP_AUDIT_2026-10-16.md) for unfinished items and the exact verification plan.
 
-## Full mock showcase (no API or PostgreSQL needed)
-
-```bash
-npm ci
-npm run demo
-```
-
-Open **http://localhost:5173/?demo=1**. The whole UI loads an in-memory sample backend: eight crop fields, example polygon boundaries and NDVI layers, two-date vegetation observations, 45 days of daily weather per field, satellite scenes, historical field events, tasks, alerts, scouting, report/CSV data, and six additional dataset cards. You can create example visits/notes and navigate between pages. No real database, Python engine or external satellite processing is used.
-
-Use **http://localhost:5173/?demo=0** to leave sample mode (if your real backend is running). All mock records reset on a browser refresh; original database records are untouched. The interface displays an unobtrusive Example Data Mode indicator to distinguish synthetic values from verified imagery.
-
-Run `npx playwright test tests/ui/showcase.spec.ts` for targeted checks. Never treat in-memory readings as real satellite evidence.
-
 ## Sync project data
 
 With native services running, run `npm run sync:data` to import 30 available days of NASA POWER weather and search the last 90 days of Sentinel-2 observations for saved field locations. NASA meteorological availability typically trails by 2–3 days; missing-value sentinels are excluded from measurements. Set `SYNC_WEATHER_DAYS` to choose 1–365 days. This sends saved coordinates to NASA POWER and Earth Search.
 
 Fields with no coordinates are skipped. Field-level indices require an actual polygon boundary; a point lookup only supplies scene metadata. Successful observations update vegetation indices and field health, and may generate stress alerts. The local sync report is `.local/data-sync-report.json`. Planting/harvest dates, yield and management events must come from the field manager.
 
-## Public demo and dataset catalog
+## Dataset catalog and source status
 
-Open **Explore datasets** on the dashboard for nine relevant public sources and their actual integration status. See [datasets/README.md](datasets/README.md) for reproducible public-boundary demo import, attribution, and the mapping from datasets to app fields. Public demo parcels are clearly labelled; unknown crop identity, farm dates and yield remain unknown.
+Open **Explore datasets** on the dashboard for ten reviewed sources and their actual integration status. Three sources are connected to product features; the remaining entries are reference-only or a static research sample. See [datasets/README.md](datasets/README.md) for source limitations and attribution. Sample parcel polygons are not imported as farm records.
 
 ## Phones, tablets, and other computers
 
@@ -147,7 +134,7 @@ The command records source, license, retrieval timestamp, coverage, provider err
 
 ## Evidence-first monitoring
 
-The overview prioritizes field visits, old images and missing evidence. Universal farm-average health has been removed. Field-level coverage, valid pixels, acquisition date, source, freshness and descriptive change are separate. Demo/public parcels are hidden from real-farm summaries by default. Legacy scores are preserved in PostgreSQL but are not verified imagery.
+The overview prioritizes field visits, old images and missing evidence. Universal farm-average health has been removed. Field-level coverage, valid pixels, acquisition date, source, freshness and descriptive change are separate. Demo/public-boundary field records are removed by the latest database migration. Legacy scores are preserved in PostgreSQL but are not verified imagery.
 
 Run `npm run migrate` before starting this version. The evidence migrations preserve existing rows, archive boundary revisions, and attach provenance and quality to observations. The additive field-visit migration adds retry keys and image context to tasks without removing existing records. Take a database backup before migration. Existing unverified observations must be reprocessed to qualify; they are not silently promoted to measured evidence.
 
@@ -216,6 +203,6 @@ npm run test:smoke
 
 If an older launcher first reported `ECONNREFUSED` during migration and then `column "client_key" does not exist` during start, its start attempt has brought the managed database up but the migration is still pending. Run `npm run migrate && npm start && npm run status` directly. There is no need to reset the database or manually add the column. `npm run db:start` also starts only the configured managed cluster. `npm run test:launcher` checks stopped/running/failing/external database startup paths using an isolated fake pg_ctl; CI additionally performs real PostGIS migrations.
 
-### Full sample workspace
+### Research fixtures
 
-Open `http://localhost:5173/?demo=1` (or run `npm run demo`). The standalone workspace includes 24 fictional fields, 414 satellite readings, 2,160 daily weather records, 288 diary records, 72 photo notes, visit tasks and completed processing jobs. Seven reference images are served locally. Demo edits persist in the current browser tab across reloads. Use `?demo=0` to return to your connected account.
+Fictional scenarios remain under `tests/fixtures/` for automated regression checks only. The FTW public-boundary extract under `datasets/demo/` is retained as a cited research sample; neither is loaded into the running application.

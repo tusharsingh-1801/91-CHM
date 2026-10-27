@@ -3,12 +3,11 @@ import {readFile} from 'node:fs/promises';
 import {setup,id,seed,day,latest} from './fixtures';
 import {assessEvidence} from '../../shared/evidence';
 
-test('inspection actions stay separate from missing imagery, with demo exclusion and working filters',async({page})=>{
+test('inspection actions stay separate from missing imagery, with working filters',async({page})=>{
   const state=await setup(page);
   state.fields.push({...seed,id:'00000000-0000-0000-0000-000000000002',name:'Cloudy field',latestObservation:null,previousObservation:null,assessment:assessEvidence(null,null)});
-  state.fields.push({...seed,id:'00000000-0000-0000-0000-000000000003',name:'Demo field',provenance:'demo',isDemo:true});
-  await page.goto('/');const attention=page.locator('.attention-panel');await expect(attention).toContainText('Test field');await expect(attention).toContainText('Cloudy field');await expect(attention).not.toContainText('Demo field');
-  await expect(page.getByRole('heading',{name:'Demo field'})).toHaveCount(0);await page.getByRole('button',{name:/Waiting for pictures/}).click();await expect(page.locator('.field-card')).toHaveCount(1);await expect(page.locator('.field-card')).toContainText('Cloudy field');
+  await page.goto('/');const attention=page.locator('.attention-panel');await expect(attention).toContainText('Test field');await expect(attention).toContainText('Cloudy field');
+  await page.getByRole('button',{name:/Waiting for pictures/}).click();await expect(page.locator('.field-card')).toHaveCount(1);await expect(page.locator('.field-card')).toContainText('Cloudy field');
   await page.getByLabel('Search fields').fill('No such field');await page.getByRole('button',{name:'Clear filters'}).click();await expect(page.locator('.field-card')).toHaveCount(2);expect(state.errors).toEqual([]);
 });
 

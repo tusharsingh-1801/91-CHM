@@ -7,15 +7,14 @@ const endDate=new Date(Date.now()-3*86400000);
 const startDate=new Date(endDate.getTime()-(days-1)*86400000);
 const compact=date=>date.toISOString().slice(0,10).replaceAll('-','');
 const report={startedAt:new Date().toISOString(),weatherRange:{start:compact(startDate),end:compact(endDate)},fields:[]};
-const persist=()=>{mkdirSync('.local',{recursive:true});writeFileSync(process.env.SYNC_DEMO_ONLY==='1'?'.local/public-demo-sync-report.json':'.local/data-sync-report.json',JSON.stringify(report,null,2)+'\n',{mode:0o600});};
+const persist=()=>{mkdirSync('.local',{recursive:true});writeFileSync('.local/data-sync-report.json',JSON.stringify(report,null,2)+'\n',{mode:0o600});};
 async function request(path,method='GET',body,timeout=135000){
  const response=await fetch(base+path,{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(timeout)});
  const payload=await response.json();if(!response.ok)throw new Error(payload.error||`HTTP ${response.status}`);return payload;
 }
 const sceneLimit=Number(process.env.SYNC_SCENE_LIMIT || 6);
 if(!Number.isInteger(sceneLimit)||sceneLimit<1||sceneLimit>6)throw new Error('SYNC_SCENE_LIMIT must be 1–6');
-const fields=(await request('/fields')).filter(field => process.env.SYNC_DEMO_ONLY === '1' ? field.provenance === 'public_boundary' : !field.isDemo);
-if(process.env.SYNC_DEMO_ONLY==='1')console.log('Sync scope: public benchmark demo fields only.');
+const fields=(await request('/fields')).filter(field => field.provenance !== 'demo' && field.provenance !== 'public_boundary');
 for(const field of fields){
  const result={id:field.id,name:field.name,weather:null,satellite:null,processed:[],errors:[]};report.fields.push(result);persist();
  console.log(`Syncing ${field.name}…`);
@@ -38,4 +37,4 @@ for(const field of fields){
  }
 }
 report.completedAt=new Date().toISOString();persist();
-console.log(`Sync finished. Details: ${process.env.SYNC_DEMO_ONLY==='1'?'.local/public-demo-sync-report.json':'.local/data-sync-report.json'}`);
+console.log('Sync finished. Details: .local/data-sync-report.json');

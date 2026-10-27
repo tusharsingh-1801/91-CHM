@@ -6,7 +6,7 @@ export function PwaStatus(){
   const network=()=>setOnline(navigator.onLine);const available=(event:Event)=>{event.preventDefault();setInstall(event as InstallEvent);};
   window.addEventListener('online',network);window.addEventListener('offline',network);window.addEventListener('beforeinstallprompt',available);
   let active=true;
-  if(import.meta.env.PROD&&document.documentElement.dataset.showcase!=='true'&&'serviceWorker' in navigator){void navigator.serviceWorker.register('/sw.js').then(registration=>{
+  if(import.meta.env.PROD&&'serviceWorker' in navigator){void navigator.serviceWorker.register('/sw.js').then(registration=>{
    if(!active)return;if(registration.waiting)setUpdate(registration.waiting);
    registration.addEventListener('updatefound',()=>{const worker=registration.installing;worker?.addEventListener('statechange',()=>{if(active&&worker.state==='installed'&&navigator.serviceWorker.controller)setUpdate(worker);});});
   }).catch(()=>{/* Browser operation continues if installation is unavailable. */});}

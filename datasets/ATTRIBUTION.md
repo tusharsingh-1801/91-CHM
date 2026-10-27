@@ -1,4 +1,4 @@
-# Public boundary sample attribution
+# Public boundary research-sample attribution
 
 The polygons in `demo/ftw-india-sample.geojson` are a three-parcel extract of **Fields of The World: Field Boundaries for India**, distributed by **Kerner Lab / Fields of The World** on Source Cooperative.
 
@@ -7,8 +7,8 @@ The polygons in `demo/ftw-india-sample.geojson` are a three-parcel extract of **
 - FTW dataset/license listing: https://github.com/fieldsoftheworld/ftw-datasets-list
 - License: **Creative Commons Attribution 4.0 International**, https://creativecommons.org/licenses/by/4.0/
 - Reference boundary year: **2016**.
-- Changes: selected three valid 1–10 hectare polygons for a public demo; attached source IDs, provenance and explicit unknown-value fields. Polygon coordinates are retained from the source.
+- Changes: selected three valid 1–10 hectare polygons as a static research sample; attached source IDs, provenance and explicit unknown-value fields. Polygon coordinates are retained from the source.
 
-The full downloaded GeoParquet remains under ignored `.local/datasets/`; its checksum and size are recorded in `demo/manifest.json`.
+The original GeoParquet is not stored in this repository or currently present in the workspace. Its source checksum and size are recorded in `demo/manifest.json`.
 
-These parcels are public historical benchmarks, not the user's farms. Their current crop species, planting/harvest dates, yield, ownership and management activities are not established by this boundary dataset. A current satellite calculation over the historical polygon is an observation over that footprint, not a validation that today's parcel boundary or crop label is unchanged.
+These parcels are public historical benchmarks, not the user's farms, and are not imported into the app. Their current crop species, planting/harvest dates, yield, ownership and management activities are not established by this boundary dataset. A current satellite calculation over the historical polygon is an observation over that footprint, not a validation that today's parcel boundary or crop label is unchanged.
