@@ -47,17 +47,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
     void readSession().then(async value => {
-      // Local demo is opt-in on the backend; production returns 404 and retains normal sign-in.
-      // Switch to the populated Tushar account even if another user was previously signed in.
-      if (import.meta.env.DEV) {
-        try {
-          const demo = await fetch('/api/auth/demo/tushar', {method:'POST',credentials:'same-origin'});
-          if (demo.ok) {
-            const payload = await demo.json() as {user?:Account};
-            if (payload.user?.id) value = {mode:'required',user:payload.user};
-          }
-        } catch { /* normal authentication remains available */ }
-      }
       if (active) setSession(value);
     }).catch(reason => {
       if (active) setError(reason instanceof Error ? reason.message : 'Unable to check sign-in status.');
