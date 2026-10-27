@@ -23,6 +23,8 @@ from shapely.ops import transform
 from pyproj import Transformer
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 CACHE = ROOT / '.local/datasets/reference'
 MAX_BYTES = 64 * 1024 * 1024
 MAX_LABEL_BYTES = 96 * 1024 * 1024
@@ -32,7 +34,7 @@ SOURCES = {
  'worldcover': ('ESA WorldCover / Copernicus', '2021 v200', 'https://esa-worldcover.org/en/data-access', 'CC BY 4.0'),
  'chirps': ('UCSB Climate Hazards Center', '3.0 daily; final rnl / preliminary sat', 'https://data.chc.ucsb.edu/products/CHIRPS/v3.0/', 'CC BY 4.0; preserve CHC citation'),
  'soilgrids': ('ISRIC SoilGrids', '2.0', 'https://docs.isric.org/globaldata/soilgrids/SoilGrids_faqs_02.html', 'CC BY 4.0'),
- 'worldcereal': ('ESA WorldCereal / Van Tricht et al.', '2021 v100', 'https://zenodo.org/records/7875105', 'CC BY 4.0'),
+ 'worldcereal': ('ESA WorldCereal / Van Tricht et al.', '2021 v100', 'https://developers.google.com/earth-engine/datasets/catalog/ESA_WorldCereal_2021_MODELS_v100', 'CC BY 4.0'),
  'cropharvest': ('NASA Harvest CropHarvest', '10251170', 'https://zenodo.org/records/10251170', 'CC BY-SA 4.0; constituent terms also apply'),
  'fao-calendar': ('FAO Crop Calendar', 'manual regional reference', 'https://cropcalendar.apps.fao.org/', 'Per-record permission required'),
 }
@@ -371,13 +373,17 @@ def soilgrids(field,options):
     return {'period':'SoilGrids 2.0','resolution':'250 m','field_area_m2':field_area,'coverage_percent':min(v['coverage_percent'] for v in values),'variables':values,'note':'Field-area-weighted modeled soil estimates, not lab-tested values. Q05–Q95 are the official lower/upper prediction quantiles. Surface depth only.'}
 
 def worldcereal(field, options):
-    # The official authenticated AOI export is preferred over the 15.5 GB global archive.
     geom=geometry_of(field)
     manifest_path=CACHE/'worldcereal/manifest.json'
     if not manifest_path.exists():
-        # Probe the public metadata, recording exact access errors when offline.
-        fetch('https://zenodo.org/api/records/7875105',2*1024*1024)
-        return {'status':'not_configured','note':'Export 2021 v100 temporarycrops classification GeoTIFF for the AOI from https://hub.esa-worldcereal.org (CDSE login), then supply .local/datasets/reference/worldcereal/manifest.json. Global 15.5 GB archive refused.'}
+        from fastapi import HTTPException
+        from backend.engine.earth_engine import summarize_worldcereal
+        try:
+            return summarize_worldcereal(mapping(geom))
+        except HTTPException as exc:
+            if exc.status_code!=503:
+                raise
+            return {'status':'not_configured','note':'WorldCereal can be summarized directly through Google Earth Engine when the project and ADC are configured; alternatively supply an official AOI export and checksum manifest.'}
     manifest=json.loads(manifest_path.read_text())
     if manifest.get('product')!='temporarycrops' or manifest.get('version')!='2021 v100' or manifest.get('license')!='CC BY 4.0':
         raise ValueError('WorldCereal manifest must identify licensed 2021 v100 temporarycrops classification')

@@ -7,7 +7,7 @@ describe('Fields Controller Integration Tests', () => {
     assert.strictEqual(typeof fetch, 'function');
   });
 
-  it('Calculates STAC query dates correctly', () => {
+  it('Calculates UTC satellite search dates correctly', () => {
     const end = new Date().toISOString().slice(0, 10);
     const start = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
     assert.ok(start.startsWith('202'));
@@ -89,23 +89,51 @@ it('weather sync excludes missing sentinel values without dropping valid zero ra
   } finally { pool.query = originalQuery; globalThis.fetch = originalFetch; }
 });
 
-it('satellite point search uses Earth Search property paths for sorting', async () => {
-  const { ingestSentinelScenes } = await import('./fieldsController.ts');
+it('satellite ingestion searches the dated Sentinel-2 collection through Earth Engine', async () => {
+  const { ingestEarthEngineScenes } = await import('./fieldsController.ts');
   const { pool } = await import('../db/pool.ts');
   const originalQuery = pool.query, originalFetch = globalThis.fetch;
   let imported: unknown;
-  pool.query = (async (sql: string) => ({ rows: sql.startsWith('select') ? [{ latitude: 28, longitude: 77, boundary_geojson: null }] : [], rowCount: 1 })) as typeof pool.query;
-  globalThis.fetch = (async (_url: unknown, init: RequestInit) => {
+  const writes: unknown[][] = [];
+  pool.query = (async (sql: string, values: unknown[]) => {
+    if (sql.startsWith('select')) return { rows: [{ latitude: 28, longitude: 77, boundary_geojson: { type: 'Polygon', coordinates: [[[76.99,27.99],[77.01,27.99],[77.01,28.01],[76.99,28.01],[76.99,27.99]]] } }], rowCount: 1 };
+    writes.push(values); return { rows: [], rowCount: 1 };
+  }) as typeof pool.query;
+  globalThis.fetch = (async (url: unknown, init: RequestInit) => {
+    assert.ok(String(url).endsWith('/earth-engine/scenes'));
     const body = JSON.parse(init.body as string);
-    assert.deepEqual(body.intersects, { type: 'Point', coordinates: [77, 28] });
-    assert.deepEqual(body.sortby.map((sort: { field: string }) => sort.field), ['properties.datetime']);
-    return new Response(JSON.stringify({ features: [{ id: 'test-scene', properties: { datetime: '2026-10-01T00:00:00Z', 'eo:cloud_cover': 5 }, assets: {} }] }));
+    assert.deepEqual(body.polygonGeojson.type, 'Polygon');
+    assert.match(body.start, /^\d{4}-\d{2}-\d{2}$/);
+    assert.match(body.end, /^\d{4}-\d{2}-\d{2}$/);
+    assert.ok(body.limit <= 20);
+    return new Response(JSON.stringify({ scenes: [{ id: '20261001T000000_T43QAB', image_id: 'COPERNICUS/S2_SR_HARMONIZED/20261001T000000_T43QAB', observed_at: '2026-10-01T00:00:00Z', cloud_cover: 5 }] }));
   }) as typeof fetch;
   try {
-    await ingestSentinelScenes({ params: { fieldId: 'test' }, query: {} } as unknown as import('express').Request, {
+    await ingestEarthEngineScenes({ params: { fieldId: 'test' }, query: {} } as unknown as import('express').Request, {
       json(value: unknown) { imported = value; }, status() { throw new Error('Unexpected failure'); },
     } as unknown as import('express').Response);
     assert.equal((imported as { imported: number }).imported, 1);
+    assert.equal(writes.length, 1);
+    assert.equal(writes[0][1], 'gee-20261001T000000_T43QAB');
+    assert.equal(writes[0][5], 'Copernicus Sentinel-2 via Google Earth Engine');
+    assert.equal(JSON.parse(writes[0][7] as string).earth_engine.image_id, 'COPERNICUS/S2_SR_HARMONIZED/20261001T000000_T43QAB');
+  } finally { pool.query = originalQuery; globalThis.fetch = originalFetch; }
+});
+
+it('does not silently fall back to Earth Search when Earth Engine authentication is unavailable', async () => {
+  const { ingestEarthEngineScenes } = await import('./fieldsController.ts');
+  const { pool } = await import('../db/pool.ts');
+  const originalQuery = pool.query, originalFetch = globalThis.fetch;
+  let statusCode = 200, message = '';
+  pool.query = (async (sql: string) => ({ rows: sql.startsWith('select') ? [{ latitude: 28, longitude: 77, boundary_geojson: { type: 'Polygon', coordinates: [[[76.99,27.99],[77.01,27.99],[77.01,28.01],[76.99,28.01],[76.99,27.99]]] } }] : [], rowCount: 1 })) as typeof pool.query;
+  globalThis.fetch = (async () => new Response('{}', { status: 503 })) as typeof fetch;
+  try {
+    await ingestEarthEngineScenes({ params: { fieldId: 'test' }, query: {} } as unknown as import('express').Request, {
+      json(value: { error: string }) { message = value.error; },
+      status(code: number) { statusCode = code; return this; },
+    } as unknown as import('express').Response);
+    assert.equal(statusCode, 503);
+    assert.match(message, /EARTH_ENGINE_PROJECT_ID/);
   } finally { pool.query = originalQuery; globalThis.fetch = originalFetch; }
 });
 

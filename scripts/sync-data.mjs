@@ -19,7 +19,7 @@ for(const field of fields){
  const result={id:field.id,name:field.name,weather:null,satellite:null,processed:[],errors:[]};report.fields.push(result);persist();
  console.log(`Syncing ${field.name}…`);
  if(field.latitude==null||field.longitude==null){result.errors.push('GPS location missing; supply actual coordinates or a boundary.');console.log('  Skipped: location missing.');persist();continue;}
- for(const [name,path,body] of [['weather',`/fields/${field.id}/ingest/weather`,report.weatherRange],['satellite',`/fields/${field.id}/ingest/sentinel-scenes?days=90`,undefined]]){
+ for(const [name,path,body] of [['weather',`/fields/${field.id}/ingest/weather`,report.weatherRange],['satellite',`/fields/${field.id}/ingest/earth-engine-scenes?days=90`,undefined]]){
   try{const data=await request(path,'POST',body);result[name]={imported:data.imported,source:data.source};console.log(`  ${name}: ${data.imported} records synced.`);}
   catch(error){result.errors.push(`${name}: ${error.message}`);console.log(`  ${name}: ${error.message}`);}
   persist();

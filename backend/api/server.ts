@@ -1,8 +1,10 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import { pathToFileURL } from 'node:url';
 import { app } from './app.ts';
 import {startWorkers} from './services/jobs.ts';
 import { pool } from './db/pool.ts';
+
+dotenv.config({ path: ['.env.local', '.env'] });
 
 const port = Number(process.env.API_PORT ?? 3001);
 
@@ -32,4 +34,3 @@ export async function start() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   start();
 }
-

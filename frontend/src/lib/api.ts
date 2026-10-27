@@ -94,12 +94,14 @@ export async function ingestWeather(fieldId: string) {
   return payload
 }
 
-export async function ingestSentinelScenes(fieldId: string) {
-  const response = await fetch(`/api/fields/${fieldId}/ingest/sentinel-scenes`, { method: 'POST' })
+export async function ingestEarthEngineScenes(fieldId: string) {
+  const response = await fetch(`/api/fields/${fieldId}/ingest/earth-engine-scenes`, { method: 'POST' })
   const payload = await response.json().catch(() => ({})) as { error?: string; source: string; imported: number }
-  if (!response.ok) throw new Error(payload.error ?? 'Sentinel scene ingestion failed')
+  if (!response.ok) throw new Error(payload.error ?? 'Earth Engine scene ingestion failed')
   return payload
 }
+
+export const ingestSentinelScenes = ingestEarthEngineScenes;
 
 export async function loadScenes(fieldId: string) {
   const response = await fetch(`/api/fields/${fieldId}/scenes`)

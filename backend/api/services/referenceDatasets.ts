@@ -27,7 +27,8 @@ export function referencePage(input:Record<string,unknown>){
 const root=fileURLToPath(new URL('../../../',import.meta.url));
 export function extractReference(field:Record<string,unknown>,options:ReferenceOptions):Promise<ReferenceResult[]>{
  return new Promise((resolve,reject)=>{
-  const python=process.env.REFERENCE_PYTHON||(existsSync(root+'.venv/bin/python')?root+'.venv/bin/python':'python3');
+  const localPython=process.platform==='win32'?root+'.venv/Scripts/python.exe':root+'.venv/bin/python';
+  const python=process.env.REFERENCE_PYTHON||(existsSync(localPython)?localPython:process.platform==='win32'?'python':'python3');
   const child=spawn(python,[root+'backend/engine/reference_data.py'],{cwd:root,stdio:['pipe','pipe','pipe']});
   let output='',error='';
   const timer=setTimeout(()=>{child.kill('SIGTERM');reject(new Error('Reference extraction exceeded 15 minute bound'));},900000);

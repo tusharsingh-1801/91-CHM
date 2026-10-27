@@ -31,7 +31,7 @@ export function OpenFieldMap({ latitude, longitude, fieldName = '', zoom = 14, b
       if (boundary.getBounds().isValid()) { bounds = boundary.getBounds(); map.fitBounds(bounds.pad(0.35), { maxZoom: 18, animate: false }); }
     }
     if (tileUrl && bounds) {
-      const ndvi = L.tileLayer(tileUrl, { bounds, opacity, maxZoom: 20, keepBuffer: 0, attribution: 'NDVI: Copernicus Sentinel-2 / Earth Search' }).addTo(map);
+      const ndvi = L.tileLayer(tileUrl, { bounds, opacity, maxZoom: 20, keepBuffer: 0, attribution: 'NDVI: Copernicus Sentinel-2 data' }).addTo(map);
       ndvi.on('tileerror', () => setFailedLayer(tileUrl));
       ndvi.on('tileload', () => setFailedLayer(current => current === tileUrl ? null : current));
     }

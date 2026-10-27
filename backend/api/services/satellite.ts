@@ -3,10 +3,10 @@ import { pool } from '../db/pool.ts';
 import { qualityReason, vegetationScore, numeric, type Observation } from '../../../shared/evidence.ts';
 import { evidencePolicy } from './policy.ts';
 
-interface Asset { href?: string; 'raster:bands'?: Array<{ scale?: number; offset?: number; nodata?: number }> }
+interface Asset { href?: string; image_id?: string; earth_engine?: { image_id?: string }; 'raster:bands'?: Array<{ scale?: number; offset?: number; nodata?: number }> }
 export interface SatelliteScene {
   scene_id: string; observed_at: string | Date; cloud_cover: number | string | null;
-  assets: Record<string, Asset>; processing_status?: string;
+  assets: Record<string, Asset>; source?: string; processing_status?: string;
 }
 export class ProcessingError extends Error {
   status: number;
@@ -14,6 +14,8 @@ export class ProcessingError extends Error {
 }
 export const engineUrl = () => (process.env.PYTHON_ENGINE_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
 export const CALCULATION_VERSION = 'sentinel-reflectance-scl-v2';
+export const EARTH_ENGINE_CALCULATION_VERSION = 'gee-sentinel-reflectance-scl-v1';
+export const EARTH_ENGINE_SOURCE = 'Copernicus Sentinel-2 via Google Earth Engine';
 export function rasterPayload(assets: SatelliteScene['assets']) {
   const transforms: Record<string, { scale: number; offset: number }> = {};
   for (const [key, asset] of Object.entries(assets)) {
@@ -41,15 +43,19 @@ export async function processScene(fieldId: string, sceneId: string) {
   const field = (await pool.query<{boundary_version:number; boundary_geojson:Record<string,unknown> | null}>('select boundary_version, ST_AsGeoJSON(boundary_geom)::jsonb as boundary_geojson from public.fields where id=$1',[fieldId])).rows[0];
   if (!field?.boundary_geojson) throw new ProcessingError('Save a field boundary first',400);
   const version = field.boundary_version;
+  const earthEngineImageId = scene.assets.earth_engine?.image_id;
+  const isEarthEngine = scene.source === EARTH_ENGINE_SOURCE;
+  const calculationVersion = isEarthEngine ? EARTH_ENGINE_CALCULATION_VERSION : CALCULATION_VERSION;
   const token = randomUUID();
   const claim = await pool.query(`update public.satellite_scenes set processing_status='processing',processing_token=$3,
     processing_boundary_version=$4,processing_started_at=now(),processing_finished_at=null,processing_error=null
     where field_id=$1 and scene_id=$2 and exists(select 1 from public.fields f where f.id=$1 and f.boundary_version=$4) and (processing_status <> 'processing' or processing_started_at < now()-interval '5 minutes') returning scene_id`,[fieldId,sceneId,token,version]);
   if (!claim.rowCount) throw new ProcessingError('This image is already being processed. Refresh shortly.',409);
   try {
-    if (!scene.assets.red?.href || !scene.assets.nir?.href || !scene.assets.scl?.href) throw new ProcessingError('Required red, NIR, or cloud-mask band is unavailable');
-    const engineResponse = await fetch(`${engineUrl()}/calculate-indices`,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({...rasterPayload(scene.assets),polygonGeojson:field.boundary_geojson}),signal:AbortSignal.timeout(120000)});
+    if (isEarthEngine && typeof earthEngineImageId !== 'string') throw new ProcessingError('Earth Engine image reference is unavailable');
+    if (!isEarthEngine && (!scene.assets.red?.href || !scene.assets.nir?.href || !scene.assets.scl?.href)) throw new ProcessingError('Required red, NIR, or cloud-mask band is unavailable');
+    const engineResponse = await fetch(`${engineUrl()}${isEarthEngine?'/earth-engine/calculate-indices':'/calculate-indices'}`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(isEarthEngine?{imageId:earthEngineImageId,polygonGeojson:field.boundary_geojson}:{...rasterPayload(scene.assets),polygonGeojson:field.boundary_geojson}),signal:AbortSignal.timeout(180000)});
     if (!engineResponse.ok) throw new ProcessingError(engineResponse.status===422 ? 'No usable pixels intersect this field. Try another date.' : 'Image processing service is unavailable',engineResponse.status===422?422:503);
     const result = validateResult(await engineResponse.json());
     const policy = evidencePolicy();
@@ -78,9 +84,9 @@ export async function processScene(fieldId: string, sceneId: string) {
          quality_reason=excluded.quality_reason,calculation_version=excluded.calculation_version,
          provenance=excluded.provenance,vegetation_score=excluded.vegetation_score,acquired_at=excluded.acquired_at`,
         [fieldId,scene.observed_at,sceneId,result.ndvi,result.ndre,result.ndmi,result.savi,result.evi,
-          scene.cloud_cover===null?null:Math.round(Number(scene.cloud_cover)), 'Copernicus Sentinel-2 L2A / Earth Search',
+          scene.cloud_cover===null?null:Math.round(Number(scene.cloud_cover)), isEarthEngine?EARTH_ENGINE_SOURCE:'Copernicus Sentinel-2 L2A / Earth Search',
           result.validPixels,result.validCoverage,result.minimum,result.maximum,result.median,result.standardDeviation,
-          version,accepted,reason,CALCULATION_VERSION,score]);
+          version,accepted,reason,calculationVersion,score]);
       await client.query(`update public.vegetation_indices set inspection_geom=case when $4::text is null then null else ST_Multi(ST_GeomFromGeoJSON($4)) end, affected_coverage_percent=$5 where field_id=$1 and scene_id=$2 and boundary_version=$3`,[fieldId,sceneId,version,result.stressGeojson?JSON.stringify(result.stressGeojson):null,result.affectedCoverage??null]);
       if (!boundaryChanged) {
         // Recompute from accepted, distinct acquisition days, never completion order or previous stored score.
@@ -113,7 +119,7 @@ export async function processScene(fieldId: string, sceneId: string) {
           where field_id=$1 and scene_id=$2 and processing_token=$3`,[fieldId,sceneId,token,accepted?'processed':'rejected',quality,result.validCoverage,result.validPixels]);
       }
       await client.query('commit');
-      return {sceneId,observedAt:scene.observed_at,...result,accepted:accepted&&!boundaryChanged,qualityReason:quality,boundaryVersion:version,healthScore:score,source:'Copernicus Sentinel-2',calculationVersion:CALCULATION_VERSION};
+      return {sceneId,observedAt:scene.observed_at,...result,accepted:accepted&&!boundaryChanged,qualityReason:quality,boundaryVersion:version,healthScore:score,source:isEarthEngine?EARTH_ENGINE_SOURCE:'Copernicus Sentinel-2',calculationVersion};
     } catch(error) { await client.query('rollback'); throw error; }
     finally { client.release(); }
   } catch(error) {

@@ -24,10 +24,11 @@ test('empty references show unconfigured sources while valid reference results r
  const references=page.locator('section').filter({has:page.getByRole('heading',{name:'Land, rainfall and soil references',exact:true})});
  await expect(references.getByRole('article')).toHaveCount(6);
  await expect(references).toContainText('worldcover — Not configured');
- await page.route('**/api/fields/*/datasets?*',route=>route.fulfill({json:{items:new URL(route.request().url()).searchParams.get('provider')==='worldcover'?[{id:'reference-1',provider:'worldcover',status:'integrated',source:'ESA WorldCover',version:'2021',source_url:'https://esa-worldcover.org',license:'CC BY 4.0',period:'2021',fetched_at:'2026-10-22T00:00:00Z',coverage_percent:90,error:null,payload:{cropland_percent:75}}]:[]}}));
+ await page.route('**/api/fields/*/datasets?*',route=>route.fulfill({json:{items:['worldcover','chirps'].includes(new URL(route.request().url()).searchParams.get('provider')??'')?[{id:'reference-1',provider:new URL(route.request().url()).searchParams.get('provider'),status:'integrated',source:new URL(route.request().url()).searchParams.get('provider')==='worldcover'?'ESA WorldCover':'CHIRPS',version:'2021',source_url:'https://example.org',license:'CC BY 4.0',period:'2021',fetched_at:'2026-10-22T00:00:00Z',coverage_percent:new URL(route.request().url()).searchParams.get('provider')==='worldcover'?90:100,error:null,payload:{cropland_percent:75}}]:[]}}));
  await page.reload();
- await expect(references).toContainText('ESA WorldCover — Available');
+ await expect(references).toContainText('ESA WorldCover — Partial coverage');
  await expect(references).toContainText('75.0%');
+ await expect(references).toContainText('CHIRPS — Available');
  expect(state.errors).toEqual([]);
 });
 

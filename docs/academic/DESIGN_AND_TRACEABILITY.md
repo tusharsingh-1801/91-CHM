@@ -1,6 +1,6 @@
 # CHM design and requirement traceability
 
-Verified against the current React/Express/PostgreSQL/PostGIS/FastAPI implementation on 16 October 2026. These diagrams describe implemented components, not an assertion of external provider uptime or agricultural accuracy.
+Verified against the current React/Express/PostgreSQL/PostGIS/FastAPI implementation on 28 October 2026. These diagrams describe implemented components, not an assertion of external provider uptime or agricultural accuracy.
 
 ## Components
 
@@ -11,7 +11,7 @@ flowchart TD
     A --> D[(PostgreSQL and PostGIS)]
     A --> P[FastAPI raster and photo engine]
     A --> J[Job worker inside API process]
-    J --> S[Earth Search Sentinel-2]
+    J --> S[Google Earth Engine Sentinel-2 API]
     J --> N[NASA POWER history]
     J --> P
     J --> D

@@ -81,17 +81,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
     }
   }
 
-  async function openTusharDemo(){
-    setBusy(true);setError('');
-    try{
-      const response=await fetch('/api/auth/demo/tushar',{method:'POST',credentials:'same-origin'});
-      const payload=await response.json() as {user?:Account;error?:string};
-      if(!response.ok||!payload.user)throw new Error(payload.error||'Demo account unavailable');
-      setSession({mode:'required',user:payload.user});
-      window.location.assign('/');
-    }catch(reason){setError(reason instanceof Error?reason.message:'Demo unavailable');}
-    finally{setBusy(false);}
-  }
   async function signOut() {
     setBusy(true);
     setError('');
@@ -126,7 +115,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
           <input id="auth-password" name="password" type="password" autoComplete={registering ? 'new-password' : 'current-password'} required minLength={12} maxLength={256} />
           {error && <p className="auth-error" role="alert">{t(error, 'साइन इन नहीं हुआ। ईमेल और कम-से-कम 12 अक्षर वाला पासवर्ड जाँचें। बहुत कोशिश की हो तो 15 मिनट बाद फिर करें।')}</p>}
           <button type="submit" disabled={busy}>{busy ? t('Please wait…','कृपया रुकें…') : registering ? t('Create account','खाता बनाएँ') : t('Sign in','साइन इन करें')}</button>
-          {!registering&&<button type="button" disabled={busy} onClick={openTusharDemo}>{t('Open Tushar demo farmer','Tushar का डेमो खेत खोलें')}</button>}
           <button type="button" className="auth-switch" disabled={busy} onClick={() => { setRegistering(!registering); setError(''); }}>
             {registering ? t('Already have an account? Sign in','पहले से खाता है? साइन इन करें') : t('New to TerraScope? Create an account','पहली बार आए हैं? खाता बनाएँ')}
           </button>

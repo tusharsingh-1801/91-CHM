@@ -1,6 +1,6 @@
 # TerraScope Crop Health Monitor
 
-Crop health dashboard using Sentinel-2 imagery, a Node API, a Python raster engine and PostgreSQL/PostGIS.
+Crop health dashboard using Sentinel-2 imagery from Google Earth Engine, a Node API, a Python processing engine and PostgreSQL/PostGIS.
 
 ## Start / stop locally
 
@@ -44,7 +44,7 @@ Migrations install the schema and enable the required extensions; the database u
 
 ## Configuration
 
-The frontend and backend both load the root `.env`. Restart after changing it. Only variables prefixed `VITE_` are exposed to the browser; never put server secrets under that prefix.
+The frontend and backend load root `.env.local` first, then `.env` for values not already configured; externally supplied environment variables take precedence. Restart after changing either file. Only variables prefixed `VITE_` are exposed to the browser; never put server secrets under that prefix.
 
 | Variable | Purpose | Default |
 |---|---|---|
@@ -53,11 +53,11 @@ The frontend and backend both load the root `.env`. Restart after changing it. O
 | `API_PORT` | API port; Vite proxy follows this | 3001 |
 | `PYTHON_BIN` | Python executable | .venv/bin/python |
 | `PYTHON_ENGINE_URL` | Local Python engine URL/port | http://127.0.0.1:8000 |
+| `EARTH_ENGINE_PROJECT_ID` | Registered Google Cloud project used by the Earth Engine API | unset |
 | `LOCAL_PG_BIN` | Optional native PostgreSQL bin directory managed by start/stop | unset |
 | `LOCAL_PG_DATA` | Data directory for that managed database | .local/postgres-data |
 | `VITE_GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAPS_MAP_ID` | Legacy optional Google map settings; current core maps use Leaflet/OpenStreetMap and do not require these values | unset |
 | `GEMINI_API_KEY`, `GEMINI_MODEL` | Google AI Studio chat credentials and model | unset / gemini-3.5-flash-lite |
-| `SENTINEL_HUB_CLIENT_ID`, `SENTINEL_HUB_CLIENT_SECRET` | Optional Sentinel Hub processing endpoint | unset |
 | `AUTH_MODE` | `required` enables accounts; `local` disables ownership checks for isolated development only | required |
 | `APP_ORIGIN` | Comma-separated browser origins allowed for write requests | http://localhost:5173 |
 | `AUTH_SECURE_COOKIE` | Set to `1` when serving the app over HTTPS | 0 |
@@ -68,7 +68,7 @@ This machine is configured with a project-managed native database on port **5435
 
 When `LOCAL_PG_BIN` is set, its data directory must already be initialized. The launcher starts/stops only that configured cluster, leaving any system PostgreSQL installation alone. Otherwise PostgreSQL runs independently and `npm stop` stops the three app services only.
 
-Field drawing, boundary editing and satellite-map viewing use Leaflet with OpenStreetMap; no Google Maps key is required. The basemap is not the selected Sentinel acquisition. Gemini is the only chat provider and requires server-side `GEMINI_API_KEY`; the default `GEMINI_MODEL` is `gemini-3.5-flash-lite`. Run `npm run gemini:check` to verify access. `/api/assistant` provides field-aware answers and optional saved history. Public STAC scene ingestion and NASA POWER weather do not require Google credentials. Placeholder credentials will not enable these services. In shared deployments, keep `AUTH_MODE=required`, set `APP_ORIGIN` to the exact HTTPS frontend origin(s), and set `AUTH_SECURE_COOKIE=1`. Do not use `AUTH_MODE=local` on a shared or network-exposed service.
+Field drawing, boundary editing and satellite-map viewing use Leaflet with OpenStreetMap; no Google Maps key is required. The basemap is not the selected Sentinel acquisition. New Sentinel-2 scene search and index processing use the Earth Engine Python API (`earthengine-api`, included in the engine requirements) and require a registered Earth Engine Cloud project, the Earth Engine API enabled, and Google Application Default Credentials (ADC) available to the Python engine. Earth Engine uses OAuth credentials rather than a browser/API key. For local development, install Google Cloud CLI, run `gcloud auth application-default login`, and set `EARTH_ENGINE_PROJECT_ID` in `.env.local` or `.env` (for this workspace, `meta-falcon-512307-n4`). In a hosted environment, use an attached service identity instead of a downloaded private key. Existing Earth Search observations remain available as historical records; a missing Earth Engine setup does not trigger a fallback. NASA POWER weather does not require Google credentials. Gemini is the only chat provider and requires server-side `GEMINI_API_KEY`; the default `GEMINI_MODEL` is `gemini-3.5-flash-lite`. Run `npm run gemini:check` to verify access. `/api/assistant` provides field-aware answers and optional saved history. In shared deployments, keep `AUTH_MODE=required`, set `APP_ORIGIN` to the exact HTTPS frontend origin(s), and set `AUTH_SECURE_COOKIE=1`. Do not use `AUTH_MODE=local` on a shared or network-exposed service.
 
 Accounts are created in the app. Migrations preserve legacy fields with `owner_id = NULL`; they are never assigned to the first account automatically. For an explicit local claim, sign in/create the intended account, identify the exact legacy field UUIDs with your database administrator, then run `node scripts/claim-fields.mjs account@example.com <field-uuid> [...]`. The script only operates on a loopback TerraScope database, claims only listed unowned fields, and writes an audit record. Back up the database before migrations or claims.
 
@@ -104,7 +104,7 @@ For the full submission check use `npm run submission:check`. A timestamped repo
 
 ## Sync project data
 
-With native services running, run `npm run sync:data` to import 30 available days of NASA POWER weather and search the last 90 days of Sentinel-2 observations for saved field locations. NASA meteorological availability typically trails by 2–3 days; missing-value sentinels are excluded from measurements. Set `SYNC_WEATHER_DAYS` to choose 1–365 days. This sends saved coordinates to NASA POWER and Earth Search.
+With native services running and Earth Engine configured, run `npm run sync:data` to import 30 available days of NASA POWER weather and search the last 90 days of Sentinel-2 observations for saved field locations through Google Earth Engine. NASA meteorological availability typically trails by 2–3 days; missing-value sentinels are excluded from measurements. Set `SYNC_WEATHER_DAYS` to choose 1–365 days. This sends saved coordinates to NASA POWER and the authorized Earth Engine project.
 
 Fields with no coordinates are skipped. Field-level indices require an actual polygon boundary; a point lookup only supplies scene metadata. Successful observations update vegetation indices and field health, and may generate stress alerts. The local sync report is `.local/data-sync-report.json`. Planting/harvest dates, yield and management events must come from the field manager.
 

@@ -265,3 +265,21 @@ def test_worldcereal_missing_aoi_is_not_marked_integrated(monkeypatch,tmp_path):
     result=ref.worldcereal({'geometry':mapping(box(77,17,77.001,17.001))},{})
     assert result['status']=='not_configured'
     assert result['availability']=='aoi_export_required'
+
+def test_worldcereal_uses_earth_engine_when_no_manual_aoi_export(monkeypatch,tmp_path):
+    from fastapi import HTTPException
+    from backend.engine import earth_engine
+    monkeypatch.setattr(ref,'CACHE',tmp_path)
+    expected={'coverage_percent':98.5,'temporary_crop_percent_field':61.2,'product':'temporarycrops'}
+    monkeypatch.setattr(earth_engine,'summarize_worldcereal',lambda _geometry:expected)
+    result=ref.worldcereal({'geometry':mapping(box(77,17,77.001,17.001))},{})
+    assert result is expected
+
+def test_worldcereal_requires_auth_or_explicit_download_manifest(monkeypatch,tmp_path):
+    from fastapi import HTTPException
+    from backend.engine import earth_engine
+    monkeypatch.setattr(ref,'CACHE',tmp_path)
+    monkeypatch.setattr(earth_engine,'summarize_worldcereal',lambda _geometry:(_ for _ in ()).throw(HTTPException(503,'ADC missing')))
+    result=ref.worldcereal({'geometry':mapping(box(77,17,77.001,17.001))},{})
+    assert result['status']=='not_configured'
+    assert 'Earth Engine' in result['note']

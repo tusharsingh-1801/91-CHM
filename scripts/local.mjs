@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, openSync, closeSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -6,11 +6,18 @@ import { fileURLToPath } from 'node:url';
 import net from 'node:net';
 import pg from 'pg';
 
+dotenv.config({ path: ['.env.local', '.env'] });
+
 process.chdir(fileURLToPath(new URL('..', import.meta.url)));
 const runtime = resolve('.local');
 const pidFile = resolve(runtime, 'server.pid');
 const logFile = resolve(runtime, 'server.log');
-const python = process.env.PYTHON_BIN || (existsSync('.venv/bin/python') ? '.venv/bin/python' : 'python3');
+const configuredPython = process.env.PYTHON_BIN;
+const windowsVenvPython = '.venv/Scripts/python.exe';
+const configuredUnixVenvPath = configuredPython?.replaceAll('\\', '/').startsWith('.venv/bin/') && process.platform === 'win32';
+const python = configuredUnixVenvPath && existsSync(windowsVenvPython)
+  ? windowsVenvPython
+  : configuredPython || (existsSync(windowsVenvPython) ? windowsVenvPython : existsSync('.venv/bin/python') ? '.venv/bin/python' : 'python3');
 const apiPort = Number(process.env.API_PORT || 3001);
 if(process.env.AUTH_MODE==='local'&&process.env.WEB_HOST&&!['127.0.0.1','localhost'].includes(process.env.WEB_HOST))throw new Error('Shared network access requires AUTH_MODE=required.');
 const webPort = Number(process.env.WEB_PORT || 5173);

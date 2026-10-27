@@ -17,7 +17,7 @@ import { askAssistant } from '../controllers/assistantController.ts';
 import { 
   getFields, getFieldAlerts, resolveFieldAlert, updateFieldAlert, getFieldNdvi, getFieldNdviAnalysis,
   getFieldWeather, calculateNdviFromScene, processNdviSentinelHub, processLatestScene,
-  getFieldScenes, ingestSentinelScenes, ingestWeather, 
+  getFieldScenes, ingestEarthEngineScenes, ingestWeather,
   createField, updateBoundary, updateFieldLocation, updateField, deleteField,
   getFieldEvents, createFieldEvent, deleteFieldEvent,
   getFieldOverlay,
@@ -73,7 +73,8 @@ router.post('/fields/:fieldId/ndvi/from-scene/:sceneId', calculateNdviFromScene)
 router.post('/fields/:fieldId/ndvi/process-latest', processLatestScene);
 router.post('/fields/:fieldId/ndvi/process', processNdviSentinelHub);
 router.get('/fields/:fieldId/scenes', getFieldScenes);
-router.post('/fields/:fieldId/ingest/sentinel-scenes', ingestSentinelScenes);
+router.post('/fields/:fieldId/ingest/earth-engine-scenes', ingestEarthEngineScenes);
+router.post('/fields/:fieldId/ingest/sentinel-scenes', ingestEarthEngineScenes);
 router.post('/fields/:fieldId/ingest/weather', ingestWeather);
 router.get('/fields/:fieldId/events', getFieldEvents);
 router.get('/fields/:fieldId/overlay/:sceneId', getFieldOverlay);

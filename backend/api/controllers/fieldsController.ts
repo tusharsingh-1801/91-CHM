@@ -3,7 +3,7 @@ import { pool } from '../db/pool.ts';
 import {actor,authRequired} from '../services/auth.ts';
 import { assessEvidence, vegetationScore, type Observation } from '../../../shared/evidence.ts';
 import { evidencePolicy } from '../services/policy.ts';
-import { processScene, processLatest, ProcessingError, rasterPayload } from '../services/satellite.ts';
+import { processScene, processLatest, ProcessingError, rasterPayload, EARTH_ENGINE_SOURCE } from '../services/satellite.ts';
 
 const DEFAULT_PYTHON_ENGINE_URL = 'http://127.0.0.1:8000';
 
@@ -138,7 +138,7 @@ export async function getFieldNdviAnalysis(request: Request, response: Response)
     if (!field) { response.status(404).json({ error: 'Field not found' }); return; }
     
     const policy=evidencePolicy();
-    const result = await pool.query(`select distinct on (observed_on) observed_on,ndvi_value,cloud_cover,source,scene_id from public.vegetation_indices where field_id=$1 and accepted and provenance='measured_imagery' and boundary_version=(select boundary_version from fields where id=$1) and calculation_version='sentinel-reflectance-scl-v2' and valid_coverage_percent >= $2 and valid_pixel_count >= $3 order by observed_on asc,acquired_at desc,scene_id desc`, [request.params.fieldId,policy.minCoverage,policy.minPixels]);
+    const result = await pool.query(`select distinct on (observed_on) observed_on,ndvi_value,cloud_cover,source,scene_id from public.vegetation_indices where field_id=$1 and accepted and provenance='measured_imagery' and boundary_version=(select boundary_version from fields where id=$1) and calculation_version in ('sentinel-reflectance-scl-v2','gee-sentinel-reflectance-scl-v1') and valid_coverage_percent >= $2 and valid_pixel_count >= $3 order by observed_on asc,acquired_at desc,scene_id desc`, [request.params.fieldId,policy.minCoverage,policy.minPixels]);
     
     const engineResponse = await fetch(`${getPythonEngineUrl()}/analyze-indices`, {
       method: 'POST',
@@ -190,7 +190,7 @@ export async function processLatestScene(request: Request,response: Response) {
 }
 
 export async function processNdviSentinelHub(_request: Request, response: Response) {
-  response.status(422).json({ error: 'Undated mosaics are not accepted as observations. Select a dated Earth Search scene instead.' });
+  response.status(422).json({ error: 'Undated mosaics are not accepted as observations. Select a dated Sentinel-2 scene from Google Earth Engine instead.' });
 }
 
 export async function getFieldScenes(request: Request, response: Response) {
@@ -203,51 +203,54 @@ export async function getFieldScenes(request: Request, response: Response) {
   }
 }
 
-export async function ingestSentinelScenes(request: Request, response: Response) {
+export async function ingestEarthEngineScenes(request: Request, response: Response) {
   try {
     const fieldResult = await pool.query('select ST_Y(location) as latitude, ST_X(location) as longitude, ST_AsGeoJSON(boundary_geom)::jsonb as boundary_geojson from public.fields where id = $1', [request.params.fieldId]);
     const field = fieldResult.rows[0];
-    if (field?.latitude == null || field?.longitude == null) { response.status(400).json({ error: 'Field coordinates are required' }); return; }
-    const catalogUrl = 'https://earth-search.aws.element84.com/v1/search';
+    if (field?.latitude == null || field?.longitude == null || !field.boundary_geojson) { response.status(400).json({ error: 'A field boundary is required' }); return; }
+    const catalogUrl = 'https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR_HARMONIZED';
     
     const policy = evidencePolicy();
     const days = Number(request.query.days ?? policy.searchDays);
     if (!Number.isInteger(days) || days<1 || days>365) { response.status(400).json({error:'Choose a search range of 1–365 days'}); return; }
     const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - days);
-    const datetime = `${startDate.toISOString()}/${endDate.toISOString()}`;
-
-    const catalogResponse = await fetch(catalogUrl, {
-      signal: AbortSignal.timeout(30000),
-      method: 'POST', 
-      headers: { 'Content-Type': 'application/json' }, 
-      body: JSON.stringify({ 
-        collections: ['sentinel-2-l2a'], 
-        ...(field.boundary_geojson
-          ? { intersects: field.boundary_geojson }
-          : { intersects: { type: 'Point', coordinates: [field.longitude, field.latitude] } }),
-        datetime, 
-        query: { 'eo:cloud_cover': { lt: 40 } }, 
-        limit: policy.candidateLimit,
-        sortby: [{ field: "properties.datetime", direction: "desc" }]
-      }) 
+    endDate.setUTCDate(endDate.getUTCDate() + 1);
+    const startDate = new Date(Date.now() - days * 86400000);
+    const engineResponse = await fetch(`${getPythonEngineUrl()}/earth-engine/scenes`, {
+      signal: AbortSignal.timeout(180000),
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        polygonGeojson: field.boundary_geojson,
+        start: startDate.toISOString().slice(0, 10),
+        end: endDate.toISOString().slice(0, 10),
+        limit: Math.min(policy.candidateLimit, 20),
+      }),
     });
-
-    if (!catalogResponse.ok) { response.status(502).json({ error: 'Sentinel catalog request failed' }); return; }
-    const catalog = await catalogResponse.json() as { features?: Array<{ id: string; collection?: string; properties: { datetime: string; 'eo:cloud_cover'?: number }; assets: Record<string, { href: string; type?: string }> }> };
+    if (!engineResponse.ok) {
+      response.status(engineResponse.status === 503 ? 503 : 502).json({
+        error: engineResponse.status === 503
+          ? 'Google Earth Engine is not configured. Set EARTH_ENGINE_PROJECT_ID and configure ADC for the engine service.'
+          : 'Google Earth Engine Sentinel-2 search failed.',
+      });
+      return;
+    }
+    const catalog = await engineResponse.json() as { scenes?: Array<{ id: string; image_id: string; observed_at: string; cloud_cover: number | null }> };
     let imported = 0;
-    for (const scene of catalog.features ?? []) {
-      if (!scene.id || !Number.isFinite(Date.parse(scene.properties?.datetime)) || !scene.assets) continue;
-      await pool.query('insert into public.satellite_scenes (field_id, scene_id, collection, observed_at, cloud_cover, source, catalog_url, assets) values ($1, $2, $3, $4, $5, $6, $7, $8) on conflict (field_id, scene_id) do update set cloud_cover = excluded.cloud_cover, assets = excluded.assets', [request.params.fieldId, scene.id, typeof scene.collection === 'string' ? scene.collection : 'sentinel-2-l2a', scene.properties.datetime, scene.properties['eo:cloud_cover'] ?? null, 'Copernicus Sentinel-2 via Earth Search', catalogUrl, JSON.stringify(scene.assets)]);
+    for (const scene of catalog.scenes ?? []) {
+      if (!scene.id || !scene.image_id || !Number.isFinite(Date.parse(scene.observed_at))) continue;
+      const sceneId = `gee-${scene.id}`;
+      await pool.query('insert into public.satellite_scenes (field_id, scene_id, collection, observed_at, cloud_cover, source, catalog_url, assets) values ($1, $2, $3, $4, $5, $6, $7, $8) on conflict (field_id, scene_id) do update set cloud_cover = excluded.cloud_cover, assets = excluded.assets, source=excluded.source, catalog_url=excluded.catalog_url', [request.params.fieldId, sceneId, 'COPERNICUS/S2_SR_HARMONIZED', scene.observed_at, scene.cloud_cover, EARTH_ENGINE_SOURCE, catalogUrl, JSON.stringify({earth_engine:{image_id:scene.image_id}})]);
       imported += 1;
     }
-    response.json({ source: 'Copernicus Sentinel-2', catalogUrl, imported });
+    response.json({ source: EARTH_ENGINE_SOURCE, catalogUrl, imported });
   } catch {
-    console.error('POST Sentinel scene ingestion failed:');
-    response.status(503).json({ error: 'Sentinel scene ingestion failed' });
+    console.error('POST Earth Engine Sentinel-2 ingestion failed:');
+    response.status(503).json({ error: 'Earth Engine scene ingestion failed. Check engine logs and ADC configuration.' });
   }
 }
+
+export const ingestSentinelScenes = ingestEarthEngineScenes;
 
 export async function ingestWeather(request: Request, response: Response) {
   const { start, end } = (request.body ?? {}) as { start?: string; end?: string };
@@ -435,13 +438,24 @@ export async function getFieldOverlay(request: Request, response: Response) {
     if (!field || !field.boundary_geojson) { response.status(400).json({ error: 'Field boundary missing' }); return; }
     
     const sceneResult = await pool.query(
-      'select assets from public.satellite_scenes where field_id = $1 and scene_id = $2',
+      'select assets,source from public.satellite_scenes where field_id = $1 and scene_id = $2',
       [fieldId, sceneId]
     );
     const scene = sceneResult.rows[0];
     if (!scene) { response.status(404).json({ error: 'Scene not found' }); return; }
     
     const assets = scene.assets;
+    if (scene.source === EARTH_ENGINE_SOURCE && typeof assets.earth_engine?.image_id === 'string') {
+      const engineResponse = await fetch(`${getPythonEngineUrl()}/earth-engine/generate-overlay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageId: assets.earth_engine.image_id, polygonGeojson: field.boundary_geojson }),
+        signal: AbortSignal.timeout(60000),
+      });
+      if (!engineResponse.ok) { response.status(502).json({ error: 'Earth Engine overlay generation failed.' }); return; }
+      response.json(await engineResponse.json());
+      return;
+    }
     const engineResponse = await fetch(`${getPythonEngineUrl()}/generate-overlay`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -469,7 +483,7 @@ export async function getFieldTile(request: Request, response: Response) {
     const { fieldId, sceneId, z, x, y } = request.params;
     
     const sceneResult = await pool.query(
-      `select scenes.assets, ST_AsGeoJSON(fields.boundary_geom)::jsonb as boundary_geojson
+      `select scenes.assets,scenes.source, ST_AsGeoJSON(fields.boundary_geom)::jsonb as boundary_geojson
        from public.satellite_scenes scenes
        join public.fields fields on fields.id = scenes.field_id
        where scenes.field_id = $1 and scenes.scene_id = $2 and exists(select 1 from vegetation_indices vi where vi.field_id=fields.id and vi.scene_id=scenes.scene_id and vi.boundary_version=fields.boundary_version and vi.accepted and vi.provenance='measured_imagery' and vi.valid_coverage_percent >= $3 and vi.valid_pixel_count >= $4)`,
@@ -479,6 +493,19 @@ export async function getFieldTile(request: Request, response: Response) {
     if (!scene) { response.status(404).json({ error: 'Scene not found' }); return; }
     
     const assets = scene.assets;
+    if (scene.source === EARTH_ENGINE_SOURCE && typeof assets.earth_engine?.image_id === 'string') {
+      const engineResponse = await fetch(`${getPythonEngineUrl()}/earth-engine/tiles/${z}/${x}/${y}.png`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageId: assets.earth_engine.image_id, polygonGeojson: scene.boundary_geojson }),
+        signal: AbortSignal.timeout(30000),
+      });
+      if (!engineResponse.ok) { response.status(502).json({ error: 'Earth Engine tile generation failed.' }); return; }
+      response.setHeader('Content-Type', 'image/png');
+      response.setHeader('Cache-Control', 'private, max-age=300');
+      response.send(Buffer.from(await engineResponse.arrayBuffer()));
+      return;
+    }
     const redUrl = assets['red']?.href ?? assets['B04']?.href;
     const nirUrl = assets['nir']?.href ?? assets['B08']?.href;
     if (!redUrl || !nirUrl) { response.status(422).json({ error: 'Scene does not contain red and NIR assets' }); return; }

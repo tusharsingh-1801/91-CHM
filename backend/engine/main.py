@@ -15,6 +15,7 @@ from pyproj import Transformer
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel, Field
 from PIL import Image
+from backend.engine import earth_engine
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import colormaps
@@ -97,6 +98,16 @@ class TileRequest(CalculateIndicesRequest):
 
 class GenerateOverlayRequest(CalculateIndicesRequest):
     pass
+
+class EarthEngineScenesRequest(BaseModel):
+    polygonGeojson: dict
+    start: str
+    end: str
+    limit: int = Field(ge=1, le=20)
+
+class EarthEngineImageRequest(BaseModel):
+    imageId: str
+    polygonGeojson: dict
 
 def field_geometry(payload):
     try:
@@ -207,6 +218,23 @@ def calculate_indices(payload: CalculateIndicesRequest):
                 'calculationVersion':CALCULATION_VERSION}
     except HTTPException: raise
     except Exception as exc: raise HTTPException(502,'Raster processing failed') from exc
+
+@app.post('/earth-engine/scenes')
+def earth_engine_scenes(payload: EarthEngineScenesRequest):
+    return {'scenes': earth_engine.search_scenes(payload.polygonGeojson, payload.start, payload.end, payload.limit)}
+
+@app.post('/earth-engine/calculate-indices')
+def earth_engine_calculate_indices(payload: EarthEngineImageRequest):
+    return earth_engine.calculate_indices(payload.imageId, payload.polygonGeojson)
+
+@app.post('/earth-engine/generate-overlay')
+def earth_engine_generate_overlay(payload: EarthEngineImageRequest):
+    return earth_engine.generate_overlay(payload.imageId, payload.polygonGeojson)
+
+@app.post('/earth-engine/tiles/{z}/{x}/{y}.png')
+def earth_engine_tile(z: int, x: int, y: int, payload: EarthEngineImageRequest):
+    return Response(content=earth_engine.get_tile(payload.imageId, payload.polygonGeojson, z, x, y),
+                    media_type='image/png', headers={'Cache-Control': 'private, max-age=300'})
 
 @app.post('/generate-overlay')
 def generate_overlay(payload: GenerateOverlayRequest):

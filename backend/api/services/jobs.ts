@@ -3,7 +3,7 @@ import type {Request,Response} from 'express';
 import {pool} from '../db/pool.ts';
 import {actor} from './auth.ts';
 import {processLatest} from './satellite.ts';
-import {ingestSentinelScenes,ingestWeather} from '../controllers/fieldsController.ts';
+import {ingestEarthEngineScenes,ingestWeather} from '../controllers/fieldsController.ts';
 export interface Job{id:string;field_id:string;owner_id:string|null;boundary_version:number;kind:'satellite'|'weather';status:'queued'|'running'|'succeeded'|'failed';attempts:number;max_attempts:number;lease_token:string;progress:string;result:Record<string,unknown>|null;error:string|null}
 const publicColumns='id,field_id,boundary_version,kind,status,progress,result,error,created_at,finished_at';
 async function controllerWork(handler:typeof ingestWeather,fieldId:string){
@@ -51,7 +51,7 @@ export async function runOne(execute?:(job:Job)=>Promise<Record<string,unknown>>
   if(execute)result=await execute(job);
   else if(job.kind==='weather')result=await controllerWork(ingestWeather,job.field_id);
   else{
-   await controllerWork(ingestSentinelScenes,job.field_id);
+   await controllerWork(ingestEarthEngineScenes,job.field_id);
    await pool.query("update ingestion_jobs set progress='Processing newest candidates; checking field coverage' where id=$1 and lease_token=$2",[job.id,token]);
    const processed=await processLatest(job.field_id);result=processed;
    if(!processed.accepted&&processed.attempts.some(attempt=>attempt.status==='failed'))throw new Error('Processing failed. The saved field and last accepted evidence are unchanged.');

@@ -3,7 +3,7 @@ import {assessEvidence,type Observation} from '../../shared/evidence';
 test.use({baseURL:'http://127.0.0.1:5175'});
 const now=Date.now();
 const day=(days:number)=>new Date(now-days*86400000).toISOString().slice(0,10);
-const measured:Observation={scene_id:'new',observed_on:day(2),ndvi_value:.5,valid_coverage_percent:91,valid_pixel_count:900,cloud_cover:30,source:'Copernicus Sentinel-2 / Earth Search',provenance:'measured_imagery',accepted:true,boundary_version:1,calculation_version:'v2'};
+const measured:Observation={scene_id:'new',observed_on:day(2),ndvi_value:.5,valid_coverage_percent:91,valid_pixel_count:900,cloud_cover:30,source:'Copernicus Sentinel-2 via Google Earth Engine',provenance:'measured_imagery',accepted:true,boundary_version:1,calculation_version:'gee-sentinel-reflectance-scl-v1'};
 const before:Observation={...measured,scene_id:'before',observed_on:day(12),ndvi_value:.75};
 const seed={id:'00000000-0000-0000-0000-000000000071',name:'River field',crop:'Wheat',area_hectares:12,latitude:28,longitude:77,boundary_version:1,last_observation:measured.observed_on,latestObservation:measured,previousObservation:before,assessment:assessEvidence(measured,before,undefined,now),provenance:'user_reported'};
 for(const width of [320,390,768,1440]){
