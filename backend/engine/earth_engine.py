@@ -43,10 +43,16 @@ def _ee():
             return _ee_module
         try:
             import ee
+            import google.auth
         except ImportError as exc:
-            raise HTTPException(503, 'Earth Engine API is not installed. Restore backend/engine/requirements.txt.') from exc
+            raise HTTPException(503, 'Earth Engine API or Google Auth library is not installed. Restore backend/engine/requirements.txt.') from exc
         try:
-            ee.Initialize(project=project)
+            # ADC may carry a quota project that is denied by Google APIs in this
+            # environment. The runtime project is passed explicitly below, so
+            # omit only the x-goog-user-project quota header from these requests.
+            credentials, _ = google.auth.default()
+            credentials = credentials.with_quota_project(None)
+            ee.Initialize(credentials=credentials, project=project)
         except Exception as exc:
             logger.warning('Earth Engine initialization failed: %s', type(exc).__name__)
             raise HTTPException(503, 'Earth Engine authentication failed. Configure ADC and confirm this project is registered for Earth Engine.') from exc
