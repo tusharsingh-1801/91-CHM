@@ -9,6 +9,36 @@ from fastapi.testclient import TestClient
 POLYGON = mapping(box(77, 28, 77.001, 28.001))
 
 
+def test_ee_initialization_removes_adc_quota_project(monkeypatch):
+    from types import SimpleNamespace
+    import google.auth
+
+    project = 'driven-crawler-513018-k4'
+    calls = {}
+
+    class FakeCredentials:
+        def with_quota_project(self, quota_project):
+            calls['quota_project'] = quota_project
+            return self
+
+    credentials = FakeCredentials()
+    fake_ee = SimpleNamespace(
+        Initialize=lambda **kwargs: calls.update(initialize_kwargs=kwargs)
+    )
+    monkeypatch.setattr(gee, '_project', lambda: project)
+    monkeypatch.setattr(gee, '_initialized_project', None)
+    monkeypatch.setattr(gee, '_ee_module', None)
+    monkeypatch.setattr(google.auth, 'default', lambda: (credentials, project))
+    monkeypatch.setitem(__import__('sys').modules, 'ee', fake_ee)
+
+    assert gee._ee() is fake_ee
+    assert calls['quota_project'] is None
+    assert calls['initialize_kwargs'] == {
+        'credentials': credentials,
+        'project': project,
+    }
+
+
 def test_geometry_requires_bounded_valid_wgs84_polygon():
     geometry, area = gee._geometry(POLYGON)
     assert geometry.geom_type == 'Polygon'
