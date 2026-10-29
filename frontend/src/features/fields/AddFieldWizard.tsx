@@ -3,6 +3,7 @@ import { useModalDialog } from '../../lib/useModalDialog';
 import { queueFieldJob } from '../../lib/api';
 import { usePreferences } from '../../lib/preferencesContext';
 import { FieldBoundaryEditor } from './FieldBoundaryEditor';
+import { FieldLocationSearch } from './FieldLocationSearch';
 import { polygonAreaHectares, validatePolygonBoundary, type PolygonBoundary } from './boundary';
 
 type Step = 'basic' | 'dates' | 'boundary' | 'confirm';
@@ -16,6 +17,7 @@ export function AddFieldWizard({ onComplete, onCancel }: { onComplete: (fieldId:
   const [harvestDate, setHarvestDate] = useState('');
   
   const [polygonGeojson, setPolygonGeojson] = useState<PolygonBoundary|null>(null);
+  const [focusLocation,setFocusLocation]=useState<{latitude:number;longitude:number}|null>(null);
   const [savedFieldId, setSavedFieldId] = useState<string | null>(null);
   const [clientKey] = useState(()=>crypto.randomUUID());
   const [saving, setSaving] = useState(false);
@@ -135,7 +137,8 @@ export function AddFieldWizard({ onComplete, onCancel }: { onComplete: (fieldId:
         {step === 'boundary' && (
           <div>
             <p>{t('Tap the map to mark your field corners. Drag a white corner to adjust it, then finish the boundary.', 'खेत के कोने चुनने के लिए नक्शे पर दबाएँ। सफ़ेद कोना खींचकर ठीक करें, फिर सीमा पूरी करें।')}</p>
-            <FieldBoundaryEditor boundary={polygonGeojson} onChange={boundary=>{setPolygonGeojson(boundary);setImportError('');}} boundaryFinished={boundaryFinished}/>
+            <FieldLocationSearch onSelect={({latitude,longitude})=>setFocusLocation({latitude,longitude})}/>
+            <FieldBoundaryEditor boundary={polygonGeojson} onChange={boundary=>{setPolygonGeojson(boundary);setImportError('');}} boundaryFinished={boundaryFinished} focusLocation={focusLocation}/>
             <div className="boundary-tools" aria-live="polite">
               <span>{boundaryPoints} {t(boundaryPoints === 1 ? 'point' : 'points', 'कोने')} · {area(areaHectares)}</span>
               <button type="button" onClick={undoBoundaryPoint} disabled={!boundaryPoints}>{t('Undo point', 'पिछला कोना हटाएँ')}</button>

@@ -24,23 +24,26 @@ npm run dev        # frontend + API + Python; Ctrl+C stops all three
 
 ## Fresh installation
 
-Use Node.js 24, Python 3.11 and a **native PostgreSQL with PostGIS** installation. Docker is not required. On macOS, [Postgres.app](https://postgresapp.com/downloads.html) includes PostGIS; a plain PostgreSQL installation may need PostGIS installed separately.
+Use Node.js 24, Python 3.11 and a **native PostgreSQL with PostGIS** installation. Docker is not required. On macOS, [Postgres.app](https://postgresapp.com/downloads.html) includes PostGIS; a plain PostgreSQL installation may need PostGIS installed separately. On Windows, install PostgreSQL and the matching PostGIS extension, then start the Windows PostgreSQL service (for example `postgresql-x64-18`) independently. The launcher uses that service when `LOCAL_PG_BIN` is unset.
 
 ```bash
 npm ci
+# macOS/Linux
 python3 -m venv .venv
 .venv/bin/python -m pip install -r backend/engine/requirements.txt
 cp .env.example .env
 ```
 
-Configure `DATABASE_URL` for your local database. Create an empty `terrascope` database with your PostgreSQL tools, then run:
+On Windows PowerShell, use `npm.cmd` (PowerShell may block `npm.ps1`) and create the Python environment with `py -3.11 -m venv .venv`; install dependencies with `.venv\Scripts\python.exe -m pip install -r backend/engine/requirements.txt`. Copy `.env.example` to `.env` using `Copy-Item .env.example .env` if you do not already have a local configuration.
+
+Set `DATABASE_URL` to your local PostgreSQL connection. This is the only database credential setting the app and migrations require; put a password in `.env.local` if PostgreSQL requires one, and do not keep separate `PGUSER`/`PGPASSWORD` values. Create the `terrascope` database with your PostgreSQL tools, then run:
 
 ```bash
 npm run migrate
 npm start
 ```
 
-Migrations install the schema and enable the required extensions; the database user must have permission to create them. Do not rerun seed SQL manually over existing data.
+On Windows with the independent PostgreSQL service described above, use `npm.cmd run migrate`, `npm.cmd start`, and `npm.cmd run status`. Set `DATABASE_URL=postgresql://your-user@127.0.0.1:5432/terrascope` in `.env.local` or `.env` (add the password only if required by your local server). The launcher will not start or stop the Windows service. On macOS/Linux the equivalent commands are `npm run migrate`, `npm start`, and `npm run status`; Postgres.app's path is never assumed. Migrations install the schema and enable PostGIS; the database user must have permission to create extensions. Do not rerun seed SQL manually over existing data.
 
 ## Configuration
 
@@ -48,27 +51,26 @@ The frontend and backend load root `.env.local` first, then `.env` for values no
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `DATABASE_URL` | Native PostgreSQL connection URL | localhost:5432/terrascope |
+| `DATABASE_URL` | Native PostgreSQL connection URL; required for migrations and startup | 127.0.0.1:5432/terrascope |
 | `WEB_PORT` | Browser port | 5173 |
 | `API_PORT` | API port; Vite proxy follows this | 3001 |
-| `PYTHON_BIN` | Python executable | .venv/bin/python |
+| `PYTHON_BIN` | Optional Python executable override; otherwise the launcher detects the `.venv` path for the OS | auto-detected |
 | `PYTHON_ENGINE_URL` | Local Python engine URL/port | http://127.0.0.1:8000 |
 | `EARTH_ENGINE_PROJECT_ID` | Registered Google Cloud project used by the Earth Engine API | unset |
 | `LOCAL_PG_BIN` | Optional native PostgreSQL bin directory managed by start/stop | unset |
 | `LOCAL_PG_DATA` | Data directory for that managed database | .local/postgres-data |
-| `VITE_GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAPS_MAP_ID` | Legacy optional Google map settings; current core maps use Leaflet/OpenStreetMap and do not require these values | unset |
+| `VITE_GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAPS_MAP_ID` | Optional browser key and map ID for Google satellite maps, Places location search and reverse geocoding; keep HTTP-referrer restrictions on localhost/deployed frontend origins | unset |
 | `GEMINI_API_KEY`, `GEMINI_MODEL` | Google AI Studio chat credentials and model | unset / gemini-3.5-flash-lite |
+| `GOOGLE_WEATHER_API_KEY` | Optional server-only Google Weather forecast key; when unset, Open-Meteo is used | unset |
 | `AUTH_MODE` | `required` enables accounts; `local` disables ownership checks for isolated development only | required |
 | `APP_ORIGIN` | Comma-separated browser origins allowed for write requests | http://localhost:5173 |
 | `AUTH_SECURE_COOKIE` | Set to `1` when serving the app over HTTPS | 0 |
 | `PHOTO_STORAGE_DIR` | Private server-side storage for scouting photos | .local/scouting-photos |
 | `JOB_CONCURRENCY` | Concurrent PostgreSQL-backed worker jobs (clamped to 1–4) | 2 |
 
-This machine is configured with a project-managed native database on port **5435** under `.local/`; the existing system PostgreSQL stays on its own port.
-
 When `LOCAL_PG_BIN` is set, its data directory must already be initialized. The launcher starts/stops only that configured cluster, leaving any system PostgreSQL installation alone. Otherwise PostgreSQL runs independently and `npm stop` stops the three app services only.
 
-Field drawing, boundary editing and satellite-map viewing use Leaflet with OpenStreetMap; no Google Maps key is required. The basemap is not the selected Sentinel acquisition. New Sentinel-2 scene search and index processing use the Earth Engine Python API (`earthengine-api`, included in the engine requirements) and require a registered Earth Engine Cloud project, the Earth Engine API enabled, and Google Application Default Credentials (ADC) available to the Python engine. Earth Engine uses OAuth credentials rather than a browser/API key. For local development, install Google Cloud CLI, run `gcloud auth application-default login`, and set `EARTH_ENGINE_PROJECT_ID` in `.env.local` or `.env` (for this workspace, `meta-falcon-512307-n4`). In a hosted environment, use an attached service identity instead of a downloaded private key. Existing Earth Search observations remain available as historical records; a missing Earth Engine setup does not trigger a fallback. NASA POWER weather does not require Google credentials. Gemini is the only chat provider and requires server-side `GEMINI_API_KEY`; the default `GEMINI_MODEL` is `gemini-3.5-flash-lite`. Run `npm run gemini:check` to verify access. `/api/assistant` provides field-aware answers and optional saved history. In shared deployments, keep `AUTH_MODE=required`, set `APP_ORIGIN` to the exact HTTPS frontend origin(s), and set `AUTH_SECURE_COOKIE=1`. Do not use `AUTH_MODE=local` on a shared or network-exposed service.
+Field boundary drawing uses Leaflet/OpenStreetMap, with optional Google Places autocomplete and reverse geocoding to find a farm area; the user still draws the exact parcel boundary. Field analysis maps use Google Maps JavaScript satellite tiles when configured and fall back to OpenStreetMap. Keep the browser key limited to Maps JavaScript API, Places API and Geocoding API, with HTTP-referrer restrictions for local/deployed frontend origins. The basemap is not the selected Sentinel acquisition. New Sentinel-2 scene search and index processing use the Earth Engine Python API (`earthengine-api`, included in the engine requirements) and require a registered Earth Engine Cloud project, the Earth Engine API enabled, and Google Application Default Credentials (ADC) available to the Python engine. Earth Engine uses OAuth credentials rather than a browser/API key. For local development, install Google Cloud CLI, run `gcloud auth application-default login`, and set `EARTH_ENGINE_PROJECT_ID` in `.env.local` or `.env` (for this workspace, `meta-falcon-512307-n4`). In a hosted environment, use an attached service identity instead of a downloaded private key. Existing Earth Search observations remain available as historical records; a missing Earth Engine setup does not trigger a fallback. NASA POWER weather does not require Google credentials. Google Weather forecasts use server-side `GOOGLE_WEATHER_API_KEY` and are separate from NASA POWER historical weather; when unset, forecasts continue through Open-Meteo. Gemini is the only chat provider and requires server-side `GEMINI_API_KEY`; the default `GEMINI_MODEL` is `gemini-3.5-flash-lite`. Run `npm run gemini:check` to verify access. `/api/assistant` provides field-aware answers and optional saved history. In shared deployments, keep `AUTH_MODE=required`, set `APP_ORIGIN` to the exact HTTPS frontend origin(s), and set `AUTH_SECURE_COOKIE=1`. Do not use `AUTH_MODE=local` on a shared or network-exposed service.
 
 Accounts are created in the app. Migrations preserve legacy fields with `owner_id = NULL`; they are never assigned to the first account automatically. For an explicit local claim, sign in/create the intended account, identify the exact legacy field UUIDs with your database administrator, then run `node scripts/claim-fields.mjs account@example.com <field-uuid> [...]`. The script only operates on a loopback TerraScope database, claims only listed unowned fields, and writes an audit record. Back up the database before migrations or claims.
 

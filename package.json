@@ -17,7 +17,7 @@
     "lint": "oxlint frontend backend",
     "preview": "vite --config frontend/vite.config.ts preview",
     "premigrate": "node scripts/local.mjs database",
-    "migrate": "node-pg-migrate up -j ts -m backend/database/migrations --envPath .env",
+    "migrate": "node scripts/migrate.mjs",
     "db:start": "node scripts/local.mjs database",
     "start": "node scripts/local.mjs start",
     "stop": "node scripts/local.mjs stop",
@@ -32,7 +32,7 @@
     "photos:cleanup": "tsx scripts/cleanup-orphan-photos.ts --apply",
     "photos:test": "node --import tsx --test scripts/cleanup-orphan-photos.test.ts",
     "data:acquire:cropharvest": "node scripts/acquire-cropharvest.mjs",
-    "data:sync:references": "node --import tsx scripts/sync-reference-datasets.ts"
+    "data:sync:references": "node --experimental-strip-types scripts/sync-reference-datasets.ts"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.1.1",

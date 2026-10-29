@@ -138,6 +138,12 @@ button { white-space:normal; overflow-wrap:anywhere; touch-action:manipulation; 
 .wizard-content .actions button { flex:1 1 120px; }
 .step-label,.wizard-status { color:#cbe86b; }
 .boundary-map { width:100%; height:clamp(240px,50svh,400px); background:#ccc; }
+.field-location-search { display:grid; gap:.4rem; margin:.75rem 0; }
+.field-location-search > label { font-weight:600; }
+.field-location-search > div { min-height:40px; }
+.field-location-search gmp-place-autocomplete { width:100%; }
+.field-location-search small,.field-location-search-note { color:var(--muted); }
+.field-location-search small[role="alert"] { color:#9b2c2c; }
 .boundary-tools { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:.75rem; color:#cbe86b; font-size:.85rem; }
 .boundary-tools span { flex-basis:100%; }
 .boundary-tools button { min-height:44px; padding:.4rem .65rem; background:#27371f; color:#edf1df; border:1px solid #536b36; border-radius:4px; }

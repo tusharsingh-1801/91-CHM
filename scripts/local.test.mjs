@@ -6,15 +6,20 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { loadEnvironment } from './environment.mjs';
+import { migrationArgs, runMigration } from './migrate.mjs';
+import { managedPostgresPaths, pgCtlPath } from './local.mjs';
 
 const run = promisify(execFile);
 const launcher = fileURLToPath(new URL('./local.mjs', import.meta.url));
+const managedLifecycleTest = process.platform === 'win32' ? test.skip : test;
 
 async function fixture(overrides, exercise) {
   const root = await mkdtemp(join(tmpdir(), 'chm-launcher-'));
   const bin = join(root, 'bin');
   const log = join(root, 'pg-requests.jsonl');
   await mkdir(bin);
+  await mkdir(join(root, 'data'));
   await writeFile(join(root, 'empty.env'), '');
   await writeFile(join(bin, 'pg_ctl'), `#!/usr/bin/env node
 import {appendFileSync} from 'node:fs';
@@ -43,7 +48,7 @@ if(process.env.CHM_LAUNCHER_PG_FAIL==='1'){console.error('Fixture PostgreSQL sta
   finally { await rm(root, { recursive: true, force: true }); }
 }
 
-test('migration preparation starts only the configured database without requiring app schema or Python', async () => {
+managedLifecycleTest('migration preparation starts only the configured database without requiring app schema or Python', async () => {
   await fixture({}, async (start, requests, root) => {
     const result = await start();
     assert.match(result.stdout, /PostgreSQL is running/);
@@ -56,7 +61,7 @@ test('migration preparation starts only the configured database without requirin
   });
 });
 
-test('migration preparation reuses an already running managed database', async () => {
+managedLifecycleTest('migration preparation reuses an already running managed database', async () => {
   await fixture({ CHM_LAUNCHER_PG_RUNNING: '1' }, async (start, requests) => {
     await start();
     const calls = await requests();
@@ -65,7 +70,7 @@ test('migration preparation reuses an already running managed database', async (
   });
 });
 
-test('migration preparation reports a database start failure with a nonzero exit', async () => {
+managedLifecycleTest('migration preparation reports a database start failure with a nonzero exit', async () => {
   await fixture({ CHM_LAUNCHER_PG_FAIL: '1' }, async start => {
     await assert.rejects(start, error => error.code === 1 && /Local PostgreSQL start failed/.test(error.stderr));
   });
@@ -76,4 +81,50 @@ test('migration preparation leaves externally managed PostgreSQL alone', async (
     await start();
     assert.deepEqual(await requests(), []);
   });
+});
+
+test('environment files resolve .env.local over .env and preserve external values', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'chm-env-'));
+  try {
+    await writeFile(join(root, '.env'), 'DATABASE_URL=base\nSHARED=base\nONLY_BASE=yes\n');
+    await writeFile(join(root, '.env.local'), 'DATABASE_URL=local\nSHARED=local\n');
+    const env = loadEnvironment(root, { DATABASE_URL: 'external', EXTERNAL_ONLY: 'yes' });
+    assert.equal(env.DATABASE_URL, 'external');
+    assert.equal(env.SHARED, 'local');
+    assert.equal(env.ONLY_BASE, 'yes');
+    assert.equal(env.EXTERNAL_ONLY, 'yes');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('migration launcher passes resolved database settings to node-pg-migrate', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'chm-migrate-'));
+  try {
+    const capture = join(root, 'received.json');
+    const cli = join(root, 'fake-cli.mjs');
+    await writeFile(join(root, '.env'), 'DATABASE_URL=base-url\nPGSSLMODE=disable\n');
+    await writeFile(join(root, '.env.local'), 'DATABASE_URL=local-url\n');
+    await writeFile(cli, "import {writeFileSync} from 'node:fs'; writeFileSync(process.env.CAPTURE, JSON.stringify({url:process.env.DATABASE_URL, ssl:process.env.PGSSLMODE, args:process.argv.slice(2)}));\n");
+    const env = { ...process.env, CAPTURE: capture };
+    delete env.DATABASE_URL;
+    assert.equal(await runMigration({ cli, cwd: root, env }), 0);
+    const received = JSON.parse(await readFile(capture, 'utf8'));
+    assert.equal(received.url, 'local-url');
+    assert.equal(received.ssl, 'disable');
+    assert.deepEqual(received.args, migrationArgs());
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('Windows managed PostgreSQL resolves pg_ctl.exe, avoids macOS paths, and validates configuration', async () => {
+  assert.match(pgCtlPath('C:/PostgreSQL/bin', 'win32'), /pg_ctl\.exe$/);
+  assert.doesNotMatch(pgCtlPath('C:/PostgreSQL/bin', 'win32'), /Postgres\.app/);
+  const root = await mkdtemp(join(tmpdir(), 'chm-paths-'));
+  try {
+    assert.throws(() => managedPostgresPaths(join(root, 'missing-bin'), join(root, 'missing-data'), root, 'win32'), /LOCAL_PG_BIN does not exist/);
+    const bin = join(root, 'bin');
+    const data = join(root, 'data');
+    await mkdir(bin); await mkdir(data); await writeFile(join(bin, 'pg_ctl.exe'), '');
+    assert.equal(managedPostgresPaths(bin, data, root, 'win32').data, data);
+    await rm(join(bin, 'pg_ctl.exe'));
+    assert.throws(() => managedPostgresPaths(bin, data, root, 'win32'), /control executable does not exist:.*pg_ctl\.exe/);
+  } finally { await rm(root, { recursive: true, force: true }); }
 });

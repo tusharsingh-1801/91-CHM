@@ -9,7 +9,7 @@ function openRing(ring:number[][]){
   return closed?ring.slice(0,-1):ring.slice();
 }
 
-export function FieldBoundaryEditor({boundary,onChange,boundaryFinished=false}:{boundary:PolygonBoundary|null;onChange:(value:PolygonBoundary|null)=>void;boundaryFinished?:boolean}){
+export function FieldBoundaryEditor({boundary,onChange,boundaryFinished=false,focusLocation=null}:{boundary:PolygonBoundary|null;onChange:(value:PolygonBoundary|null)=>void;boundaryFinished?:boolean;focusLocation?:{latitude:number;longitude:number}|null}){
   const {t}=usePreferences();
   const element=useRef<HTMLDivElement>(null);
   const map=useRef<L.Map|null>(null);
@@ -41,6 +41,11 @@ export function FieldBoundaryEditor({boundary,onChange,boundaryFinished=false}:{
     const observer=new ResizeObserver(()=>instance.invalidateSize());observer.observe(element.current);
     return()=>{observer.disconnect();instance.off();instance.remove();map.current=null;layer.current=null;};
   },[]);
+
+  useEffect(()=>{
+    if(!focusLocation||!map.current)return;
+    map.current.setView([focusLocation.latitude,focusLocation.longitude],14,{animate:false});
+  },[focusLocation]);
 
   useEffect(()=>{
     const instance=map.current;const drawn=layer.current;

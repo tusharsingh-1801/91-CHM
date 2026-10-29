@@ -9,16 +9,46 @@ export async function forecastFor(fieldId:string):Promise<Forecast>{
  if(!field||field.latitude===null||field.longitude===null)throw new Error('Add field coordinates to enable the forecast');
  const {latitude,longitude}=field;
  const key=fieldId+':'+latitude+':'+longitude;
- const stored=(await pool.query<{payload:Forecast}>('select payload from field_forecasts where field_id=$1 and latitude=$2 and longitude=$3 and expires_at>now()',[fieldId,latitude,longitude])).rows[0];if(stored)return stored.payload;
- const cached=cache.get(key);if(cached&&Date.parse(cached.value.expiresAt)>Date.now())return cached.value;
+ const preferredSource=process.env.GOOGLE_WEATHER_API_KEY?.trim()?'Google Weather API':'Open-Meteo';
+ const stored=(await pool.query<{payload:Forecast}>('select payload from field_forecasts where field_id=$1 and latitude=$2 and longitude=$3 and expires_at>now()',[fieldId,latitude,longitude])).rows[0];if(stored?.payload.source===preferredSource)return stored.payload;
+ const cached=cache.get(key);if(cached&&cached.value.source===preferredSource&&Date.parse(cached.value.expiresAt)>Date.now())return cached.value;
  if(pending.has(key))return pending.get(key)!;
  const work=(async()=>{
-  const url=new URL('https://api.open-meteo.com/v1/forecast');
-  url.search=new URLSearchParams({latitude:String(latitude),longitude:String(longitude),daily:'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,relative_humidity_2m_mean,wind_speed_10m_max',current:'temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m',forecast_days:'7',timezone:'auto'}).toString();
-  const value=parseForecast(await providerJson(url.href));
+  const googleKey=process.env.GOOGLE_WEATHER_API_KEY?.trim();
+  let raw:unknown;
+  if(googleKey){
+   const url=new URL('https://weather.googleapis.com/v1/forecast/days:lookup');
+   url.search=new URLSearchParams({key:googleKey,'location.latitude':String(latitude),'location.longitude':String(longitude),days:'7',pageSize:'7',unitsSystem:'METRIC'}).toString();
+   raw=googleDailyToForecast(await providerJson(url.href));
+  }else{
+   const url=new URL('https://api.open-meteo.com/v1/forecast');
+   url.search=new URLSearchParams({latitude:String(latitude),longitude:String(longitude),daily:'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,relative_humidity_2m_mean,wind_speed_10m_max',current:'temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m',forecast_days:'7',timezone:'auto'}).toString();
+   raw=await providerJson(url.href);
+  }
+  const value=parseForecast(raw);
   await pool.query('insert into field_forecasts(field_id,latitude,longitude,retrieved_at,expires_at,payload) values($1,$2,$3,$4,$5,$6) on conflict(field_id) do update set latitude=excluded.latitude,longitude=excluded.longitude,retrieved_at=excluded.retrieved_at,expires_at=excluded.expires_at,payload=excluded.payload',[fieldId,latitude,longitude,value.retrievedAt,value.expiresAt,JSON.stringify(value)]);
   if(cache.size>=500)cache.delete(cache.keys().next().value!);cache.set(key,{value,latitude,longitude});return value;
  })();pending.set(key,work);try{return await work;}finally{pending.delete(key);}
+}
+
+/** Convert Google's seven daily periods into the shared forecast shape. */
+function googleDailyToForecast(value:unknown):unknown{
+ const data=value as {forecastDays?:Array<Record<string,any>>;timeZone?:{id?:string}};
+ if(!Array.isArray(data?.forecastDays)||data.forecastDays.length!==7)throw new Error('Google Weather returned incomplete forecast data');
+ const read=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)?v:null;
+ const days=data.forecastDays.map(day=>{
+  const date=day.displayDate;
+  const dateString=date&&[date.year,date.month,date.day].every((part:unknown)=>Number.isInteger(part))
+   ?`${String(date.year).padStart(4,'0')}-${String(date.month).padStart(2,'0')}-${String(date.day).padStart(2,'0')}`:'';
+  const daytime=day.daytimeForecast??{},nighttime=day.nighttimeForecast??{};
+  const qpf=(period:Record<string,any>)=>read(period.precipitation?.qpf?.quantity);
+  const precipitation=[qpf(daytime),qpf(nighttime)].every((n)=>n!==null)?(qpf(daytime)!+qpf(nighttime)!):null;
+  const probability=[read(daytime.precipitation?.probability?.percent),read(nighttime.precipitation?.probability?.percent)].filter((n):n is number=>n!==null);
+  const humidity=[read(daytime.relativeHumidity),read(nighttime.relativeHumidity)].filter((n):n is number=>n!==null);
+  const wind=[read(daytime.wind?.speed?.value),read(nighttime.wind?.speed?.value)].filter((n):n is number=>n!==null);
+  return {date:dateString,minC:read(day.minTemperature?.degrees),maxC:read(day.maxTemperature?.degrees),rainMm:precipitation,rainChance:probability.length?Math.max(...probability):null,humidity:humidity.length?humidity.reduce((a,b)=>a+b,0)/humidity.length:null,windKph:wind.length?Math.max(...wind):null};
+ });
+ return {source:'Google Weather API',sourceUrl:'https://developers.google.com/maps/documentation/weather',timezone:data.timeZone?.id??'UTC',current:null,daily:{time:days.map(day=>day.date),temperature_2m_min:days.map(day=>day.minC),temperature_2m_max:days.map(day=>day.maxC),precipitation_sum:days.map(day=>day.rainMm),precipitation_probability_max:days.map(day=>day.rainChance),relative_humidity_2m_mean:days.map(day=>day.humidity),wind_speed_10m_max:days.map(day=>day.windKph)}};
 }
 export async function getForecast(request:Request,response:Response){
  try{response.json(await forecastFor(String(request.params.fieldId)));}catch(error){

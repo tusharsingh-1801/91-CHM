@@ -12,5 +12,5 @@ export function parseForecast(value:unknown,now=Date.now()):Forecast{
  });
  if(new Set(days.map(day=>day.date)).size!==7||days.some((day,i)=>i>0&&day.date<=days[i-1].date))throw new Error('Forecast days must be distinct and ordered');
  const current=data.current&&typeof data.current.time==='string'?{time:data.current.time,temperatureC:number(data.current.temperature_2m),humidity:number(data.current.relative_humidity_2m),rainMm:number(data.current.precipitation),windKph:number(data.current.wind_speed_10m)}:null;
- return {source:'Open-Meteo',sourceUrl:'https://open-meteo.com/',retrievedAt:new Date(now).toISOString(),expiresAt:new Date(now+30*60000).toISOString(),issuedAt:null,timezone:data.timezone,provenance:'forecast',current,days};
+ return {source:typeof data.source==='string'?data.source:'Open-Meteo',sourceUrl:typeof data.sourceUrl==='string'?data.sourceUrl:'https://open-meteo.com/',retrievedAt:new Date(now).toISOString(),expiresAt:new Date(now+30*60000).toISOString(),issuedAt:null,timezone:data.timezone,provenance:'forecast',current,days};
 }

@@ -1,14 +1,13 @@
-import dotenv from 'dotenv';
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, openSync, closeSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, openSync, closeSync, readFileSync, writeFileSync, rmSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import net from 'node:net';
 import pg from 'pg';
-
-dotenv.config({ path: ['.env.local', '.env'] });
+import { loadEnvironment } from './environment.mjs';
 
 process.chdir(fileURLToPath(new URL('..', import.meta.url)));
+loadEnvironment();
 const runtime = resolve('.local');
 const pidFile = resolve(runtime, 'server.pid');
 const logFile = resolve(runtime, 'server.log');
@@ -33,18 +32,35 @@ function runningPid() {
   try { const pid = Number(readFileSync(pidFile, 'utf8')); if (!Number.isInteger(pid) || pid < 2) return null; process.kill(pid, 0); return pid; }
   catch { return null; }
 }
+export function pgCtlPath(bin, platform = process.platform) {
+  return resolve(bin, platform === 'win32' ? 'pg_ctl.exe' : 'pg_ctl');
+}
+export function managedPostgresPaths(binValue, dataValue, cwd = process.cwd(), platform = process.platform) {
+  const bin = resolve(cwd, binValue);
+  const data = resolve(cwd, dataValue || '.local/postgres-data');
+  const ctl = pgCtlPath(bin, platform);
+  for (const [label, path] of [['LOCAL_PG_BIN', bin], ['PostgreSQL control executable', ctl], ['LOCAL_PG_DATA', data]]) {
+    if (!existsSync(path)) throw new Error(`${label} does not exist: ${path}`);
+  }
+  if (!statSync(bin).isDirectory()) throw new Error(`LOCAL_PG_BIN must be a directory: ${bin}`);
+  if (!statSync(data).isDirectory()) throw new Error(`LOCAL_PG_DATA must be an existing initialized data directory: ${data}`);
+  return { bin, data, ctl };
+}
 function localDatabase(action) {
   if (!process.env.LOCAL_PG_BIN) return;
-  const bin = resolve(process.env.LOCAL_PG_BIN);
-  const data = resolve(process.env.LOCAL_PG_DATA || '.local/postgres-data');
-  const dbPort = new URL(process.env.DATABASE_URL).port || '5432';
-  const status = spawnSync(resolve(bin, 'pg_ctl'), ['-D', data, 'status'], { stdio: 'ignore' });
+  if (!process.env.DATABASE_URL) throw new Error('Set DATABASE_URL before starting the project-managed database.');
+  let databaseUrl;
+  try { databaseUrl = new URL(process.env.DATABASE_URL); }
+  catch { throw new Error('DATABASE_URL must be a valid PostgreSQL connection URL.'); }
+  const { data, ctl } = managedPostgresPaths(process.env.LOCAL_PG_BIN, process.env.LOCAL_PG_DATA);
+  const dbPort = databaseUrl.port || '5432';
+  const status = spawnSync(ctl, ['-D', data, 'status'], { stdio: 'ignore' });
   if (action === 'start' && status.status === 0) return;
   if (action === 'stop' && status.status !== 0) return;
   const args = ['-D', data, '-w', '-t', '15'];
   if (action === 'start') args.push('-l', resolve(runtime, 'postgres.log'), '-o', `-h 127.0.0.1 -p ${dbPort}`);
   else args.push('-m', 'fast');
-  const result = spawnSync(resolve(bin, 'pg_ctl'), [...args, action], { encoding: 'utf8' });
+  const result = spawnSync(ctl, [...args, action], { encoding: 'utf8' });
   if (result.status !== 0) throw new Error(`Local PostgreSQL ${action} failed: ${result.stderr || result.stdout || result.error}`);
 }
 async function checkDatabase() {
@@ -135,4 +151,6 @@ async function main() {
   await stop();
   throw new Error(`Startup failed; see ${logFile}`);
 }
-main().catch(error => { console.error(error.message); process.exitCode = 1; });
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch(error => { console.error(error.message); process.exitCode = 1; });
+}

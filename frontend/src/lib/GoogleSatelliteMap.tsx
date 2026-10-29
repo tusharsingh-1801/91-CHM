@@ -107,6 +107,6 @@ export function GoogleSatelliteMap({ latitude, longitude, fieldName = '', zoom =
   }, [mapReady, tileUrl, opacity]);
 
   if (!apiKey) return <OpenFieldMap latitude={latitude} longitude={longitude} fieldName={fieldName} zoom={zoom} boundaryGeojson={boundaryGeojson} stressGeojson={stressGeojson} tileUrl={tileUrl} overlay={overlay} opacity={opacity} />
-  if (mapError) return <div className="map-unavailable" role="alert">{mapError}<button type="button" onClick={() => { setMapError(''); setAttempt(value => value + 1) }}>Retry map</button></div>
+  if (mapError) return <div><OpenFieldMap latitude={latitude} longitude={longitude} fieldName={fieldName} zoom={zoom} boundaryGeojson={boundaryGeojson} stressGeojson={stressGeojson} tileUrl={tileUrl} overlay={overlay} opacity={opacity}/><div className="map-load-error" role="status">{mapError} OpenStreetMap is shown instead. <button type="button" onClick={() => { setMapError(''); setAttempt(value => value + 1) }}>Retry Google map</button></div></div>
   return <div ref={mapElement} className="google-map" aria-label={`Satellite map of ${fieldName}`} />
 }
