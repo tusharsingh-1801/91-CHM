@@ -139,7 +139,8 @@ var columns = [
   'ndre_mean', 'ndmi_mean', 'savi_mean', 'evi_mean',
   'accepted', 'quality_reason', 'source', 'calculation_version'
 ];
-var sceneTable = ee.FeatureCollection(attempts.map(function(img) {
+var sceneTable = ee.FeatureCollection(attempts.toList(attempts.size()).map(function(item) {
+  var img = ee.Image(item);
   return ee.Feature(null, img.toDictionary(columns));
 }));
 
