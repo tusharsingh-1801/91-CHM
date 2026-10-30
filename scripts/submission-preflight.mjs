@@ -9,7 +9,10 @@ const dir=resolve(root,'.local','submission-evidence',new Date().toISOString().r
 mkdirSync(dir,{recursive:true});
 function check(name,cmd,args,validateOutput=()=>true){
  const started=new Date().toISOString();
- const result=spawnSync(cmd,args,{cwd:root,encoding:'utf8',maxBuffer:16*1024*1024,timeout:720000,env:process.env});
+ const options={cwd:root,encoding:'utf8',maxBuffer:16*1024*1024,timeout:720000,env:process.env};
+ const result=process.platform==='win32'&&cmd==='npm'
+  ? spawnSync(process.env.ComSpec||'cmd.exe',['/d','/s','/c',['npm',...args].join(' ')],options)
+  : spawnSync(cmd,args,options);
  const log=resolve(dir,name+'.log');
  writeFileSync(log,(result.stdout||'')+(result.stderr||'')+(result.error?'\n'+result.error.message:''),{mode:0o600});
  const status=result.status===0&&validateOutput(result.stdout||'')?'passed':'failed';

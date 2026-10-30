@@ -35,26 +35,28 @@ function FarmMap({fields}:{fields:DatabaseField[]}){
    const state=field.assessment?.state;
    const color=state==='needs_inspection'?'#d56e31':state==='no_unusual_change'?'#27884d':'#c3a040';
    let position:L.LatLngExpression|null=null;
+   let hasBoundaryBounds=false;
    if(field.boundary_geojson){
     try{
      const layer=L.geoJSON(field.boundary_geojson as unknown as GeoJsonObject,{style:{color,weight:3,fillColor:color,fillOpacity:.27}});
      if(layer.getBounds().isValid()){
-      layer.addTo(map);all.push(layer.getBounds());position=layer.getBounds().getCenter();
+      layer.addTo(map);all.push(layer.getBounds());hasBoundaryBounds=true;position=layer.getBounds().getCenter();
       layer.on('click',()=>navigate('/fields/'+field.id+'/overview'));
       const label=document.createElement('span');label.textContent=field.name;
       layer.bindTooltip(label,{sticky:true});
      }
     }catch{/* bad polygon: point marker can still appear */}
    }
-   if(!position&&validNumber(field.latitude)!==null&&validNumber(field.longitude)!==null){
-    position=[Number(field.latitude),Number(field.longitude)];
+   if(!position){
+    const latitude=validNumber(field.latitude),longitude=validNumber(field.longitude);
+    if(latitude!==null&&latitude>=-90&&latitude<=90&&longitude!==null&&longitude>=-180&&longitude<=180)position=[latitude,longitude];
    }
    if(position){
     const marker=L.circleMarker(position,{radius:7,color:'#fff',weight:2,fillColor:color,fillOpacity:1}).addTo(map);
     const label=document.createElement('span');label.textContent=field.name;
     marker.bindTooltip(label);
     marker.on('click',()=>navigate('/fields/'+field.id+'/overview'));
-    if(!all.length||!field.boundary_geojson)all.push(L.latLngBounds(position,position));
+    if(!hasBoundaryBounds)all.push(L.latLngBounds(position,position));
    }
   });
   if(all.length){const allBounds=all[0];for(const bounds of all.slice(1))allBounds.extend(bounds);map.fitBounds(allBounds.pad(.22),{maxZoom:15,animate:false});}

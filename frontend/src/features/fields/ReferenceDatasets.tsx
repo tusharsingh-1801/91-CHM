@@ -1,11 +1,16 @@
 import {useEffect,useState} from 'react';
+import {Link} from 'react-router-dom';
 import {BarChart,Bar,XAxis,YAxis,Tooltip,ResponsiveContainer} from 'recharts';
 import {usePreferences} from '../../lib/preferencesContext';
 type Row={id:string;provider:string;status:string;source:string;version:string;source_url:string;license:string;period:string;fetched_at:string;coverage_percent:number|string|null;error:{message:string}|null;payload:{is_demo?:boolean;mode?:string;availability?:string;training_metrics?:{accuracy:number;balanced_accuracy:number;f1:number;test_samples:number};official_data_status?:string;note?:string;label_count?:number;feature_sample_count?:number;feature_status?:string;training_status?:string;cropland_percent?:number|null;temporary_crop_percent_field?:number;temporary_crop_percent_mapped?:number;mean_confidence?:number;aez_ids?:number[];image_count?:number;product?:string;season?:string;classes?:{code:number;label:string;field_percent:number}[];daily?:{date:string;mm:number|null;revision:string}[];monthly?:{month:string;available_days:number;requested_days:number;final_days:number;preliminary_days:number;unavailable_days:number;sum_available_mm:number|null;complete_calendar_month:boolean}[];recommendations?:{region:string;agroecological_zone:string;crop:string;season:string;planting_start_month:number;planting_end_month:number;harvest_start_month:number;harvest_end_month:number;source_title:string;source_url:string;accessed_on:string;license:string;permission_reference:string}[];variables?:{variable:string;depth:string;unit:string;mean:number|null;Q05:number|null;Q95:number|null;uncertainty:number|null}[]}};
 const providers=['worldcover','chirps','soilgrids','worldcereal','cropharvest','fao-calendar'];
+const autoProviders=['worldcover','chirps','soilgrids','worldcereal'];
+const dateDaysAgo=(days:number)=>{const value=new Date();value.setUTCDate(value.getUTCDate()-days);return value.toISOString().slice(0,10);};
 export function ReferenceDatasets({fieldId}:{fieldId:string}){
  const {t}=usePreferences();
  const [rows,setRows]=useState<Row[]>([]),[error,setError]=useState(false),[loading,setLoading]=useState(true);
+ const [syncing,setSyncing]=useState(false),[syncMessage,setSyncMessage]=useState(''),[syncError,setSyncError]=useState('');
+ const [start,setStart]=useState(()=>dateDaysAgo(32)),[end,setEnd]=useState(()=>dateDaysAgo(3));
  useEffect(()=>{const controller=new AbortController();setLoading(true);setRows([]);setError(false);
   // Provider-filtered pagination ensures frequent rainfall runs cannot hide other sources.
   void Promise.all(providers.map(async provider=>{
@@ -18,6 +23,19 @@ export function ReferenceDatasets({fieldId}:{fieldId:string}){
    return items as Row[];
   })).then(value=>{if(!controller.signal.aborted)setRows(value.flat());}).catch(()=>{if(!controller.signal.aborted)setError(true);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});return()=>controller.abort();
  },[fieldId]);
+ const sync=async(event:React.FormEvent<HTMLFormElement>)=>{
+  event.preventDefault();if(syncing)return;
+  setSyncing(true);setSyncMessage('');setSyncError('');
+  try{
+   const response=await fetch(`/api/fields/${fieldId}/datasets/sync`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({providers:autoProviders,start,end})});
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok)throw new Error(typeof result.error==='string'?result.error:t('Could not refresh field references.','खेत के संदर्भ अपडेट नहीं हो सके।'));
+   const items=Array.isArray(result.items)?result.items as Row[]:[];
+   setRows(previous=>[...items,...previous.filter(row=>!autoProviders.includes(row.provider))]);
+   setSyncMessage(t('Reference check complete. Review each source and its coverage below.','संदर्भ जाँच पूरी हुई। नीचे हर स्रोत और उसका कवरेज देखें।'));
+  }catch(caught){setSyncError(caught instanceof Error?caught.message:t('Could not refresh field references.','खेत के संदर्भ अपडेट नहीं हो सके।'));}
+  finally{setSyncing(false);}
+ };
  const label=(status:string,hasManualRows=false,coverage:number|null=null)=>status==='integrated'&&coverage!==null&&Math.round(coverage*10)/10<100?t('Partial coverage','आंशिक कवरेज'):({integrated:t('Available','उपलब्ध'),downloaded:t('Downloaded; integration pending','डाउनलोड हुआ; जोड़ना बाकी'),blocked:t('Unavailable','उपलब्ध नहीं'),failed:t('Could not process','प्रक्रिया पूरी नहीं हुई'),manual:hasManualRows?t('Regional recommendation (manual)','क्षेत्रीय सुझाव (मैन्युअल)'):t('Manual reference pending','मैन्युअल संदर्भ बाकी'),not_configured:t('Needs setup or matching field data','सेटअप या खेत से मेल खाता डेटा चाहिए')}[status]??status);
  const sourceLabel=(provider:string,status:string,hasManualRows=false,coverage:number|null=null)=>{
   if(status==='not_checked'){
@@ -29,10 +47,21 @@ export function ReferenceDatasets({fieldId}:{fieldId:string}){
   if(provider==='fao-calendar'&&status==='not_configured')return t('Manual reference required','मैन्युअल संदर्भ आवश्यक');
   return label(status,hasManualRows,coverage);
  };
- return <section className="help-guide"><h2>{t('Land, rainfall and soil references','भूमि, बारिश और मिट्टी के संदर्भ')}</h2><p>{t('Historical maps and modeled estimates help provide context. They do not confirm today’s crop, soil test results or yield.','पुराने नक्शे और मॉडल के अनुमान संदर्भ देते हैं। ये आज की फ़सल, मिट्टी की जाँच या उपज की पुष्टि नहीं करते।')}</p>
+ return <section className="help-guide"><h2>{t('Land, rainfall and soil references','भूमि, बारिश और मिट्टी के संदर्भ')}</h2>
+ <form className="reference-sync" onSubmit={event=>void sync(event)}>
+  <div className="reference-sync-dates">
+   <label>{t('Rainfall from','बारिश: शुरू')}<input type="date" value={start} max={end} onChange={event=>setStart(event.target.value)}/></label>
+   <label>{t('Through','समाप्ति')}<input type="date" value={end} min={start} max={dateDaysAgo(1)} onChange={event=>setEnd(event.target.value)}/></label>
+  </div>
+  <button type="submit" disabled={syncing||loading}>{syncing?t('Checking sources...','स्रोत जाँच रहे हैं...'):t('Fetch references for this field','इस खेत के संदर्भ लाएँ')}</button>
+  <small>{t('To retrieve matching data, this sends the field boundary to the selected public providers. CropHarvest is research-only; FAO calendar entries require reviewed manual records.','मेल खाता डेटा लाने के लिए इस खेत की सीमा चुने गए सार्वजनिक स्रोतों को भेजी जाएगी। CropHarvest केवल शोध के लिए है; FAO कैलेंडर के लिए जाँचे गए मैन्युअल रिकॉर्ड चाहिए।')}</small>
+  {syncMessage&&<small role="status">{syncMessage}</small>}{syncError&&<small role="alert">{syncError}</small>}
+ </form><p>{t('Historical maps and modeled estimates help provide context. They do not confirm today’s crop, soil test results or yield.','पुराने नक्शे और मॉडल के अनुमान संदर्भ देते हैं। ये आज की फ़सल, मिट्टी की जाँच या उपज की पुष्टि नहीं करते।')}</p>
+ <Link className="apy-explorer-link" to="/datasets#district-yield-reference">{t('Open district yield explorer','Zila yield data dekhein')}</Link>
  {loading&&<p role="status">{t('Loading references…','संदर्भ लोड हो रहे हैं…')}</p>}{error&&<p role="alert">{t('Reference data unavailable. Other field readings remain available.','संदर्भ उपलब्ध नहीं हैं। खेत की अन्य रीडिंग देख सकते हैं।')}</p>}
  {!loading&&!error&&providers.map(provider=>{const row=rows.find(r=>r.provider===provider);const coverage=row?.coverage_percent==null?null:Number(row.coverage_percent);return <article key={provider}><h3>{row?.source??provider} — {row?.payload.is_demo?t('DEMO ONLY — not FAO data','केवल डेमो — FAO डेटा नहीं'):sourceLabel(provider,row?.status??'not_checked',!!row?.payload.recommendations?.length,coverage)}</h3>{row&&<><p>{row.version} · {row.period} {coverage!=null&&`· ${t('Coverage','कवरेज')}: ${coverage.toFixed(1)}%`}</p>
  {row.error&&<p>{t('The source could not supply a usable result.','स्रोत से उपयोगी परिणाम नहीं मिला।')}</p>}
+ {row.status==='not_configured'&&row.payload.note&&<p role="note">{row.payload.note}</p>}
  {row.payload.is_demo&&<p role="note">{t('Illustrative Indian calendar only. These are not official FAO records or your field dates.','केवल भारत के कैलेंडर का उदाहरण। ये आधिकारिक FAO रिकॉर्ड या आपके खेत की तारीखें नहीं हैं।')} {row.payload.official_data_status}</p>}
  {row.provider==='cropharvest'&&<p>{t('Benchmark labels','बेंचमार्क लेबल')}: {row.payload.label_count??'—'} · {t('Verified feature samples','सत्यापित फ़ीचर सैंपल')}: {row.payload.feature_sample_count??0} · {row.payload.training_status==='trained_heldout_evaluated'?t('Research model evaluated on held-out sources; not a crop-health diagnosis','अलग स्रोतों पर शोध मॉडल का मूल्यांकन हुआ; यह फ़सल रोग निदान नहीं है'):t('Research data; no trained model implied','शोध डेटा; प्रशिक्षित मॉडल की पुष्टि नहीं')}</p>}
  {row.payload.training_status==='trained_heldout_evaluated'&&row.payload.training_metrics&&<p>{t('Held-out evaluation','अलग डेटा पर मूल्यांकन')}: {row.payload.training_metrics.test_samples} {t('samples','सैंपल')} · {t('Accuracy','सटीकता')} {(row.payload.training_metrics.accuracy*100).toFixed(1)}% · {t('Balanced accuracy','संतुलित सटीकता')} {(row.payload.training_metrics.balanced_accuracy*100).toFixed(1)}% · F1 {row.payload.training_metrics.f1.toFixed(3)}</p>}

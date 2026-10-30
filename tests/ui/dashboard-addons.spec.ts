@@ -67,6 +67,16 @@ test('dashboard map treats saved field names as text, including HTML',async({pag
  expect(await page.evaluate(()=>Reflect.get(window,'chmInjected'))).toBeUndefined();
 });
 
+test('all-fields map includes point fallbacks and ignores invalid saved coordinates',async({page})=>{
+ const state=await setup(page);
+ state.fields.push({...seed,id:'00000000-0000-4000-0000-000000000003',name:'Fallback field',latitude:29,longitude:78,boundary_geojson:{type:'Polygon',coordinates:'invalid'}});
+ state.fields.push({...seed,id:'00000000-0000-4000-0000-000000000004',name:'Invalid point',latitude:500,longitude:300,boundary_geojson:null});
+ await page.goto('/');
+ const map=page.locator('.addon-map');
+ await expect(map.locator('.leaflet-interactive')).toHaveCount(3);
+ expect(state.errors).toEqual([]);
+});
+
 test('dashboard does not offer a demo-field switch',async({page})=>{
  await setup(page);
  await page.goto('/');

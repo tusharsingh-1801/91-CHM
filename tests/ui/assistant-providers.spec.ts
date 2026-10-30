@@ -5,7 +5,7 @@ test('Gemini is the only provider, sends requests and preserves failed drafts',a
  await page.route('**/api/auth/session',route=>route.fulfill({json:{mode:'required',user:{id:'test-user',email:'test@example.invalid'}}}));
  await page.route('**/api/assistant/status',route=>route.fulfill({json:{configured:true,provider:'gemini'}}));
  let failure=false;const bodies:any[]=[];
- await page.route('**/api/assistant',route=>{bodies.push(route.request().postDataJSON());return route.fulfill({status:failure?429:200,json:failure?{error:'Gemini request limit reached.'}:{answer:'Gemini fixture answer',historySaved:false}});});
+ await page.route('**/api/assistant',route=>{bodies.push(route.request().postDataJSON());return route.fulfill({status:failure?503:200,json:failure?{error:'Gemini temporarily unavailable.'}:{answer:'Gemini fixture answer',historySaved:false}});});
  await page.goto('/');await page.getByRole('button',{name:'Ask crop assistant'}).click();
  const panel=page.getByRole('region',{name:'Crop assistant chat'});
  await expect(panel).toContainText('Gemini AI');await expect(page.getByLabel('AI Provider')).toHaveCount(0);
@@ -13,7 +13,24 @@ test('Gemini is the only provider, sends requests and preserves failed drafts',a
  await page.getByLabel('Your question').fill('Crop question');await page.getByRole('button',{name:'Send question'}).click();
  await expect(panel).toContainText('Gemini fixture answer');expect(bodies[0].provider).toBe('gemini');
  failure=true;await page.getByLabel('Your question').fill('Retry this question');await page.getByRole('button',{name:'Send question'}).click();
- await expect(panel.getByRole('alert')).toContainText('limit');await expect(page.getByLabel('Your question')).toHaveValue('Retry this question');
+ await expect(panel.getByRole('alert')).toContainText('temporarily unavailable');await expect(page.getByLabel('Your question')).toHaveValue('Retry this question');
+ await expect(panel.locator('.assistant-user-message').filter({hasText:'Retry this question'})).toHaveCount(0);
+ failure=false;await page.getByRole('button',{name:'Send question'}).click();
+ await expect(panel).toContainText('Gemini fixture answer');
+ await expect(panel.locator('.assistant-user-message').filter({hasText:'Retry this question'})).toHaveCount(1);
+ expect(bodies).toHaveLength(3);
+});
+test('rapid duplicate submits send and display a question only once',async({page})=>{
+ await setup(page);let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;});let calls=0;
+ await page.route('**/api/assistant',async route=>{calls++;await gate;await route.fulfill({json:{answer:'One reply'}});});
+ await page.goto('/');await page.getByRole('button',{name:'Ask crop assistant'}).click();
+ const panel=page.getByRole('region',{name:'Crop assistant chat'});
+ await page.getByLabel('Your question').fill('Send this once');
+ await page.getByLabel('Your question').evaluate(element=>{const form=element.closest('form');if(!(form instanceof HTMLFormElement))throw new Error('Assistant form missing');form.requestSubmit();form.requestSubmit();});
+ await expect.poll(()=>calls).toBe(1);
+ release();
+ await expect(panel.locator('.assistant-user-message').filter({hasText:'Send this once'})).toHaveCount(1);
+ await expect(panel).toContainText('One reply');
 });
 test('late replies stay in their original field conversation',async({page})=>{
  await setup(page);let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;});

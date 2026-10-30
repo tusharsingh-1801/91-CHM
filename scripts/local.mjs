@@ -102,7 +102,14 @@ async function ready() {
 async function stop() {
   const pid = runningPid();
   if (!pid) { rmSync(pidFile, { force: true }); console.log('Local stack is already stopped.'); return; }
-  process.kill(-pid, 'SIGTERM');
+  if (process.platform === 'win32') {
+    const result = spawnSync('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { encoding: 'utf8' });
+    if (result.status !== 0 && runningPid()) {
+      throw new Error(`Could not stop local stack process ${pid}: ${result.stderr || result.stdout || result.error}`);
+    }
+  } else {
+    process.kill(-pid, 'SIGTERM');
+  }
   for (let i = 0; i < 100 && runningPid(); i++) await delay(100);
   if (runningPid()) throw new Error('Stack is still shutting down. Check .local/server.log.');
   rmSync(pidFile, { force: true });

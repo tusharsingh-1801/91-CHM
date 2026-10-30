@@ -137,13 +137,23 @@ button { white-space:normal; overflow-wrap:anywhere; touch-action:manipulation; 
 .wizard-content .actions { flex-wrap:wrap; }
 .wizard-content .actions button { flex:1 1 120px; }
 .step-label,.wizard-status { color:#cbe86b; }
-.boundary-map { width:100%; height:clamp(240px,50svh,400px); background:#ccc; }
+.boundary-map-wrap { position:relative; width:100%; }
+.boundary-map { width:100%; height:clamp(320px,55svh,560px); background:#d8e1d4; border-radius:12px; overflow:hidden; }
+.boundary-map-crosshair { position:absolute; left:50%; top:50%; z-index:2; display:grid; place-items:center; width:34px; height:34px; transform:translate(-50%,-50%); border:2px solid #fff; border-radius:50%; background:#174d31cc; color:#fff; font-size:25px; line-height:1; text-shadow:0 1px 3px #000; pointer-events:none; box-shadow:0 1px 5px #0008; }
+.boundary-map-add-center { position:absolute; z-index:3; right:12px; bottom:12px; min-height:44px; max-width:calc(100% - 24px); border:1px solid #fff; border-radius:10px; padding:9px 13px; background:#174d31; color:#fff; font-weight:700; box-shadow:0 2px 8px #0005; }
+.boundary-map-add-center:disabled { opacity:.72; }
 .field-location-search { display:grid; gap:.4rem; margin:.75rem 0; }
 .field-location-search > label { font-weight:600; }
 .field-location-search > div { min-height:40px; }
 .field-location-search gmp-place-autocomplete { width:100%; }
 .field-location-search small,.field-location-search-note { color:var(--muted); }
 .field-location-search small[role="alert"] { color:#9b2c2c; }
+.reference-sync { display:grid; gap:.75rem; margin:1rem 0; padding:1rem; border:1px solid #cfe0cf; border-radius:12px; background:#f6faf4; }
+.reference-sync-dates { display:flex; flex-wrap:wrap; gap:.75rem; }
+.reference-sync-dates label { display:grid; gap:.3rem; font-size:.85rem; }
+.reference-sync button { justify-self:start; min-height:44px; padding:.65rem 1rem; }
+.reference-sync small { color:var(--muted); line-height:1.5; }
+.reference-sync small[role="alert"] { color:#9b2c2c; }
 .boundary-tools { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:.75rem; color:#cbe86b; font-size:.85rem; }
 .boundary-tools span { flex-basis:100%; }
 .boundary-tools button { min-height:44px; padding:.4rem .65rem; background:#27371f; color:#edf1df; border:1px solid #536b36; border-radius:4px; }
@@ -367,6 +377,19 @@ input[type=range] { padding:0; accent-color:var(--green); }
 .potato-research label { display:grid; gap:.5rem; max-width:32rem; font-weight:700; }
 .potato-research input { margin-top:.25rem; }
 .potato-research .scouting-photo-preview { display:block; max-width:min(100%,360px); max-height:320px; object-fit:contain; margin:1rem 0; border-radius:8px; }
+.apy-explorer { margin:2rem 0; padding:1.25rem; }
+.apy-explorer-link { display:inline-flex; margin:.25rem 0 1rem; color:var(--green); font-weight:700; }
+.apy-controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr)); gap:.8rem; margin:1rem 0; }
+.apy-controls label { display:grid; gap:.4rem; font-size:.82rem; font-weight:700; }
+.apy-controls select { width:100%; min-height:42px; padding:.5rem .65rem; border:1px solid #b7c7b5; border-radius:6px; background:#fff; color:var(--ink); font:inherit; }
+.apy-note { font-size:.8rem; color:var(--muted); }
+.apy-table-wrap { overflow:auto; max-width:100%; border:1px solid var(--line); border-radius:8px; background:#fff; }
+.apy-table-wrap table { width:100%; min-width:780px; border-collapse:collapse; font-size:.84rem; }
+.apy-table-wrap th,.apy-table-wrap td { padding:.65rem .75rem; text-align:left; white-space:nowrap; border-bottom:1px solid var(--line); }
+.apy-table-wrap th { position:sticky; top:0; background:#edf3e7; color:var(--ink); }
+.apy-paging { display:flex; align-items:center; justify-content:flex-end; gap:.8rem; margin-top:.8rem; font-size:.82rem; }
+.apy-paging button { min-height:38px; padding:.4rem .8rem; border:1px solid #b7c7b5; border-radius:6px; background:#fff; color:var(--ink); }
+.apy-paging button:disabled { opacity:.45; cursor:not-allowed; }
 .auth-shell { background:#f4f6ef; color:var(--ink); min-height:calc(100dvh - 90px); }
 .auth-card { background:#fff; border-color:var(--line); box-shadow:0 10px 50px #20382b0b; }
 .auth-card input { background:#fff; color:var(--ink); border-color:#b7c7b5; }

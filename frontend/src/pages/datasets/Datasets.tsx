@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import catalog from '../../../../datasets/catalog.json';
 import { usePreferences } from '../../lib/preferencesContext';
+import {DistrictApyExplorer} from './DistrictApyExplorer';
 import {PotatoLeafAnalysis} from '../../features/research/PotatoLeafAnalysis';
 
 export function Datasets() {
@@ -18,6 +19,7 @@ export function Datasets() {
       <details><summary>{t('How do I create a report?','रिपोर्ट कैसे बनाएँ?')}</summary><p>{t('Open a field and choose Report. Select dates, print or save as PDF using your browser, or download readings as CSV and the boundary as GeoJSON.','खेत खोलकर रिपोर्ट चुनें। तारीख़ें चुनें, browser से प्रिंट या PDF सेव करें, या रीडिंग CSV और सीमा GeoJSON में डाउनलोड करें।')}</p></details>
     </section>
     <h2>{t('Project datasets','जानकारी के स्रोत')}</h2><p className="dataset-intro">{t('Connected sources provide live product features. Research datasets and reference sources are listed for transparency; benchmark data is not current farm data.','जुड़े हुए स्रोत ऐप की सुविधाएँ देते हैं। शोध और संदर्भ स्रोत जानकारी के लिए सूचीबद्ध हैं; नमूना डेटा किसी खेत का मौजूदा डेटा नहीं है।')}</p>
+    <DistrictApyExplorer/>
     <PotatoLeafAnalysis/>
     <div className="dataset-filters"><label>{t('Search datasets','स्रोत खोजें')}<input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder={t('Weather, soil, boundaries…','मौसम, मिट्टी, सीमाएँ…')}/></label><label>{t('Integration status','ऐप से जुड़ाव')}<select value={status} onChange={event=>setStatus(event.target.value)}>{['All',...new Set(catalog.datasets.map(item=>item.status))].map(value=><option value={value} key={value}>{statusText(value)}</option>)}</select></label></div>
     <p role="status">{datasets.length} {t('sources','स्रोत')} · {t('reviewed','समीक्षा की तारीख़')} {date(catalog.reviewedOn)}</p>

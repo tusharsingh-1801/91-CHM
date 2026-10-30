@@ -5,7 +5,7 @@ import { useLocation, useParams } from 'react-router-dom';
 import { askFieldAssistant } from '../../lib/api';
 import { usePreferences } from '../../lib/preferencesContext';
 
-type Message = { role: 'user'|'assistant'; text: string };
+type Message = { id:string; role: 'user'|'assistant'; text: string };
 const prompts=[
  ['Why is NDVI decreasing?', 'NDVI कम क्यों हो रहा है?'],
  ['What should I inspect in my field?', 'खेत में क्या जाँच करनी चाहिए?'],
@@ -36,11 +36,12 @@ export function CropAssistant() {
   const [saveHistory,setSaveHistory]=useState(false);
   const [contextName,setContextName]=useState('');
   const [availability,setAvailability]=useState<boolean|undefined>(undefined);
+  const sending=useRef(false);
   useEffect(()=>{
     if(!open)return;let active=true;
     void fetch('/api/assistant/status').then(response=>response.json()).then(value=>{if(active)setAvailability(value.configured);}).catch(()=>{});
     if(selectedField)void fetch('/api/fields').then(response=>response.json()).then(value=>{if(active&&Array.isArray(value))setContextName(value.find(item=>item.id===selectedField)?.name||'');}).catch(()=>{});
-    if(saveHistory)void fetch('/api/assistant/history'+(selectedField?'?fieldId='+selectedField:'')).then(response=>{if(!response.ok)throw Error('History unavailable');return response.json();}).then(value=>{if(active&&Array.isArray(value))setConversations(current=>current[contextKey]?.length?current:({...current,[contextKey]:value.filter(item=>['user','assistant'].includes(item.role)&&typeof item.content==='string').map(item=>({role:item.role,text:item.content}))}));}).catch(()=>{if(active)setErrorValue({key:contextKey,text:'Saved conversation could not load. Your current chat remains available.'});});
+    if(saveHistory)void fetch('/api/assistant/history'+(selectedField?'?fieldId='+selectedField:'')).then(response=>{if(!response.ok)throw Error('History unavailable');return response.json();}).then(value=>{if(active&&Array.isArray(value))setConversations(current=>current[contextKey]?.length?current:({...current,[contextKey]:value.filter(item=>['user','assistant'].includes(item.role)&&typeof item.content==='string').map((item,index)=>({id:`history-${index}`,role:item.role,text:item.content}))}));}).catch(()=>{if(active)setErrorValue({key:contextKey,text:'Saved conversation could not load. Your current chat remains available.'});});
     return()=>{active=false;};
   },[open,saveHistory,selectedField,contextKey]);
 
@@ -57,19 +58,22 @@ export function CropAssistant() {
 
   async function send(text:string) {
     const value = text.trim();
-    if (!value || busyContext) return;
+    if (!value || sending.current) return;
+    sending.current=true;
+    const messageId=crypto.randomUUID();
     setError('');
-    setMessages(current => [...current, { role:'user', text:value }]);
+    setMessages(current => [...current, { id:messageId, role:'user', text:value }]);
     setQuestion('');
     setBusyContext(contextKey);
     try {
       const response = await askFieldAssistant(value, selectedField, language === 'hi' ? 'hi-IN' : 'en-IN',saveHistory);
-      setMessages(current => [...current, { role:'assistant', text:response.answer }]);
+      setMessages(current => [...current, { id:crypto.randomUUID(), role:'assistant', text:response.answer }]);
       if(saveHistory&&response.historySaved===false)setError(t('Reply received, but the conversation could not be saved.','जवाब मिल गया, पर बातचीत सेव नहीं हुई।'));
     } catch (reason) {
+      setMessages(current=>current.filter(message=>message.id!==messageId));
       if(activeContext.current===contextKey)setQuestion(value);
       setError(reason instanceof Error ? reason.message : t('Assistant unavailable','सहायक उपलब्ध नहीं है'));
-    } finally { setBusyContext(current=>current===contextKey?null:current); }
+    } finally { sending.current=false;setBusyContext(current=>current===contextKey?null:current); }
   }
   function submit(event:FormEvent) { event.preventDefault(); void send(question); }
   return <>
@@ -86,7 +90,7 @@ export function CropAssistant() {
         {!messages.length && <><p className="crop-assistant-intro">{t('Ask about your crop, satellite pictures or weather.', 'फ़सल, सैटेलाइट तस्वीर और मौसम के बारे में पूछें।')}</p>
           <div className="crop-assistant-prompts">{prompts.map(([en,hi])=><button key={en} type="button" onClick={() => void send(t(en,hi))} disabled={busyContext!==null}>{t(en,hi)}</button>)}</div>
         </>}
-        {messages.map((message,index)=><p key={index} className={message.role === 'user' ? 'assistant-user-message' : 'assistant-answer-message'}><span>{message.role==='user' ? t('You','आप') : t('Assistant','सहायक')}</span>{message.text}</p>)}
+        {messages.map(message=><p key={message.id} className={message.role === 'user' ? 'assistant-user-message' : 'assistant-answer-message'}><span>{message.role==='user' ? t('You','आप') : t('Assistant','सहायक')}</span>{message.text}</p>)}
         {busy && <p role="status">{t('Writing reply…','जवाब तैयार हो रहा है…')}</p>}
       </div>
       {error && <p className="crop-assistant-error" role="alert">{error}</p>}

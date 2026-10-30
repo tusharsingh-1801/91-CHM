@@ -7,10 +7,10 @@
     "dev": "concurrently --kill-others --names web,api,engine \"npm run dev:client\" \"npm run dev:server\" \"npm run dev:engine\"",
     "dev:client": "vite --config frontend/vite.config.ts",
     "sarvam:check": "node scripts/check-sarvam.mjs",
-    "dev:server": "tsx backend/api/server.ts",
+    "dev:server": "node --require ./scripts/tsx-windows-compat.cjs ./node_modules/tsx/dist/cli.mjs backend/api/server.ts",
     "typecheck": "tsc -b",
     "test": "npm run test:launcher && node --import tsx --test backend/api/**/*.test.ts",
-    "test:integration": "CHM_INTEGRATION=1 node --import tsx --test backend/api/services/*.integration.test.ts",
+    "test:integration": "node scripts/run-integration-tests.mjs",
     "test:launcher": "node --test scripts/local.test.mjs",
     "test:research": "node --import tsx --test shared/research/*.test.ts",
     "build": "npm run typecheck && vite --config frontend/vite.config.ts build",
@@ -32,7 +32,8 @@
     "photos:cleanup": "tsx scripts/cleanup-orphan-photos.ts --apply",
     "photos:test": "node --import tsx --test scripts/cleanup-orphan-photos.test.ts",
     "data:acquire:cropharvest": "node scripts/acquire-cropharvest.mjs",
-    "data:sync:references": "node --experimental-strip-types scripts/sync-reference-datasets.ts"
+    "data:sync:references": "node --experimental-strip-types scripts/sync-reference-datasets.ts",
+    "data:sync:apy": "node scripts/import-district-apy.mjs"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.1.1",

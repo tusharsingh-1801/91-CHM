@@ -59,7 +59,7 @@ export function Dashboard() {
       <button className="primary-action" onClick={() => setAdding(true)}>{t('+ Add field', '+ खेत जोड़ें')}</button>
     </header>
     <nav className="overview-nav farmer-quick-nav" aria-label={t('Main navigation', 'मुख्य नेविगेशन')}>
-      <a href="#my-fields">{t('My fields', 'मेरे खेत')}</a><Link to="/reports">{t('Reports', 'रिपोर्ट')}</Link><Link to="/help">{t('How to use', 'कैसे इस्तेमाल करें')}</Link><Link to="/gallery">{t("Crop & satellite photos", "फ़सल और सैटेलाइट तस्वीरें")}</Link>
+      <a href="#my-fields">{t('My fields', 'मेरे खेत')}</a><Link to="/reports">{t('Reports', 'रिपोर्ट')}</Link><Link to="/datasets#district-yield-reference">{t('Data & district yields','Data aur zila yield')}</Link><Link to="/help">{t('How to use', 'कैसे इस्तेमाल करें')}</Link><Link to="/gallery">{t("Crop & satellite photos", "फ़सल और सैटेलाइट तस्वीरें")}</Link>
     </nav>
     {error && <div className="service-error" role="alert"><strong>{t('Fields unavailable', 'खेतों की जानकारी नहीं मिली')}</strong><span>{t('Check your connection and try again. Your saved fields are safe.', 'कनेक्शन देखकर फिर कोशिश करें। आपके सेव किए खेत सुरक्षित हैं।')}</span><button onClick={() => { setLoading(true); setError(false); setReload(value => value + 1); }}>{t('Retry', 'फिर कोशिश करें')}</button></div>}
     {!error && !loading && <>

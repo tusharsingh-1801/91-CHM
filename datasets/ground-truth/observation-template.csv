@@ -1,0 +1,1 @@
+observation_id,field_id,observed_at,latitude,longitude,crop,growth_stage,condition_label,stress_type,severity,observed_symptoms,disease_status,confirmation_method,photo_path,observer_role,consent_status,consent_reference,reviewed_by,reviewed_at
