@@ -4,6 +4,10 @@ import {providerJson} from './provider.ts';
 import {parseForecast,type Forecast} from '../../../shared/forecast.ts';
 const cache=new Map<string,{value:Forecast;latitude:number;longitude:number}>();
 const pending=new Map<string,Promise<Forecast>>();
+export class ForecastProviderError extends Error {
+ readonly provider:'Google Weather API'|'Open-Meteo';
+ constructor(provider:'Google Weather API'|'Open-Meteo'){super('Weather provider request failed');this.provider=provider;}
+}
 export async function forecastFor(fieldId:string):Promise<Forecast>{
  const field=(await pool.query<{latitude:number|null;longitude:number|null}>('select ST_Y(location) latitude,ST_X(location) longitude from fields where id=$1',[fieldId])).rows[0];
  if(!field||field.latitude===null||field.longitude===null)throw new Error('Add field coordinates to enable the forecast');
@@ -15,17 +19,20 @@ export async function forecastFor(fieldId:string):Promise<Forecast>{
  if(pending.has(key))return pending.get(key)!;
  const work=(async()=>{
   const googleKey=process.env.GOOGLE_WEATHER_API_KEY?.trim();
-  let raw:unknown;
-  if(googleKey){
-   const url=new URL('https://weather.googleapis.com/v1/forecast/days:lookup');
-   url.search=new URLSearchParams({key:googleKey,'location.latitude':String(latitude),'location.longitude':String(longitude),days:'7',pageSize:'7',unitsSystem:'METRIC'}).toString();
-   raw=googleDailyToForecast(await providerJson(url.href));
-  }else{
-   const url=new URL('https://api.open-meteo.com/v1/forecast');
-   url.search=new URLSearchParams({latitude:String(latitude),longitude:String(longitude),daily:'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,relative_humidity_2m_mean,wind_speed_10m_max',current:'temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m',forecast_days:'7',timezone:'auto'}).toString();
-   raw=await providerJson(url.href);
-  }
-  const value=parseForecast(raw);
+  let value:Forecast;
+  try{
+   let raw:unknown;
+   if(googleKey){
+    const url=new URL('https://weather.googleapis.com/v1/forecast/days:lookup');
+    url.search=new URLSearchParams({key:googleKey,'location.latitude':String(latitude),'location.longitude':String(longitude),days:'7',pageSize:'7',unitsSystem:'METRIC'}).toString();
+    raw=googleDailyToForecast(await providerJson(url.href));
+   }else{
+    const url=new URL('https://api.open-meteo.com/v1/forecast');
+    url.search=new URLSearchParams({latitude:String(latitude),longitude:String(longitude),daily:'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,relative_humidity_2m_mean,wind_speed_10m_max',current:'temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m',forecast_days:'7',timezone:'auto'}).toString();
+    raw=await providerJson(url.href);
+   }
+   value=parseForecast(raw);
+  }catch{throw new ForecastProviderError(googleKey?'Google Weather API':'Open-Meteo');}
   await pool.query('insert into field_forecasts(field_id,latitude,longitude,retrieved_at,expires_at,payload) values($1,$2,$3,$4,$5,$6) on conflict(field_id) do update set latitude=excluded.latitude,longitude=excluded.longitude,retrieved_at=excluded.retrieved_at,expires_at=excluded.expires_at,payload=excluded.payload',[fieldId,latitude,longitude,value.retrievedAt,value.expiresAt,JSON.stringify(value)]);
   if(cache.size>=500)cache.delete(cache.keys().next().value!);cache.set(key,{value,latitude,longitude});return value;
  })();pending.set(key,work);try{return await work;}finally{pending.delete(key);}
@@ -52,8 +59,15 @@ function googleDailyToForecast(value:unknown):unknown{
 }
 export async function getForecast(request:Request,response:Response){
  try{response.json(await forecastFor(String(request.params.fieldId)));}catch(error){
-  const noLocation=error instanceof Error&&error.message.startsWith('Add field');response.status(noLocation?422:502).json({error:noLocation?'Add field coordinates to enable the forecast':'Forecast provider unavailable. Historical weather is unchanged; retry shortly.'});
+  const noLocation=error instanceof Error&&error.message.startsWith('Add field');
+  if(noLocation){response.status(422).json({error:'Add field coordinates to enable the forecast'});return;}
+  response.status(503).json({error:forecastFailureMessage(error)});
  }
+}
+export function forecastFailureMessage(error:unknown):string{
+ if(error instanceof ForecastProviderError&&error.provider==='Google Weather API')return 'Google Weather API is unavailable. Check that the Weather API is enabled, billing is active, and server key restrictions allow this request. Historical weather is unchanged.';
+ if(error instanceof ForecastProviderError)return 'Open-Meteo is unavailable. Check the connection and retry. Historical weather is unchanged.';
+ return 'The forecast service could not complete the request. Historical weather is unchanged; retry shortly.';
 }
 
 /** Seven-day field forecast. Separate from historical NASA POWER observations. */

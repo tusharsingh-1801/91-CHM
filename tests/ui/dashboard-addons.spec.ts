@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-import {setup,seed} from './fixtures';
+import {forecastFixture,setup,seed,id} from './fixtures';
 test('dashboard add-ons use the available field records',async({page})=>{
  await setup(page);
  await page.goto('/');
@@ -22,6 +22,21 @@ test('dashboard quick question opens existing AI chat and prefills a question',a
  await page.getByRole('button',{name:'Explain NDVI in simple terms'}).click();
  await expect(page.getByRole('region',{name:'Crop assistant chat'})).toBeVisible();
  await expect(page.getByRole('textbox',{name:'Your question'})).toHaveValue('Explain NDVI in simple terms');
+});
+
+test('dashboard forecast reports provider failures, retries, and preserves source attribution',async({page})=>{
+ const state=await setup(page);
+ state.forecast={...forecastFixture(),source:'Google Weather API',sourceUrl:'https://developers.google.com/maps/documentation/weather'};
+ state.fail.add(`GET /api/fields/${id}/forecast`);
+ await page.goto('/');
+ const forecast=page.locator('.forecast-preview');
+ await expect(forecast.getByRole('alert')).toContainText('Service temporarily unavailable');
+ state.fail.delete(`GET /api/fields/${id}/forecast`);
+ await forecast.getByRole('button',{name:'Retry forecast'}).click();
+ await expect(forecast.locator('.forecast-source')).toContainText('Google Weather API');
+ await expect(forecast.locator('.forecast-source')).toContainText('Retrieved');
+ await expect(forecast.locator('.forecast-source a')).toHaveAttribute('href','https://developers.google.com/maps/documentation/weather');
+ expect(state.errors).toEqual([]);
 });
 
 test('dashboard image comparison changes when different field is selected',async({page})=>{

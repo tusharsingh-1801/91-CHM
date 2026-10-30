@@ -78,7 +78,7 @@ export function CropAssistant() {
     </button>
     {open && <section id="crop-assistant-window" className="crop-assistant-window no-print" aria-label={t('Crop assistant chat','फ़सल सहायक चैट')}>
       <header className="crop-assistant-header">
-        <div><strong><Bot size={21} aria-hidden="true"/> {t('Crop assistant','फ़सल सहायक')}</strong><small>Sarvam AI{selectedField ? ' · '+(contextName||t('Selected field','चुना हुआ खेत')) : ''}</small></div>
+        <div><strong><Bot size={21} aria-hidden="true"/> {t('Crop assistant','फ़सल सहायक')}</strong><small>Gemini AI{selectedField ? ' · '+(contextName||t('Selected field','चुना हुआ खेत')) : ''}</small></div>
         <button type="button" aria-label={t('Close assistant','सहायक बंद करें')} onClick={() => setOpen(false)}><X size={20}/></button>
       </header>
       <div className="assistant-history-controls"><small>{availability===false?t('Provider not configured','सेवा कॉन्फ़िगर नहीं है'):availability===true?t('Provider configured · availability checked on send','सेवा कॉन्फ़िगर है · भेजने पर कनेक्शन जाँचा जाएगा'):t('Provider status unavailable','सेवा की स्थिति उपलब्ध नहीं')}</small>{account.signedIn&&<label><input type="checkbox" disabled={busy} checked={saveHistory} onChange={event=>setSaveHistory(event.target.checked)}/>{t('Save conversation history','बातचीत का इतिहास सेव करें')}</label>}{saveHistory&&<button type="button" disabled={busy} onClick={async()=>{try{const response=await fetch('/api/assistant/history',{method:'DELETE'});if(!response.ok)throw Error('Could not clear saved history');setConversations({});}catch{setError(t('Could not clear saved history','इतिहास हट नहीं पाया'));}}}>{t('Clear all saved history','पूरा सेव किया इतिहास हटाएँ')}</button>}</div>

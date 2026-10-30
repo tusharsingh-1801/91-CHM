@@ -34,6 +34,22 @@ test('onboarding leaves a saved field available while its image check runs in th
   await page.getByRole('button',{name:'Check for a new image'}).click();expect(state.created).toBe(1);await expect.poll(()=>state.jobs.length).toBe(2);
 });
 
+test('image progress polling exposes an explicit retry after a transient request failure',async({page})=>{
+  const {setup,id}=await import('./fixtures');
+  const state=await setup(page);
+  const action=`GET /api/fields/${id}/jobs`;
+  state.fail.add(action);
+  await page.goto(`/fields/${id}/overview`);
+  await page.getByText('Check for a newer picture',{exact:true}).click();
+  const progressError=page.getByRole('alert').filter({hasText:'Unable to check progress.'});
+  await expect(progressError).toBeVisible();
+  state.fail.delete(action);
+  await progressError.getByRole('button',{name:'Retry progress check'}).click();
+  await expect(progressError).toHaveCount(0);
+  expect(state.calls.filter(call=>call===action).length).toBeGreaterThanOrEqual(2);
+  expect(state.errors).toEqual([]);
+});
+
 test('same-date map scenes select exact latest evidence and keep scene/boundary evidence aligned through refresh', async ({ page }) => {
   const field = {
     id: fieldId, name: 'River field', crop: 'Wheat', area_hectares: 3,

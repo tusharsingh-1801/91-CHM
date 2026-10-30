@@ -3,7 +3,7 @@ import {parseForecast} from '../../../shared/forecast.ts';
 const payload=()=>({timezone:'Asia/Kolkata',daily:{time:['2026-10-27','2026-10-28','2026-10-29','2026-10-30','2026-10-31','2026-11-01','2026-11-02'],temperature_2m_min:Array(7).fill(0),temperature_2m_max:Array(7).fill(20),precipitation_sum:Array(7).fill(0),precipitation_probability_max:Array(7).fill(0),relative_humidity_2m_mean:Array(7).fill(50),wind_speed_10m_max:Array(7).fill(9)}});
 test('forecast retains zero measurements, source, expiry and unknown issue time',()=>{const data=parseForecast(payload(),1000000);assert.equal(data.days[0].minC,0);assert.equal(data.days[0].rainChance,0);assert.equal(data.issuedAt,null);assert.equal(Date.parse(data.expiresAt)-Date.parse(data.retrievedAt),1800000);assert.equal(data.provenance,'forecast');});
 test('forecast rejects incomplete, unordered or impossible measurements',()=>{for(const mutate of [(p:ReturnType<typeof payload>)=>p.daily.time.pop(),(p:ReturnType<typeof payload>)=>p.daily.time.reverse(),(p:ReturnType<typeof payload>)=>p.daily.temperature_2m_min[0]=50,(p:ReturnType<typeof payload>)=>p.daily.precipitation_probability_max[0]=200]){const value=payload();mutate(value);assert.throws(()=>parseForecast(value));}});
-import {normaliseForecast,forecastUrl} from './forecast.ts';
+import {normaliseForecast,forecastUrl,ForecastProviderError,forecastFailureMessage} from './forecast.ts';
 test('forecast provider request uses seven days and weather variables',()=>{
  const url=new URL(forecastUrl(28.5,77.2));
  assert.equal(url.hostname,'api.open-meteo.com');
@@ -22,4 +22,10 @@ test('invalid date arrays and values are rejected rather than fabricated',()=>{
  const data=normaliseForecast({daily:{time:['2026-10-19'],temperature_2m_max:[999],precipitation_sum:[-1]}},'id','now');
  assert.equal(data.days[0].max_c,null);
  assert.equal(data.days[0].precipitation_mm,null);
+});
+test('forecast failures name the selected provider without exposing credentials or provider payloads',()=>{
+ assert.match(forecastFailureMessage(new ForecastProviderError('Google Weather API')),/Weather API is enabled, billing is active, and server key restrictions allow this request/);
+ assert.match(forecastFailureMessage(new ForecastProviderError('Open-Meteo')),/Open-Meteo is unavailable/);
+ assert.match(forecastFailureMessage(new Error('database connection failed')),/forecast service could not complete/);
+ assert.doesNotMatch(forecastFailureMessage(new Error('sensitive provider response')),/sensitive provider response/);
 });

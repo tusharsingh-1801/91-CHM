@@ -9,6 +9,10 @@
 - PATCH field edits retain dates/yield when those properties are omitted; explicit null still clears a value.
 - PostgreSQL DATE values remain calendar strings, preventing a one-day shift during JSON serialization in IST.
 - Invalid field/alert/event UUIDs return 400 before querying PostgreSQL.
+- Forecast views preserve provider attribution and retrieval time, distinguish forecasts from historical records, enforce bounded requests, and expose provider-safe errors with retry controls.
+- Imagery progress checks use bounded requests and offer a separate retry when polling fails; the persisted background job remains intact.
+- Empty field-reference results are labeled as not yet checked rather than implying provider configuration was verified. Research-only and manual-only sources remain explicitly identified.
+- The assistant UI now identifies its configured backend as Gemini rather than Sarvam AI.
 
 ## Still missing / recommended implementation order
 
@@ -19,7 +23,7 @@
 5. **Trend correctness.** Python regression uses observation position when planting date is missing, so irregular time gaps are ignored. Require distinct observation dates, fit elapsed days, bound NDVI predictions to [-1, 1], and distinguish daily slope from per-observation slope. Crop stages/health scores need crop-specific validation and uncertainty.
 6. **External service resilience.** Apply timeouts consistently to STAC, NASA POWER, Sentinel Hub and Python calls. Add bounded retry/backoff for transient failures and a readiness view showing optional key configuration without exposing credentials.
 7. **Access control before hosting.** There is no user authentication or field ownership boundary. Add those plus request rate limits before exposing this application publicly. The local launcher binds services to loopback.
-8. **UI verification.** Seven browser workflow tests now cover boundary controls, wizard recovery, field management, history, analysis, weather, assistant, alerts and map retry with external API/SDK fixtures. Extend race-condition/mobile coverage and verify live Google Maps/Sarvam/Sentinel integrations. See [BUTTON_AUDIT.md](BUTTON_AUDIT.md).
+8. **UI verification.** Seven browser workflow tests now cover boundary controls, wizard recovery, field management, history, analysis, weather, assistant, alerts and map retry with external API/SDK fixtures. Extend race-condition/mobile coverage and verify live Google Maps/Gemini/Sentinel integrations. See [BUTTON_AUDIT.md](BUTTON_AUDIT.md).
 9. **Data provenance.** Identify seeded records clearly, retain ingestion/source timestamps, and avoid presenting heuristic scores or predicted crop stages as calibrated agronomic measurements.
 
 ## Verified on this machine

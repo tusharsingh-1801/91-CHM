@@ -250,13 +250,13 @@ function isJob(value: unknown): value is ProcessingJob {
     && ['satellite','weather'].includes(job.kind) && ['queued','running','succeeded','failed'].includes(job.status);
 }
 export async function loadFieldJobs(fieldId: string) {
-  const response = await fetch(`/api/fields/${fieldId}/jobs`);
+  const response = await fetch(`/api/fields/${fieldId}/jobs`, { signal: AbortSignal.timeout(10000) });
   const payload: unknown = await response.json();
   if (!response.ok || !Array.isArray(payload) || !payload.every(isJob)) throw new Error('Unable to check image progress');
   return payload as ProcessingJob[];
 }
 export async function queueFieldJob(fieldId: string, kind: 'satellite'|'weather' = 'satellite') {
-  const response = await fetch(`/api/fields/${fieldId}/jobs`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({kind}) });
+  const response = await fetch(`/api/fields/${fieldId}/jobs`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({kind}), signal:AbortSignal.timeout(15000) });
   const payload: unknown = await response.json();
   if (!response.ok || !isJob(payload)) throw new Error('Image check could not be started. Your field is saved.');
   return payload;
@@ -336,18 +336,62 @@ export interface SatelliteScene {
 
 
 export type ForecastDay={date:string;min_c:number|null;max_c:number|null;rain_probability_percent:number|null;precipitation_mm:number|null;humidity_percent:number|null;wind_speed_kmh:number|null};
-export type FieldForecast={source:'Open-Meteo';source_url:string;field_id:string;issued_at:string;timezone:string;units:{temperature:'°C';precipitation:'mm';wind_speed:'km/h'};days:ForecastDay[]};
-export async function loadForecast(fieldId:string):Promise<FieldForecast>{
- const response=await fetch(`/api/fields/${encodeURIComponent(fieldId)}/forecast`);
- if(!response.ok){const payload=await response.json().catch(()=>({})) as {error?:string};throw new Error(payload.error||'Forecast temporarily unavailable');}
- const raw=await response.json();
- const payload:FieldForecast=typeof raw.retrievedAt==='string'?{
-  source:'Open-Meteo',source_url:raw.sourceUrl,field_id:fieldId,
-  issued_at:raw.retrievedAt,timezone:raw.timezone,units:{temperature:'°C',precipitation:'mm',wind_speed:'km/h'},
-  days:raw.days.map((day:import('../../../shared/forecast').ForecastDay)=>({date:day.date,min_c:day.minC,max_c:day.maxC,rain_probability_percent:day.rainChance,precipitation_mm:day.rainMm,humidity_percent:day.humidity,wind_speed_kmh:day.windKph}))
- }:raw;
- if(!payload||!Array.isArray(payload.days)||typeof payload.issued_at!=='string')throw new Error('Invalid forecast response');
- return payload;
+export type FieldForecast={source:string;source_url:string;field_id:string;retrieved_at:string;issued_at:string|null;timezone:string;units:{temperature:'°C';precipitation:'mm';wind_speed:'km/h'};days:ForecastDay[]};
+export async function loadForecast(fieldId:string,options:{signal?:AbortSignal;timeoutMs?:number}={}):Promise<FieldForecast>{
+ const controller=new AbortController();
+ let timedOut=false;
+ const timeout=window.setTimeout(()=>{timedOut=true;controller.abort();},options.timeoutMs??35000);
+ const abort=()=>controller.abort();
+ if(options.signal?.aborted)abort();
+ else options.signal?.addEventListener('abort',abort,{once:true});
+ try{
+  const response=await fetch(`/api/fields/${encodeURIComponent(fieldId)}/forecast`,{signal:controller.signal});
+  const raw=await response.json().catch(()=>({})) as Record<string,unknown>&{error?:string};
+  if(!response.ok)throw new Error(typeof raw.error==='string'?raw.error:'Forecast temporarily unavailable');
+  if(Array.isArray(raw.days)&&typeof raw.retrievedAt==='string'){
+   if(typeof raw.source!=='string'||typeof raw.sourceUrl!=='string'||typeof raw.timezone!=='string')throw new Error('Invalid forecast response');
+   const days=raw.days as Array<Record<string,unknown>>;
+   if(days.length!==7||days.some(day=>typeof day.date!=='string'))throw new Error('Forecast provider returned incomplete data');
+   return {
+    source:raw.source,source_url:raw.sourceUrl,field_id:fieldId,retrieved_at:raw.retrievedAt,
+    issued_at:typeof raw.issuedAt==='string'?raw.issuedAt:null,timezone:raw.timezone,
+    units:{temperature:'°C',precipitation:'mm',wind_speed:'km/h'},
+    days:days.map(day=>({
+     date:day.date as string,
+     min_c:typeof day.minC==='number'&&Number.isFinite(day.minC)?day.minC:null,
+     max_c:typeof day.maxC==='number'&&Number.isFinite(day.maxC)?day.maxC:null,
+     rain_probability_percent:typeof day.rainChance==='number'&&Number.isFinite(day.rainChance)?day.rainChance:null,
+     precipitation_mm:typeof day.rainMm==='number'&&Number.isFinite(day.rainMm)?day.rainMm:null,
+     humidity_percent:typeof day.humidity==='number'&&Number.isFinite(day.humidity)?day.humidity:null,
+     wind_speed_kmh:typeof day.windKph==='number'&&Number.isFinite(day.windKph)?day.windKph:null,
+    })),
+   };
+  }
+  if(Array.isArray(raw.days)&&typeof raw.issued_at==='string'&&typeof raw.source==='string'&&typeof raw.source_url==='string'&&typeof raw.timezone==='string'){
+   const days=raw.days as Array<Record<string,unknown>>;
+   if(days.length!==7||days.some(day=>typeof day.date!=='string'))throw new Error('Forecast provider returned incomplete data');
+   return {
+    source:raw.source,source_url:raw.source_url,field_id:fieldId,retrieved_at:raw.issued_at,issued_at:null,
+    timezone:raw.timezone,units:{temperature:'°C',precipitation:'mm',wind_speed:'km/h'},
+    days:days.map(day=>({
+     date:day.date as string,
+     min_c:typeof day.min_c==='number'&&Number.isFinite(day.min_c)?day.min_c:null,
+     max_c:typeof day.max_c==='number'&&Number.isFinite(day.max_c)?day.max_c:null,
+     rain_probability_percent:typeof day.rain_probability_percent==='number'&&Number.isFinite(day.rain_probability_percent)?day.rain_probability_percent:null,
+     precipitation_mm:typeof day.precipitation_mm==='number'&&Number.isFinite(day.precipitation_mm)?day.precipitation_mm:null,
+     humidity_percent:typeof day.humidity_percent==='number'&&Number.isFinite(day.humidity_percent)?day.humidity_percent:null,
+     wind_speed_kmh:typeof day.wind_speed_kmh==='number'&&Number.isFinite(day.wind_speed_kmh)?day.wind_speed_kmh:null,
+    })),
+   };
+  }
+  throw new Error('Invalid forecast response');
+ }catch(error){
+  if(timedOut)throw new Error('Forecast request timed out. Check your connection and retry.');
+  throw error;
+ }finally{
+  window.clearTimeout(timeout);
+  options.signal?.removeEventListener('abort',abort);
+ }
 }
 
 export type MaizePredictionResult = {

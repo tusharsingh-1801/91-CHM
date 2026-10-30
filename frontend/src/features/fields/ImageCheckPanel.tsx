@@ -59,7 +59,7 @@ export function ImageCheckPanel({ field, onComplete }: { field: DatabaseField; o
     <div><h3>{t('Find a clear picture', 'साफ़ तस्वीर खोजें')}</h3><p role="status" aria-live="polite">{message}</p>
       {job?.finished_at && <small>{t('Last check', 'पिछली जाँच')}: {date(job.finished_at)}</small>}
       {active && <p className="quiet">{t('Progress is saved. Reopening this field will show the same check.', 'जाँच की स्थिति सेव है। खेत दोबारा खोलने पर यही जाँच दिखेगी।')}</p>}
-      {error && <p role="alert">{t('Unable to check progress. Check your connection and retry.', 'स्थिति नहीं मिल रही। इंटरनेट कनेक्शन देखकर फिर कोशिश करें।')}</p>}
+      {error && <p role="alert">{t('Unable to check progress. Check your connection and retry.', 'स्थिति नहीं मिल रही। इंटरनेट कनेक्शन देखकर फिर कोशिश करें।')} <button type="button" onClick={()=>setPollVersion(value=>value+1)}>{t('Retry progress check','स्थिति फिर देखें')}</button></p>}
       {startError && <p role="alert">{t('Image check could not be started. Your field is safe. Please retry.', 'तस्वीर की जाँच शुरू नहीं हुई। आपका खेत सुरक्षित है। फिर कोशिश करें।')}</p>}
     </div>
     <button type="button" className="primary-action" disabled={starting || active || !field.boundary_geojson} onClick={() => void start()}>{starting || active ? t('Checking images…', 'तस्वीरें जाँच रहे हैं…') : job?.status === 'failed' ? t('Retry image check', 'दोबारा जाँच करें') : t('Check for a new image', 'नई तस्वीर देखें')}</button>

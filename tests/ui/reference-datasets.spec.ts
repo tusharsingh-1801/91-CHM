@@ -18,12 +18,14 @@ for(const [name,payload] of [
  });
 }
 
-test('empty references show unconfigured sources while valid reference results render',async({page})=>{
+test('empty references show unchecked sources while valid reference results render',async({page})=>{
  const state=await setup(page);
  await page.goto(`/fields/${id}/overview`);
  const references=page.locator('section').filter({has:page.getByRole('heading',{name:'Land, rainfall and soil references',exact:true})});
  await expect(references.getByRole('article')).toHaveCount(6);
- await expect(references).toContainText('worldcover — Not configured');
+ await expect(references).toContainText('worldcover — Not checked for this field');
+ await expect(references).toContainText('Research dataset; not field-specific');
+ await expect(references).toContainText('Manual reference required');
  await page.route('**/api/fields/*/datasets?*',route=>route.fulfill({json:{items:['worldcover','chirps'].includes(new URL(route.request().url()).searchParams.get('provider')??'')?[{id:'reference-1',provider:new URL(route.request().url()).searchParams.get('provider'),status:'integrated',source:new URL(route.request().url()).searchParams.get('provider')==='worldcover'?'ESA WorldCover':'CHIRPS',version:'2021',source_url:'https://example.org',license:'CC BY 4.0',period:'2021',fetched_at:'2026-10-22T00:00:00Z',coverage_percent:new URL(route.request().url()).searchParams.get('provider')==='worldcover'?90:100,error:null,payload:{cropland_percent:75}}]:[]}}));
  await page.reload();
  await expect(references).toContainText('ESA WorldCover — Partial coverage');
@@ -35,7 +37,7 @@ test('empty references show unconfigured sources while valid reference results r
 test('demo query parameters do not inject reference results',async({page})=>{
  const state=await setup(page);
  await page.goto(`/fields/${id}/overview?demo=1`);
- await expect(page.getByText('worldcover — Not configured',{exact:true})).toBeVisible();
+ await expect(page.getByText('worldcover — Not checked for this field',{exact:true})).toBeVisible();
  await expect(page.getByText(/DEMO ONLY — not FAO data/)).toHaveCount(0);
  expect(state.errors).toEqual([]);
 });
