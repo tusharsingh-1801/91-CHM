@@ -363,6 +363,10 @@ input[type=range] { padding:0; accent-color:var(--green); }
 .dataset-filters input,.dataset-filters select { background:#fff; color:var(--ink); border-color:#b7c7b5; }
 .dataset-card a { color:var(--green); }
 .dataset-card .dataset-limits { color:#82541d; }
+.potato-research { margin:2rem 0; padding:1.25rem; }
+.potato-research label { display:grid; gap:.5rem; max-width:32rem; font-weight:700; }
+.potato-research input { margin-top:.25rem; }
+.potato-research .scouting-photo-preview { display:block; max-width:min(100%,360px); max-height:320px; object-fit:contain; margin:1rem 0; border-radius:8px; }
 .auth-shell { background:#f4f6ef; color:var(--ink); min-height:calc(100dvh - 90px); }
 .auth-card { background:#fff; border-color:var(--line); box-shadow:0 10px 50px #20382b0b; }
 .auth-card input { background:#fff; color:var(--ink); border-color:#b7c7b5; }

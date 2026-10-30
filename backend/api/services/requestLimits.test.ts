@@ -1,19 +1,20 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {needsScoutingPhotoBody} from './requestLimits.ts';
+import {needsLargeImageBody} from './requestLimits.ts';
 import {app} from '../app.ts';
 import type {AddressInfo} from 'node:net';
 
 const id='00000000-0000-0000-0000-000000000001';
-test('only field-scoped photo upload and quality preview get the larger parser',()=>{
- assert.equal(needsScoutingPhotoBody('POST',`/api/fields/${id}/scouting`),true);
- assert.equal(needsScoutingPhotoBody('POST',`/api/fields/${id}/scouting/quality-preview?mode=check`),true);
- assert.equal(needsScoutingPhotoBody('GET',`/api/fields/${id}/scouting`),false);
- assert.equal(needsScoutingPhotoBody('POST',`/api/fields/${id}/events`),false);
- assert.equal(needsScoutingPhotoBody('POST','/api/fields/../../scouting/quality-preview'),false);
- assert.equal(needsScoutingPhotoBody('POST','/api/assistant'),false);
+test('only bounded image routes get the larger JSON parser',()=>{
+ assert.equal(needsLargeImageBody('POST',`/api/fields/${id}/scouting`),true);
+ assert.equal(needsLargeImageBody('POST',`/api/fields/${id}/scouting/quality-preview?mode=check`),true);
+ assert.equal(needsLargeImageBody('POST','/api/research/potato-leaf/predict'),true);
+ assert.equal(needsLargeImageBody('GET',`/api/fields/${id}/scouting`),false);
+ assert.equal(needsLargeImageBody('POST',`/api/fields/${id}/events`),false);
+ assert.equal(needsLargeImageBody('POST','/api/fields/../../scouting/quality-preview'),false);
+ assert.equal(needsLargeImageBody('POST','/api/assistant'),false);
 });
-test('128KB body cap stays in place for regular APIs; photo routes bypass only that cap',async()=>{
+test('128KB body cap stays for regular APIs and image routes use their bounded parser',async()=>{
  const server=app.listen(0,'127.0.0.1');
  try{
   await new Promise<void>(resolve=>server.once('listening',resolve));
@@ -25,6 +26,8 @@ test('128KB body cap stays in place for regular APIs; photo routes bypass only t
   assert.equal(regular.status,413);
   const preview=await request(`/api/fields/${id}/scouting/quality-preview`);
   assert.notEqual(preview.status,413);
+  const potato=await request('/api/research/potato-leaf/predict');
+  assert.notEqual(potato.status,413);
   assert.equal(preview.headers.get('x-frame-options'),'DENY');
   assert.equal(preview.headers.get('x-content-type-options'),'nosniff');
   assert.equal(preview.headers.get('referrer-policy'),'same-origin');

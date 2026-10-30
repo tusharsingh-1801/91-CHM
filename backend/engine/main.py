@@ -329,3 +329,7 @@ def inspect_photo(payload: PhotoRequest):
 # Experimental maize leaf classification
 from backend.engine.maize_inference import router as maize_router
 app.include_router(maize_router)
+
+# Experimental field-photo classification is separate from satellite observations.
+from backend.engine.potato_inference import router as potato_router
+app.include_router(potato_router)

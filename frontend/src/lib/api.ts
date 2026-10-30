@@ -394,3 +394,59 @@ export async function predictMaizeLeaf(
 
   return payload as MaizePredictionResult;
 }
+
+export type PotatoLeafStatus = {
+  dataset_id: 'pldd-up-potato-leaf-disease';
+  model_available: boolean;
+};
+
+export type PotatoLeafPredictionResult = {
+  status: 'experimental';
+  crop: 'potato';
+  dataset_id: 'pldd-up-potato-leaf-disease';
+  prediction: 'Healthy' | 'Early Blight' | 'Late Blight';
+  probability: number;
+  predictions: Array<{label:'Healthy'|'Early Blight'|'Late Blight';probability:number}>;
+  model: string;
+  dataset_provenance: string;
+  limitations: string[];
+  disclaimer: string;
+};
+
+export async function getPotatoLeafStatus(signal?: AbortSignal):Promise<PotatoLeafStatus> {
+  const response = await fetch('/api/research/potato-leaf', {signal});
+  const payload = await response.json().catch(() => ({})) as Partial<PotatoLeafStatus> & {error?:string};
+  if (!response.ok) throw new Error(payload.error || 'Potato research service is unavailable.');
+  if (payload.dataset_id !== 'pldd-up-potato-leaf-disease' || typeof payload.model_available !== 'boolean') {
+    throw new Error('Invalid potato research status response.');
+  }
+  return payload as PotatoLeafStatus;
+}
+
+export async function predictPotatoLeaf(image:string):Promise<PotatoLeafPredictionResult> {
+  const response = await fetch('/api/research/potato-leaf/predict', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({image}),
+  });
+  const payload = await response.json().catch(() => ({})) as Partial<PotatoLeafPredictionResult> & {error?:string};
+  if (!response.ok) throw new Error(payload.error || 'Potato analysis is unavailable.');
+  const classLabels = new Set(['Healthy', 'Early Blight', 'Late Blight']);
+  if (
+    payload.status !== 'experimental' ||
+    payload.crop !== 'potato' ||
+    payload.dataset_id !== 'pldd-up-potato-leaf-disease' ||
+    typeof payload.prediction !== 'string' ||
+    !classLabels.has(payload.prediction) ||
+    typeof payload.probability !== 'number' ||
+    !Number.isFinite(payload.probability) ||
+    !Array.isArray(payload.predictions) ||
+    payload.predictions.length !== 3 ||
+    !Array.isArray(payload.limitations) ||
+    payload.limitations.length < 3 ||
+    !payload.limitations.every(item => typeof item === 'string')
+  ) {
+    throw new Error('Invalid potato prediction response.');
+  }
+  return payload as PotatoLeafPredictionResult;
+}

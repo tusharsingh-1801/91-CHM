@@ -4,14 +4,17 @@ This is a curated source catalog and a static, attributable Indian public-bounda
 
 ## What is actually included
 
-- `catalog.json`: ten reviewed sources, their use, access links, integration status and limitations.
+- `catalog.json`: eleven reviewed sources, their use, access links, integration status and limitations.
 - `demo/ftw-india-sample.geojson`: three genuine public parcel polygons, extracted from the 10,013-row FTW India benchmark.
 - `demo/manifest.json`: source checksum, file size and reproducible selection rules.
+- `.local/datasets/up/pldd-up/`: ignored PLDD-UP source archives and extracted photographs; registered as an image-classification research dataset, not as satellite or farm-observation data. See [the integration and reproducibility guide](../docs/research/pldd-up-integration.md).
 - `ATTRIBUTION.md`: authors, source publication, redistribution license and changes.
 - The original 7.47 MB GeoParquet is not bundled or currently stored in the workspace; the three-polygon extract and its source manifest are included.
 - `requirements.txt`: optional GeoParquet tooling. The regular app does not require PyArrow.
 
 The app does not import these sample polygons. They represent 2016 reference boundaries and may have changed; they are not user farms, current crop records, or evidence of current ownership.
+
+PLDD-UP is an experimental leaf-photo classification research source only; it is not linked to satellite-derived field health.
 
 ## Reproduce the research extract
 

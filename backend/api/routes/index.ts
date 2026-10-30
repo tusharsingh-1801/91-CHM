@@ -1,6 +1,7 @@
 import { getFieldFaoCalendar } from '../controllers/faoCalendarController.ts';
 import {listReferenceDatasets} from '../controllers/referenceDatasetsController.ts';
 import {predictMaize} from '../controllers/maizeController.ts';
+import {getPotatoLeafStatus,predictPotatoLeaf} from '../controllers/potatoLeafController.ts';
 import {getForecast} from '../services/forecast.ts';
 import {listNotifications,readNotifications,saveNotificationPreferences} from '../services/notifications.ts';
 import {assistantAvailability,assistantHistory,deleteAssistantHistory} from '../services/assistantHistory.ts';
@@ -82,6 +83,8 @@ router.get('/fields/:fieldId/tiles/:sceneId/:z/:x/:y.png', getFieldTile);
 router.post('/fields/:fieldId/events', createFieldEvent);
 router.delete('/fields/:fieldId/events/:eventId', deleteFieldEvent);
 router.post('/fields/:fieldId/maize/predict',rateLimit('photos',20),express.json({limit:'8mb'}),predictMaize);
+router.get('/research/potato-leaf',getPotatoLeafStatus);
+router.post('/research/potato-leaf/predict',rateLimit('photos',20),express.json({limit:'8mb'}),predictPotatoLeaf);
 router.get('/fields/:fieldId/scouting',listScouting);
 router.put('/fields/:fieldId/scouting/:caseId/research-consent',setScoutingResearchConsent);
 router.post('/fields/:fieldId/scouting',rateLimit('photos',20),express.json({limit:'8mb'}),saveScouting);
