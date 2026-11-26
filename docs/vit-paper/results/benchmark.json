@@ -1,0 +1,22 @@
+{
+ "vit": {
+  "params_M": 85.827878,
+  "size_MB_fp32": 343.367823,
+  "GFLOPs_MACs": 16.86667392,
+  "cpu_latency_ms_bs1": 222.80949999999393,
+  "gpu_latency_ms_bs1_fp32": 12.769915999997465,
+  "gpu_latency_ms_bs1_fp16": 9.081550000000789,
+  "gpu_throughput_img_s_bs64_fp16": 382.3634157551442,
+  "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU"
+ },
+ "mnv2": {
+  "params_M": 2.27255,
+  "size_MB_fp32": 9.331339,
+  "GFLOPs_MACs": 0.312961856,
+  "cpu_latency_ms_bs1": 22.790089999989505,
+  "gpu_latency_ms_bs1_fp32": 6.841891999997642,
+  "gpu_latency_ms_bs1_fp16": 13.173532999999225,
+  "gpu_throughput_img_s_bs64_fp16": 1924.315180576761,
+  "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU"
+ }
+}

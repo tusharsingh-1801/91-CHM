@@ -92,25 +92,53 @@ before submitting):
 - Singh et al., "PlantDoc: A Dataset for Visual Plant Disease Detection," CoDS-COMAD 2020.
 - Noyan, "Uncovering bias in the PlantVillage dataset," arXiv:2206.04374 (2022).
 
-Found by web search, details not yet verified (open each and confirm title,
-authors, venue and numbers before citing):
+Verification (2026-11-26): every entry in `docs/vit-paper/references.bib`
+(25 entries) was checked against arXiv or Crossref for title, authors, year and
+venue/volume/pages. All matched; one author list I had first guessed was
+corrected from Crossref. The earlier "unverified" list is now confirmed, with
+two corrections: the Agronomy 2024 paper is Feng, Sun and Zhang, "Plant Disease
+Identification Based on Encoder-Decoder Model" (14(10):2208), and the
+PlantXViT journal version lists five authors (arXiv v1 lists four).
 
-- Frontiers in Plant Science 2025, ViT plus mixture of experts, DOI 10.3389/fpls.2025.1522985 (reports cross-domain PlantVillage to PlantDoc about 68%).
-- arXiv:2511.18989, "Rethinking Plant Disease Diagnosis: Bridging the Academic-Practical Gap with Vision Transformers and Zero-Shot Learning".
-- arXiv:2504.21706, "Vision Transformers in Precision Agriculture: A Comprehensive Survey".
-- arXiv:2508.08317, "Evaluation of State-of-the-Art Deep Learning Techniques for Plant Disease and Pest Detection".
-- MDPI Agronomy 14(10):2208 (2024), a transformer plant-disease paper.
+Numbers confirmed from the abstracts of those papers (use only these):
 
-Suggested wording for the comparison:
+- Feng et al. 2024: 99.9% on PlantVillage, 97.4% EMBRAPA, 91.5% FGVC8.
+- Salman et al. 2025 (ViT + mixture of experts): 68% accuracy PlantVillage to PlantDoc cross-domain, about 20% better than a plain ViT.
+- Thakur et al. (PlantXViT): 0.8 M parameters; average accuracy above 93.55% Apple, 92.59% Maize, 98.33% Rice.
+- Tonmoy et al. 2025 (MobilePlantViT): 0.69 M parameters, test accuracy 80% to over 99% across datasets.
+- Banerjee et al. 2025 survey: hierarchical ViT above 99.3% on plant disease detection.
+- Borhani et al. 2022: attention blocks raise accuracy but slow prediction; CNN+ViT hybrid recovers speed (abstract gives no numbers).
+- Benabbas et al. 2025: CNNs lose robustness under domain shift, ViTs generalise better, CLIP zero-shot works without task training (abstract gives no numbers).
 
-> Published ViT and hybrid models report PlantVillage accuracy between about
-> 96% and above 99% [FILL: cite verified papers], while accuracy on field-style
-> data such as PlantDoc is much lower, roughly 70-87% depending on method
-> [FILL]. Our [FILL]% is in the same range on PlantVillage, but because
-> protocols differ (split, augmentation, pretraining) direct ranking is not
-> meaningful.
+I could not confirm the "96% to 99%" and "70-87% on PlantDoc" ranges I wrote
+earlier, so they are removed. Wording for the comparison:
 
-Aim for 20 or more references total, mostly from 2021 onward.
+> Published ViT and hybrid models report PlantVillage accuracy of 99.9% [Feng
+> 2024] and above 99.3% [Banerjee 2025], but accuracy falls on field images:
+> a ViT with mixture of experts reaches 68% when trained on PlantVillage and
+> tested on PlantDoc [Salman 2025]. Our 99.89% on PlantVillage is in the same
+> range. Because protocols differ (split, augmentation, pretraining), direct
+> ranking is not meaningful, and we did not test cross-dataset transfer.
+
+Related-work paragraph (paste after the comparison):
+
+> Early PlantVillage work applied CNNs [Mohanty 2016, Ferentinos 2018], and
+> reviews warned that lab-style images limit field performance [Barbedo 2016].
+> PlantDoc was built to test field images [Singh 2020], and a dataset audit found
+> background cues that let models classify PlantVillage images from the
+> background alone [Noyan 2022]. Vision transformers [Dosovitskiy 2021, Touvron
+> 2021] have since been applied to plant disease, alone [Borhani 2022], combined
+> with CNNs [Thakur 2023], as lightweight hybrids [Tonmoy 2025], with mixture of
+> experts for field data [Salman 2025], or compared with CNNs and CLIP under
+> domain shift [Benabbas 2025]; surveys are in [Mehdipour 2025, Banerjee 2025].
+> Explanation methods for transformers include attention rollout [Abnar 2020],
+> gradient-based relevance [Chefer 2021], and Grad-CAM for CNNs [Selvaraju
+> 2017], and attention weights alone are not always faithful explanations [Jain
+> 2019]. We add to this by comparing a fine-tuned ViT-B/16 and MobileNetV2 under
+> a near-duplicate-aware split, reporting deployment cost and a deletion test of
+> the rollout maps.
+
+The bib has 25 entries; 16 are from 2021 onward. Add more 2021+ plant-disease papers only after checking each one the same way.
 
 **6. Unsupported statements.** Either cite or soften:
 - "CNNs' localized receptive fields limit performance" becomes "CNNs build
