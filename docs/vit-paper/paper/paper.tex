@@ -1,0 +1,134 @@
+% IEEE conference format. Build: pdflatex paper; bibtex paper; pdflatex paper; pdflatex paper
+% Needs IEEEtran.cls (part of TeX Live / MiKTeX). Not compiled on the machine that wrote it:
+% fix any layout warnings (long table, figure size) on first build.
+\documentclass[conference]{IEEEtran}
+\usepackage{cite}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{url}
+\graphicspath{{../results/}}
+
+\begin{document}
+
+\title{Fine-Tuned Vision Transformer for 38-Class Plant Leaf Disease Classification with Attention-Rollout Explanations and Efficiency Benchmarking}
+
+\author{\IEEEauthorblockN{[FILL: author names]}
+\IEEEauthorblockA{[FILL: affiliation, email]}}
+
+\maketitle
+
+\begin{abstract}
+Plant-leaf classifiers trained on PlantVillage routinely report accuracy above 99\%, but the dataset contains several photographs of the same leaf, so reported accuracy can overstate performance on unseen leaves, and large transformers are rarely compared with lightweight CNNs on deployment cost. We fine-tune ViT-B/16 and MobileNetV2 on the 38 PlantVillage classes using a near-duplicate-aware split that keeps images of the same leaf in one partition. On 8,155 held-out images ViT-B/16 reaches 99.89\% accuracy (macro F1 0.9976) and MobileNetV2 reaches 99.78\% (macro F1 0.9955). The difference is not statistically significant (McNemar $p=0.078$), while ViT-B/16 needs 85.8\,M parameters against 2.27\,M and 223\,ms against 22.8\,ms CPU latency per image. A deletion test of attention-rollout maps shows a modest faithful ordering of patches, but the maps do not concentrate on the leaf more than its area share. Remaining errors are mostly between maize Northern Leaf Blight and Gray Leaf Spot. Results come from one seed and one dataset, so they do not show how the models behave on field images.
+\end{abstract}
+
+\begin{IEEEkeywords}
+plant disease classification, vision transformer, MobileNetV2, attention rollout, PlantVillage, efficiency benchmarking
+\end{IEEEkeywords}
+
+\section{Introduction}
+Automated recognition of plant disease from leaf photographs has been studied since deep networks were first applied to PlantVillage \cite{mohanty2016,ferentinos2018}, and reviews have long warned that images taken under controlled conditions limit what such systems achieve in the field \cite{barbedo2016}.
+
+\textbf{Problem.} Classifiers trained on PlantVillage routinely report accuracy above 99\%, yet the dataset contains several photographs of the same leaf and background cues that correlate with the label \cite{noyan2022bias}. Reported accuracy can therefore overstate how well a model works on unseen leaves, and large transformer models are rarely compared with lightweight CNNs on deployment cost.
+
+\textbf{Research question.} On a split that keeps near-duplicate photographs together, does a fine-tuned Vision Transformer (ViT) \cite{dosovitskiy2021vit} outperform MobileNetV2 \cite{sandler2018mobilenetv2} on 38-class classification, and does any accuracy gain justify its extra parameters and inference latency? A secondary question is whether attention-rollout maps \cite{abnar2020rollout} highlight the diseased leaf rather than the background.
+
+\textbf{Contributions.}
+\begin{enumerate}
+\item We fine-tune ViT-B/16 on 38 PlantVillage classes with a near-duplicate-aware split and report 99.89\% accuracy and macro F1 of 0.9976 on 8,155 held-out images (95\% CI 99.82--99.95\%).
+\item We compare it with MobileNetV2 under the same split and training budget. The 0.11-point accuracy difference is not statistically significant (McNemar $p=0.078$), while ViT costs 85.8\,M versus 2.27\,M parameters, 343\,MB versus 9.3\,MB, and 223\,ms versus 22.8\,ms CPU latency per image.
+\item We compute attention-rollout maps and test them with a deletion check on 400 correctly classified images. Removing the top-ranked 25\% of patches lowers the true-class probability about twice as much as removing random patches (0.029 versus 0.015), but the maps do not concentrate on the leaf more than its area share, so we make no localisation claim.
+\item We analyse the weakest classes and the dataset's duplicate and background-bias risks, with all 38 classes in the appendix.
+\end{enumerate}
+
+\section{Related Work}
+PlantDoc was built to test models on field images \cite{singh2020plantdoc}, and an audit of PlantVillage showed that a model given only 8 background pixels reached 49\% accuracy against 2.6\% for chance \cite{noyan2022bias}. Vision transformers \cite{dosovitskiy2021vit,touvron2021deit} have since been applied to plant disease alone \cite{borhani2022}, combined with CNNs \cite{thakur2023plantxvit}, as lightweight hybrids \cite{tonmoy2025mobileplantvit}, with a mixture of experts for field data \cite{salman2025moe}, and compared with CNNs and CLIP \cite{radford2021clip} under domain shift \cite{benabbas2025rethinking}; surveys are given in \cite{mehdipour2025vitagri,banerjee2025eval}. Explanation methods for transformers include attention rollout \cite{abnar2020rollout} and gradient-based relevance \cite{chefer2021beyond}, Grad-CAM is the usual choice for CNNs \cite{selvaraju2017gradcam}, and attention weights alone are not always faithful explanations \cite{jain2019attention}.
+
+Published PlantVillage results are very high: 99.9\% for an encoder--decoder transformer \cite{feng2024encdec} and above 99.3\% for a hierarchical ViT as summarised in \cite{banerjee2025eval}. Accuracy falls on field images: a ViT with a mixture of experts reaches 68\% when trained on PlantVillage and tested on PlantDoc \cite{salman2025moe}. Our 99.89\% on PlantVillage is in the same range as the published figures. Because protocols differ (split, augmentation, pretraining), direct ranking is not meaningful, and we did not test cross-dataset transfer. We add a comparison of a fine-tuned ViT-B/16 and MobileNetV2 under a near-duplicate-aware split, with deployment cost and a deletion test of the rollout maps.
+
+\section{Data and Method}
+\subsection{Dataset and split}
+We use the PlantVillage color images (54,305 images, 38 classes) from the public repository of Mohanty \emph{et al.} \cite{mohanty2016}, git commit \texttt{7f7ecc7}, original data from \cite{hughes2015plantvillage}. [FILL: download date and licence wording as stated on the source page.] PlantVillage photographs the same leaf several times. We hash every image with a rotation- and flip-invariant difference hash, link images of the same class whose 64-bit hashes differ by at most 6 bits, and split by connected component into train (37,860), validation (8,290) and test (8,155) images, stratified by class. Of the 54,305 images, 4,425 fall in groups of more than one image, and the largest group has 332 images. Under a plain random split 6.9\% of test images have a same-group image in training; under our split none do. The grouping is approximate, so we call the split near-duplicate-aware, not leaf-level. The split list is released with the code.
+
+\subsection{Models and training}
+We fine-tune ViT-B/16 (\texttt{vit\_base\_patch16\_224.augreg\_in21k\_ft\_in1k}, ImageNet-21k pretraining followed by ImageNet-1k fine-tuning \cite{steiner2022augreg}) and MobileNetV2 (\texttt{mobilenetv2\_100.ra\_in1k}) from the timm library, replacing the head with 38 outputs. Both use AdamW (weight decay 0.05), a one-cycle schedule, batch size 32, mixed precision and 3 epochs, with learning rate $3\times10^{-5}$ for ViT and $10^{-3}$ for MobileNetV2. Training augmentation is random resized crop (scale 0.6--1.0), horizontal and vertical flips and colour jitter, at $224\times224$. We keep the epoch with the best validation accuracy and evaluate it once on the test set. One seed (42) was run.
+
+\subsection{Evaluation}
+We report accuracy, macro and weighted precision, recall and F1 with 95\% bootstrap confidence intervals, per-class results, and a McNemar test on paired test predictions. Macro F1 was also computed by hand as the mean of the 38 per-class values and matches the library value. Latency, size and operation counts use the fine-tuned architectures at batch size 1 on 4 CPU threads and on a laptop GPU (RTX 4050), plus fp16 throughput at batch size 64.
+
+\subsection{Attention rollout checks}
+We compute attention rollout \cite{abnar2020rollout} for 400 correctly classified test images. First, we compare the share of rollout attention inside an approximate leaf mask with the share of the image the mask covers. Second, in a deletion test we zero the top-ranked 10\% or 25\% of patches by rollout, the same number of random patches, or the lowest-ranked patches, and record the drop in true-class probability. A faithful ranking should drop the probability more than random.
+
+\section{Results}
+\subsection{Classification}
+Table~\ref{tab:main} gives the main results. ViT-B/16 reaches 99.89\% test accuracy and MobileNetV2 99.78\%. The 95\% intervals overlap, and of the images on which the two models disagree, ViT is right and MobileNetV2 wrong on 15 and the reverse on 6 (McNemar $p=0.078$). We therefore do not claim that ViT is more accurate.
+
+\begin{table}[t]
+\caption{Test results on the near-duplicate-aware split (8,155 images, one seed) and deployment cost.}
+\label{tab:main}
+\centering
+\small
+\begin{tabular}{lrr}
+\toprule
+ & ViT-B/16 & MobileNetV2 \\
+\midrule
+Accuracy & 0.9989 & 0.9978 \\
+Accuracy 95\% CI & 0.9982--0.9995 & 0.9967--0.9988 \\
+Macro precision & 0.9980 & 0.9965 \\
+Macro recall & 0.9974 & 0.9946 \\
+Macro F1 & 0.9976 & 0.9955 \\
+Weighted F1 & 0.9989 & 0.9978 \\
+\midrule
+Parameters (M) & 85.8 & 2.27 \\
+Size, fp32 (MB) & 343 & 9.3 \\
+GMACs & 16.9 & 0.31 \\
+CPU latency, batch 1 (ms) & 223 & 22.8 \\
+GPU latency, batch 1, fp32 (ms) & 12.8 & 6.8 \\
+GPU throughput, batch 64, fp16 (img/s) & 382 & 1924 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Weakest classes}
+For ViT-B/16 the lowest F1 values are maize Cercospora/Gray Leaf Spot (0.967), potato healthy (0.976; 21 test images), maize Northern Leaf Blight (0.983), tomato spider mites (0.994), tomato Target Spot (0.995) and blueberry healthy (0.998). The most frequent error is maize Northern Leaf Blight predicted as Gray Leaf Spot (4 images), followed by tomato spider mites predicted as Target Spot (2). MobileNetV2 shows the same maize confusion (4 and 3 images). All 38 classes are in the appendix.
+
+\subsection{Cost}
+ViT-B/16 has about 38 times the parameters, 54 times the operations and about 10 times the CPU latency of MobileNetV2, and its batch-64 GPU throughput is about five times lower. GPU latency at batch size 1 differs by less (12.8\,ms versus 6.8\,ms in fp32). Timings were taken on a laptop GPU and are noisy; for example MobileNetV2 was slower in fp16 than in fp32 at batch size 1, so we quote fp32 and CPU figures.
+
+\subsection{Attention rollout}
+Across the 400 images, a mean of 0.877 of the rollout attention falls inside the leaf mask, which covers a mean 0.885 of the image (median ratio 0.999; ratio above 1 on 41\% of images). Rollout therefore shows no preference for the leaf over the background, and because PlantVillage leaves fill most of the frame, this check is weak. In the deletion test, removing the top 25\% of patches lowers the true-class probability by 0.029, against 0.015 for random patches and 0.009 for the lowest-ranked patches; at 10\% the values are 0.0041, 0.0038 and 0.0016. The ordering is consistent but the effects are small, because the classifier is already very confident on these images. Fig.~\ref{fig:rollout} shows examples.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_rollout.png}
+\caption{Attention-rollout examples from the fine-tuned ViT-B/16 on correctly classified test images.}
+\label{fig:rollout}
+\end{figure}
+
+\section{Discussion}
+Both models are near ceiling on this split, so PlantVillage cannot separate them: the 0.11-point gap is within noise and the extra cost of ViT buys no measured accuracy. A CNN builds global context only through depth, whereas self-attention relates all patches from the first layer \cite{dosovitskiy2021vit}, but we did not test whether this matters for symptoms spread across the leaf, and we make no claim that ViTs capture dispersed symptoms better. For deployment on constrained devices, the evidence here favours MobileNetV2: it is within 0.11 points of ViT with under 3\% of the parameters.
+
+The near-duplicate-aware split removes the same-leaf leakage that a random split has (6.9\% of test images). We did not train on the random split, so we cannot say how much it would have inflated accuracy here. The accuracy we report is still on PlantVillage images with uniform backgrounds, and published results show large drops on field images \cite{salman2025moe,singh2020plantdoc}.
+
+\section{Limitations}
+(1) One seed and 3 epochs per model, so run-to-run variation is not measured. (2) Hash-based grouping removes near-duplicates but does not guarantee that no leaf is shared across splits. (3) PlantVillage only; no cross-dataset test such as PlantDoc. (4) The leaf mask used in the rollout check is approximate, and the deletion test measures faithfulness to the model, not agreement with expert-marked lesions. (5) Latency was measured on one laptop GPU and one CPU configuration. (6) We did not compare explanations with Grad-CAM on MobileNetV2.
+
+\section{Conclusion}
+On a near-duplicate-aware PlantVillage split, fine-tuned ViT-B/16 and MobileNetV2 both exceed 99.7\% test accuracy, and the small difference is not statistically significant, while ViT-B/16 costs far more in parameters and latency. Rollout ranks patches in a modestly faithful way but does not localise the leaf. Future work should test cross-dataset transfer to field images, repeat runs over seeds, and compare explanations across architectures.
+
+\section*{Data and Code Availability}
+Code, the split list (image path and train/validation/test assignment), training histories and result files are available at [FILL: repository URL and Zenodo DOI]. Trained weights are at [FILL: URL]. PlantVillage images are not redistributed; the source and commit are given above. [FILL: dataset licence statement.]
+
+\bibliographystyle{IEEEtran}
+\bibliography{../references}
+
+\appendices
+\section{Per-class results for ViT-B/16}
+\begin{table}[h]
+\caption{Per-class precision, recall, F1 and support for ViT-B/16 on the test set.}
+\centering
+\tiny
+\resizebox{\columnwidth}{!}{\input{../results/per_class_vit_group.tex}}
+\end{table}
+
+\end{document}
