@@ -1,0 +1,14 @@
+{
+ "n_images": 400,
+ "n_correct": 400,
+ "mean_attention_inside_leaf": 0.8770269673317671,
+ "mean_leaf_area_fraction": 0.8853590860172195,
+ "inside_over_area_ratio_median": 0.9988510528776808,
+ "fraction_images_ratio_gt1": 0.41,
+ "mean_prob_drop_top10": 0.004139131680130958,
+ "mean_prob_drop_rand10": 0.0037604113419850665,
+ "mean_prob_drop_bottom10": 0.0015950670093297958,
+ "mean_prob_drop_top25": 0.029049040013924242,
+ "mean_prob_drop_rand25": 0.015045163333415983,
+ "mean_prob_drop_bottom25": 0.008627792075276374
+}
