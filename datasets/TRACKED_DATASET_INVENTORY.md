@@ -2,21 +2,21 @@
 
 Audit date: 2026-11-27
 Repository: https://github.com/tusharsingh-1801/91-CHM
-Audited default-branch tree SHA: current recursive Git tree fetched 2026-11-27 (not pinned to a commit in this report)
+Audited default-branch tree SHA: `a7cfad2e6270cd78666e8f0572bf233e4e408181`
 
 ## Scope and counts
 
-This inventory counts Git-tracked blobs under `datasets/` in the inspected repository tree. It does not count ignored local files under `.local/datasets/` and does not inspect the contents of every CSV.
+This inventory counts Git-tracked blobs under `datasets/` in the inspected repository tree at commit `a7cfad2e6270cd78666e8f0572bf233e4e408181`. It does not count ignored local files under `.local/datasets/` and does not inspect the contents of every CSV.
 
 | Item | Count |
 |---|---:|
 | Tracked files under `datasets/` | 1,695 |
-| CSV files | 1,687 |
+| CSV files | 1,682 |
 | Markdown files | 9 |
 | JSON files | 3 |
 | TXT files | 1 |
 | CSV files under `datasets/TimeSen2Crop/` | 1,677 |
-| Other CSV files | 10 |
+| Other CSV files | 5 |
 
 ## Identified dataset-bearing paths
 
@@ -47,5 +47,5 @@ The missing `npm run test:research` step has been replaced with a dedicated Pyth
 
 * Recursive Git tree returned 1,695 blobs under `datasets/`: 1,687 CSV, 9 Markdown, 3 JSON, 1 TXT. This supersedes the earlier count in this file.
 * TimeSen2Crop repository subset is exactly `datasets/TimeSen2Crop/2019_33UVP/`; it contains only class folders `0` and `1`, with 853 and 823 sample CSVs respectively, plus one `dates.csv`. Do not describe this as the complete TimeSen2Crop release.
-* The ten other CSV files are: two blank FAO calendar templates, one blank ground-truth observation template, two India crop-calendar/reference CSVs, one 7.3 MB paper split file, and four model evaluation result CSVs. The split and results files are research artifacts, not source datasets; the two India calendar files need their cited source/derived-data attribution preserved.
+* The five other CSV files are: two blank FAO calendar templates, one blank ground-truth observation template, `india-crop-calendar-ggcmi.csv`, and `india-field-calendar-import-DRAFT.csv`. The latter is explicitly a draft and is not cleared for release. The GGCMI reference CSV cites RiceAtlas and IndiaAgStat; preserve its source attribution, and keep the source-layer rights review separate from the TimeSen2Crop licence decision.
 * A Git tree SHA is not a SHA-256 checksum of the original Zenodo archive. No archive-level checksum match was performed in this audit.
