@@ -45,7 +45,7 @@ The missing `npm run test:research` step has been replaced with a dedicated Pyth
 
 ## 2026-11-27 follow-up audit
 
-* Recursive Git tree returned 1,695 blobs under `datasets/`: 1,687 CSV, 9 Markdown, 3 JSON, 1 TXT. This supersedes the earlier count in this file.
+* Recursive Git tree returned 1,695 blobs under `datasets/`: 1,682 CSV, 9 Markdown, 3 JSON, 1 TXT. This supersedes the earlier count in this file.
 * TimeSen2Crop repository subset is exactly `datasets/TimeSen2Crop/2019_33UVP/`; it contains only class folders `0` and `1`, with 853 and 823 sample CSVs respectively, plus one `dates.csv`. Do not describe this as the complete TimeSen2Crop release.
 * The five other CSV files are: two blank FAO calendar templates, one blank ground-truth observation template, `india-crop-calendar-ggcmi.csv`, and `india-field-calendar-import-DRAFT.csv`. The latter is explicitly a draft and is not cleared for release. The GGCMI reference CSV cites RiceAtlas and IndiaAgStat; preserve its source attribution, and keep the source-layer rights review separate from the TimeSen2Crop licence decision.
 * A Git tree SHA is not a SHA-256 checksum of the original Zenodo archive. No archive-level checksum match was performed in this audit.
