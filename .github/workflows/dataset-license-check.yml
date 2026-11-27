@@ -35,3 +35,5 @@ jobs:
           python-version: "3.x"
       - name: Validate tracked dataset files
         run: python scripts/check_dataset_licenses.py
+      - name: Validate public release manifest
+        run: python scripts/check_release_manifest.py
