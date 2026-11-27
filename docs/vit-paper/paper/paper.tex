@@ -74,13 +74,13 @@ Table~\ref{tab:published} lists published PlantVillage and PlantDoc results next
 \footnotesize
 \begin{tabular}{@{}p{1.5cm}p{2.0cm}p{2.5cm}r@{}}
 \toprule
-Work & Model & Dataset / split & Accuracy \
+Work & Model & Dataset / split & Accuracy \\
 \midrule
-\cite{feng2024encdec} & Encoder--decoder transformer & PlantVillage, authors' protocol & 99.9\% \
-\cite{banerjee2025eval} & Hierarchical ViT (as summarised in the survey) & PlantVillage, authors' protocol & $>$99.3\% \
-\cite{salman2025moe} & ViT with mixture of experts & PlantVillage $\rightarrow$ PlantDoc & 68\% \
-Ours & ViT-B/16 & PlantVillage, grouped split & 99.87\% \
-Ours & MobileNetV2 & PlantVillage, grouped split & 99.76\% \
+\mbox{\cite{feng2024encdec}} & Encoder--decoder transformer & PlantVillage, authors' protocol & 99.9\% \\
+\mbox{\cite{banerjee2025eval}} & Hierarchical ViT (as summarised in the survey) & PlantVillage, authors' protocol & $>$99.3\% \\
+\mbox{\cite{salman2025moe}} & ViT with mixture of experts & PlantVillage $\rightarrow$ PlantDoc & 68\% \\
+Ours & ViT-B/16 & PlantVillage, grouped split & 99.87\% \\
+Ours & MobileNetV2 & PlantVillage, grouped split & 99.76\% \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -90,7 +90,7 @@ Ours & MobileNetV2 & PlantVillage, grouped split & 99.76\% \
 We use the PlantVillage color images (54,305 images, 38 classes) from the public repository of Mohanty \emph{et al.} \cite{mohanty2016}, git commit \texttt{7f7ecc7}, original data from \cite{hughes2015plantvillage}. We cloned the repository on 26 November 2026; it has no licence file, but the front matter of its \texttt{README\_HF.md} declares CC BY-SA 3.0. PlantVillage photographs the same leaf several times. We hash every image with a rotation- and flip-invariant difference hash, link images of the same class whose 64-bit hashes differ by at most 6 bits, and split by connected component into train (37,860), validation (8,290) and test (8,155) images, stratified by class. Of the 54,305 images, 4,425 fall in groups of more than one image, and the largest group has 332 images. Under a plain random split 6.9\% of test images have a same-group image in training; under our split none do. The grouping is approximate, so we call the split near-duplicate-aware, not leaf-level. The split list is released with the code.
 
 \subsection{Models and training}
-We fine-tune ViT-B/16 (\texttt{vit\_base\_patch16\_224.augreg\_in21k\_ft\_in1k}, ImageNet-21k pretraining followed by ImageNet-1k fine-tuning \cite{steiner2022augreg}) and MobileNetV2 (\texttt{mobilenetv2\_100.ra\_in1k}) from the timm library, replacing the head with 38 outputs. Both use AdamW (weight decay 0.05), a one-cycle schedule, batch size 32, mixed precision and 3 epochs, with learning rate $3\times10^{-5}$ for ViT and $10^{-3}$ for MobileNetV2. Training augmentation is random resized crop (scale 0.6--1.0), horizontal and vertical flips and colour jitter, at $224\times224$. We keep the epoch with the best validation accuracy and evaluate it once on the test set. We train each model with three seeds (42, 43, 44); the split is fixed. We also train both models once (seed 42) on a plain stratified random split to check for leakage effects.
+We fine-tune ViT-B/16 (\texttt{vit\_\allowbreak{}base\_\allowbreak{}patch16\_\allowbreak{}224.augreg\_\allowbreak{}in21k\_\allowbreak{}ft\_\allowbreak{}in1k}, ImageNet-21k pretraining followed by ImageNet-1k fine-tuning \cite{steiner2022augreg}) and MobileNetV2 (\texttt{mobilenetv2\_\allowbreak{}100.ra\_\allowbreak{}in1k}) from the timm library, replacing the head with 38 outputs. Both use AdamW (weight decay 0.05), a one-cycle schedule, batch size 32, mixed precision and 3 epochs, with learning rate $3\times10^{-5}$ for ViT and $10^{-3}$ for MobileNetV2. Training augmentation is random resized crop (scale 0.6--1.0), horizontal and vertical flips and colour jitter, at $224\times224$. We keep the epoch with the best validation accuracy and evaluate it once on the test set. We train each model with three seeds (42, 43, 44); the split is fixed. We also train both models once (seed 42) on a plain stratified random split to check for leakage effects.
 
 \subsection{Evaluation}
 We report accuracy, macro and weighted precision, recall and F1 with 95\% bootstrap confidence intervals, per-class results, and a McNemar test on paired test predictions. Macro F1 was also computed by hand as the mean of the 38 per-class values and matches the library value. Latency, size and operation counts use the fine-tuned architectures at batch size 1 on 4 CPU threads and on a laptop GPU (RTX 4050), plus fp16 throughput at batch size 64.
