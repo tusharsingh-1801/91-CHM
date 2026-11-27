@@ -84,3 +84,11 @@ A local scan (`scripts/inventory_local_datasets.py`) hashed 1,350,838 files (abo
 
 The hash report is `.local/dataset_inventory.json` (ignored by Git; paths, sizes and SHA-256 only).
 
+
+## 2026-11-27 licence-gate fix: draft calendar import no longer tracked
+
+* `scripts/check_dataset_licenses.py` (also run by the `Dataset licence release gate` workflow) failed because `datasets/reference/india-field-calendar-import-DRAFT.csv` was a tracked raw `.csv` whose name matches the restricted keyword `india-field-calendar-import-draft` in `datasets/dataset-policy.json`. The gate was working as intended: the file is a draft import that was never imported and was not cleared for release.
+* The file has been removed from the Git index (`git rm`), and a copy kept in the ignored `.local/datasets/reference/calendar-drafts/`. Nothing else in the repository referenced it. The policy keyword list was **not** changed and the file was **not** renamed to avoid the check.
+* The file remains in earlier Git history. Removing it from the current tree does not remove it from commits already pushed; if that matters, history would need a separate rewrite decision.
+* After the change both `check_dataset_licenses.py` and `check_release_manifest.py` pass. The tracked CSV count under `datasets/` falls by one (the "five other CSV files" above are now four).
+
