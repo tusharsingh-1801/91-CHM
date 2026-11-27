@@ -27,9 +27,13 @@ images in 38 classes, as used here. Original dataset: Hughes and Salathe,
 arXiv:1511.08060; Mohanty, Hughes and Salathe, Front. Plant Sci. 2016.
 
 Licence: the GitHub repository has no LICENSE file; its `README_HF.md` front
-matter states `cc-by-sa-3.0`. [FILL: confirm against the source page before
-release, and state which copy you downloaded and when.] The code in this folder
-is under [FILL: choose a licence, e.g. MIT].
+matter states `cc-by-sa-3.0` (checked in the clone at the commit above). We
+cloned that repository on 26 November 2026; check the terms of the copy you
+download. The code is released under the MIT licence (see `LICENSE` in
+`docs/vit-paper`). The split list and result files, which are derived from the
+dataset's file names and labels, are released under CC BY-SA 3.0
+(https://creativecommons.org/licenses/by-sa/3.0/), the licence the dataset
+repository declares.
 
 ## Reproduce
 
@@ -79,8 +83,12 @@ Seed 42 is shown. Over three seeds ViT averages 0.9987 and MobileNetV2 0.9976
 ## Weights
 
 Trained weights (`best.pt`: ViT 343 MB, MobileNetV2 9.3 MB) are too large for git.
-[FILL: upload to a GitHub release or Zenodo and put the link and DOI here.]
+They are not yet released; a link will be added here when they are uploaded.
 
 ## Citation
 
-[FILL: paper citation and Zenodo DOI once available.]
+T. Singh, A. Singh, V. Thakur and S. Sharma, "Fine-Tuned Vision Transformer
+for 38-Class Plant Leaf Disease Classification with Attention-Rollout
+Explanations and Efficiency Benchmarking," 2026 (manuscript). Code:
+https://github.com/tusharsingh-1801/91-CHM (directory `docs/vit-paper`). No DOI
+has been issued yet.
