@@ -83,7 +83,7 @@ Seed 42 is shown. Over three seeds ViT averages 0.9987 and MobileNetV2 0.9976
 ## Weights
 
 Trained weights (`best.pt`: ViT 343 MB, MobileNetV2 9.3 MB) are too large for git.
-They are not yet released; a link will be added here when they are uploaded.
+They are not released: the PlantVillage licence terms are unresolved (see Data), so models trained on it are held back. Regenerate them with the commands in Reproduce; the split list fixes the data partition.
 
 ## Citation
 
