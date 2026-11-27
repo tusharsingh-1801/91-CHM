@@ -47,3 +47,20 @@ cd scripts/ml; ..\\..\\.venv\\Scripts\\python.exe -m unittest test_ml_pipeline
 The corresponding test file is `scripts/ml/test_ml_pipeline.py`. It imports NumPy and project ML modules; the ML README points to `scripts/ml/requirements-ml.txt` for the dedicated ML environment. Therefore, simply renaming the npm command to an arbitrary command or silently deleting the test step would hide the missing CI coverage. A proper CI repair should add a Python setup/dependency-install step for the research test environment and invoke the documented unittest command from `scripts/ml`, or define an npm alias that does exactly that. This change was **not** made in this audit because the full dependency/runner setup has not yet been validated on GitHub Actions.
 
 Relevant inspected files: `package.json` (no test:research script); `.github/workflows/ci.yml` (calls missing script); `scripts/ml/README.md` (documents unittest command); `scripts/ml/test_ml_pipeline.py` (actual research tests); `scripts/ml/requirements-ml.txt` (ML dependencies).
+
+
+## CI research-test integration follow-up (2026-11-27)
+
+The missing npm command was replaced in `.github/workflows/ci.yml` with a dedicated Python 3.11 setup, installation from `scripts/ml/requirements-ci.txt`, and the documented unittest invocation from `scripts/ml`:
+
+```bash
+python -m unittest test_ml_pipeline -v
+```
+
+Observed GitHub Actions evidence on commit `31ce9892d2b594335aed8916ca06c5fdc3523014` (run [45966582664](https://github.com/tusharsingh-1801/91-CHM/actions/runs/45966582664)): Python setup succeeded, research dependencies installed successfully, and **Run model-comparison research unit tests completed successfully**. The separate Python engine job also completed successfully. At the time of this update, the overall `validate` job was still in progress; therefore the complete Validation workflow is not yet recorded as passed.
+
+The dedicated dependency file intentionally excludes CUDA PyTorch, torchvision and rasterio because the unit test file covers the research selection, metrics and prediction-safety logic and does not require the GPU training environment. This does not run the full model training/experiment pipeline.
+
+## Tracked dataset inventory follow-up
+
+A Git-tree inventory was added at [`datasets/TRACKED_DATASET_INVENTORY.md`](TRACKED_DATASET_INVENTORY.md). It records 1,693 tracked blobs under `datasets/`, including 1,677 TimeSen2Crop CSV files and five other CSV files. The ignored `.local/datasets/` directory is outside the Git tree and is not counted; it requires a local filesystem inventory. The inventory is not a file-by-file licence certification.
