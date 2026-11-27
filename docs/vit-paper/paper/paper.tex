@@ -61,7 +61,7 @@ Automated recognition of plant disease from leaf photographs has been studied si
 \item We fine-tune ViT-B/16 on 38 PlantVillage classes with a near-duplicate-aware split and report 99.89\% accuracy and macro F1 of 0.9976 on 8,155 held-out images for seed 42 (95\% CI 99.82--99.95\%; three-seed mean 99.87\%).
 \item We compare it with MobileNetV2 under the same split and training budget. Over three seeds ViT is ahead by 0.11 points on average (0.06 to 0.15), but the McNemar test is significant on only one seed ($p=0.078$, $0.017$, $0.42$), so the advantage is small, while ViT costs 85.8\,M versus 2.27\,M parameters, 343\,MB versus 9.3\,MB, and 223\,ms versus 22.8\,ms CPU latency per image.
 \item We compute attention-rollout maps and test them with a deletion check on 400 correctly classified images. Removing the top-ranked 25\% of patches lowers the true-class probability about twice as much as removing random patches (0.029 versus 0.015), but the maps do not concentrate on the leaf more than its area share, so we make no localisation claim.
-\item We measure near-duplicate leakage: under a plain random split 6.9\% of test images have a same-group image in training (none under ours), yet random-split accuracy was not higher (99.85\% against 99.89\% for ViT-B/16, one seed, different test sets), and the weakest class F1 is 0.967 (maize Cercospora/Gray Leaf Spot, whose errors are mostly Northern Leaf Blight images predicted as Gray Leaf Spot), with all 38 classes in the appendix.
+\item We measure near-duplicate leakage: under a plain random split 6.9\% of test images have a same-group image in training (none under ours), yet random-split accuracy was not higher (99.85\% against 99.89\% for ViT-B/16, one seed, different test sets), and the weakest class F1 is 0.967 (maize Cercospora/Gray Leaf Spot, whose errors are mostly Northern Leaf Blight images predicted as Gray Leaf Spot), with all 38 classes for both models in the appendix.
 \end{enumerate}
 
 \section{Related Work}
@@ -135,7 +135,7 @@ GPU throughput, batch 64, fp16 (img/s) & 382 & 1924 \\
 \end{table}
 
 \subsection{Weakest classes}
-For ViT-B/16 the lowest F1 values are maize Cercospora/Gray Leaf Spot (0.967), potato healthy (0.976; 21 test images), maize Northern Leaf Blight (0.983), tomato spider mites (0.994), tomato Target Spot (0.995) and blueberry healthy (0.998). The most frequent error is maize Northern Leaf Blight predicted as Gray Leaf Spot (4 images), followed by tomato spider mites predicted as Target Spot (2). MobileNetV2 shows the same maize confusion (4 and 3 images). All 38 classes are in the appendix.
+For ViT-B/16 the lowest F1 values are maize Cercospora/Gray Leaf Spot (0.967), potato healthy (0.976; 21 test images), maize Northern Leaf Blight (0.983), tomato spider mites (0.994), tomato Target Spot (0.995) and blueberry healthy (0.998). The most frequent error is maize Northern Leaf Blight predicted as Gray Leaf Spot (4 images), followed by tomato spider mites predicted as Target Spot (2). MobileNetV2 shows the same maize confusion (4 and 3 images). All 38 classes are in the appendix (Tables~\ref{tab:perclass_vit} and~\ref{tab:perclass_mnv2}).
 
 \subsection{Cost}
 ViT-B/16 has about 38 times the parameters, 54 times the operations and about 10 times the CPU latency of MobileNetV2, and its batch-64 GPU throughput is about five times lower. GPU latency at batch size 1 differs by less (12.8\,ms versus 6.8\,ms in fp32). Timings were taken on a laptop GPU and are noisy; for example MobileNetV2 was slower in fp16 than in fp32 at batch size 1, so we quote fp32 and CPU figures.
@@ -174,6 +174,16 @@ Code, the split list (image path and train/validation/test assignment), training
 \centering
 \tiny
 \resizebox{\columnwidth}{!}{\input{../results/per_class_vit_group.tex}}
+\label{tab:perclass_vit}
+\end{table}
+
+\section{Per-class results for MobileNetV2}
+\begin{table}[h]
+\caption{Per-class precision, recall, F1 and support for MobileNetV2 on the test set (seed 42, near-duplicate-aware split).}
+\label{tab:perclass_mnv2}
+\centering
+\tiny
+\resizebox{\columnwidth}{!}{\input{../results/per_class_mnv2_group.tex}}
 \end{table}
 
 \end{document}
