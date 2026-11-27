@@ -58,3 +58,29 @@ The missing `npm run test:research` step has been replaced with a dedicated Pyth
 * The official dataset description PDF lists a dedicated 2019 33UVP tile as part of TimeSen2Crop; the Hugging Face dataset documentation cites the original Zenodo record and CC BY 4.0. These sources support the dataset identity and source-level licence statement, but do not establish that this repository's 1,677 individual files are byte-identical to Zenodo.
 * No Zenodo archive was downloaded or checksum-compared in this audit. **Provenance remains unverified.** Keep this tracked subset out of any dataset release bundle until an archive-level checksum comparison or reproducible source-file match is completed.
 * The Zenodo record describes the wider dataset as Austrian Sentinel-2 crop-type time series. It is not Indian crop-disease or field-stress ground truth; do not present it as such in CHM.
+
+
+## 2026-11-27 TimeSen2Crop archive comparison (result)
+
+* The official archive `TimeSen2Crop.zip` was downloaded from Zenodo record 4715631 (1,079,952,573 bytes). Its MD5 is `b5b7aad3fef192e78252e11c9a0e5cb8`, identical to the checksum Zenodo publishes for that file, so the reference copy is intact.
+* All 1,677 Git-tracked CSVs under `datasets/TimeSen2Crop/2019_33UVP/` were compared with the matching entries in the archive's `2019_33UVP` folder, reading each file as committed at `HEAD`. Result: **1,677 of 1,677 have identical content; none is missing and none differs.**
+* **They are not byte-identical:** 0 of 1,677 match byte for byte. The archive files use Windows line endings (`\r\n`); Git stores the repository copies with Unix line endings (`\n`). With line endings normalised, all 1,677 match.
+* The archive's 2019_33UVP tile has 139,594 files; 137,917 of them are not tracked here. The repository holds a 1,677-file subset, not the whole tile and not the 15-tile 2017/18 release.
+* This **supersedes** the earlier statement that provenance is unverified: the tracked CSVs are an unmodified subset (apart from line endings) of the CC BY 4.0 Zenodo release. It does not by itself approve the files for a dataset release bundle. The release allow-list, `dataset-policy.json` and `release-manifest.json` have not been changed by this comparison, and that decision stays separate. The data are still Austrian crop-type labels, not Indian crop-stress ground truth.
+
+## 2026-11-27 local `.local/datasets/` comparison (ignored files, not in the Git tree)
+
+A local scan (`scripts/inventory_local_datasets.py`) hashed 1,350,838 files (about 32.8 GB) with no errors. Comparison with the upstream records that publish checksums:
+
+| Dataset | Upstream record | Result |
+|---|---|---|
+| PLDD-UP (`up/pldd-up`) | Mendeley 3j4nfkvp2n v1 | 3 of 3 zips match hash and size; zip contents 4,803 / 4,600 / 6,116 files = 15,519 |
+| Rice leaf, Sethy et al. (`rice-odisha`) | Mendeley fwcj7stb8r v1/v2 | archive matches |
+| Wheat IARI (`wheat-iari`) | Mendeley th422bg4yd v1 | both zips match |
+| IITKGP potato (`iitkgp-potato`) | Zenodo 22059910 | MD5 matches |
+| DES crop-wise statistics (`yield/raw`) | India Data Portal | 3 of 3 files unchanged against the retrieval-time `manifest.json`; the portal publishes no upstream checksum, so this shows no change since 2026-10-30, not a match to an official source |
+| RiceLeafBD (`ricelbd`) | Mendeley sjkptpgv79 v1/v2 | **no match.** Upstream is a single 21,642,468-byte `.rar`; the local file is a 497,906,237-byte `Original Images.zip`. The register's "SHA-256 matched" note for this dataset could not be reproduced; treat its provenance as unconfirmed |
+| AgriFieldNet (`agrifieldnet`) | Radiant Earth / Source Cooperative | not comparable: no upstream file checksums were found |
+
+The hash report is `.local/dataset_inventory.json` (ignored by Git; paths, sizes and SHA-256 only).
+
