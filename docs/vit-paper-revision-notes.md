@@ -192,3 +192,20 @@ The grouping is approximate (hash threshold 6 bits), so say "near-duplicate-awar
 - **Weakest pair:** Corn Northern Leaf Blight vs Gray Leaf Spot (4+1 errors for ViT); also Tomato spider mites vs Target Spot.
 - **Attention rollout (400 correctly classified test images):** mean share of attention inside the leaf mask 0.877 vs mask covering 0.885 of the image (median ratio 0.999), so rollout shows **no preference for the leaf over background**; the PlantVillage leaves fill most of the frame, so this check is weak. Deletion test: removing the top 25% rollout patches drops true-class probability by 0.029, vs 0.015 for random and 0.009 for the lowest-ranked, a small but consistent ordering. Wording to use: "rollout ranking is modestly faithful by a deletion test; we do not claim it localises lesions."
 - **Limits to state:** single seed, 3 epochs, no cross-dataset test (PlantDoc), approximate grouping, GPU latency measured on a laptop GPU with timing noise (MobileNetV2 fp16 was slower than fp32, so quote fp32 or CPU).
+
+## Update 2026-11-27: three seeds and a random-split run
+
+Seeds 42, 43, 44 on the grouped split (same split, same test set), 3 epochs each,
+plus one random-split run per model (seed 42). Files: `docs/vit-paper/results/`
+(`seed_summary.json`, `metrics_seed43.json`, `metrics_seed44.json`, histories).
+
+| Grouped split | seed 42 | seed 43 | seed 44 | mean (SD) |
+|---|---|---|---|---|
+| ViT-B/16 accuracy | 0.9989 | 0.9989 | 0.9983 | 0.9987 (0.0004) |
+| MobileNetV2 accuracy | 0.9978 | 0.9974 | 0.9977 | 0.9976 (0.0002) |
+| ViT minus MobileNetV2 | +0.0011 | +0.0015 | +0.0006 | +0.0011 |
+| McNemar p | 0.078 | 0.017 | 0.42 | |
+
+- **This replaces my earlier "not significant" wording.** ViT is ahead on all three seeds (mean +0.11 points) but significant on one of three tests, and the seeds share a test set so the tests are not independent. Write "small, consistent advantage of about 0.1 points that a single run cannot establish", not "ViT outperforms" and not "no difference".
+- **Random split (seed 42, different test set of 8,146 images):** ViT 0.9985, MobileNetV2 0.9958 (McNemar p = 1e-5, 24 vs 2 on that test set). Neither is higher than on the grouped split, so leakage did not measurably inflate accuracy here. Because the test sets differ and it is one seed, say only "too small to see", never "leakage is harmless". The p = 1e-5 is a different test set and is not evidence about the grouped comparison.
+- `paper.tex` now carries these numbers (abstract, contributions, Table 2, discussion, limitations, conclusion). The "one seed" limitation is rewritten, and "repeat over seeds" is removed from future work.

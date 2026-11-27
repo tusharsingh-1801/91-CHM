@@ -2,7 +2,7 @@
 
 Fine-tuned ViT-B/16 and MobileNetV2 on the 38-class PlantVillage dataset with a
 near-duplicate-aware split, plus attention-rollout checks and a deployment-cost
-benchmark. One seed, 3 epochs per model.
+benchmark. Three seeds, 3 epochs per model, and one random-split run per model.
 
 ## Contents
 
@@ -60,12 +60,14 @@ versions.
 | Parameters | 85.8 M | 2.27 M |
 | CPU latency, batch 1 | 223 ms | 22.8 ms |
 
-The accuracy difference is not statistically significant (McNemar p = 0.078).
-Full numbers are in `results/`.
+Seed 42 is shown. Over three seeds ViT averages 0.9987 and MobileNetV2 0.9976
+(ViT ahead on every seed; McNemar significant on one of three, p = 0.078, 0.017,
+0.42). Full numbers are in `results/` (`seed_summary.json`).
 
 ## Limitations
 
-- One seed and 3 epochs; no confidence intervals across training runs.
+- Three seeds and 3 epochs; the seeds share one split and test set. The random-split
+  comparison is a single run on a different test set.
 - Grouping uses a perceptual-hash threshold of 6 bits, so it removes near-duplicate
   photos but is not a guarantee that no leaf is shared across splits.
 - PlantVillage only: no cross-dataset test (for example PlantDoc), so these numbers

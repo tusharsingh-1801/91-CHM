@@ -64,6 +64,71 @@
    ]
   ]
  },
+ "mnv2_random": {
+  "n_test": 8146,
+  "accuracy": 0.9958261723545299,
+  "balanced_accuracy": 0.9920453833621974,
+  "macro_precision": 0.9937058073264914,
+  "macro_recall": 0.9920453833621974,
+  "macro_f1": 0.99280990928765,
+  "weighted_precision": 0.9958438606243043,
+  "weighted_recall": 0.9958261723545299,
+  "weighted_f1": 0.9958218201049133,
+  "micro_precision": 0.9958261723545299,
+  "micro_recall": 0.9958261723545299,
+  "micro_f1": 0.9958261723545299,
+  "macro_f1_by_hand": 0.99280990928765,
+  "accuracy_ci95": [
+   0.9945985759882151,
+   0.997176528357476
+  ],
+  "macro_f1_ci95": [
+   0.9898624251884988,
+   0.9954074103830866
+  ],
+  "top_confusions": [
+   [
+    "Corn_(maize)___Northern_Leaf_Blight",
+    "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+    7
+   ],
+   [
+    "Potato___Late_blight",
+    "Tomato___Late_blight",
+    5
+   ],
+   [
+    "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+    "Corn_(maize)___Northern_Leaf_Blight",
+    5
+   ],
+   [
+    "Tomato___Target_Spot",
+    "Tomato___Spider_mites Two-spotted_spider_mite",
+    1
+   ],
+   [
+    "Tomato___Late_blight",
+    "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+    1
+   ],
+   [
+    "Tomato___Late_blight",
+    "Tomato___healthy",
+    1
+   ],
+   [
+    "Tomato___Late_blight",
+    "Tomato___Early_blight",
+    1
+   ],
+   [
+    "Tomato___Leaf_Mold",
+    "Tomato___Spider_mites Two-spotted_spider_mite",
+    1
+   ]
+  ]
+ },
  "vit_group": {
   "n_test": 8155,
   "accuracy": 0.9988963825873697,
@@ -83,8 +148,8 @@
    0.9995095033721643
   ],
   "macro_f1_ci95": [
-   0.9956733994841583,
-   0.9992152396080612
+   0.9955296992866985,
+   0.9991944308073535
   ],
   "top_confusions": [
    [
@@ -114,9 +179,79 @@
    ]
   ]
  },
+ "vit_random": {
+  "n_test": 8146,
+  "accuracy": 0.9985268843604223,
+  "balanced_accuracy": 0.9977765736300622,
+  "macro_precision": 0.9980935128571901,
+  "macro_recall": 0.9977765736300622,
+  "macro_f1": 0.9979313527718735,
+  "weighted_precision": 0.9985293168343332,
+  "weighted_recall": 0.9985268843604223,
+  "weighted_f1": 0.9985255318742122,
+  "micro_precision": 0.9985268843604223,
+  "micro_recall": 0.9985268843604223,
+  "micro_f1": 0.9985268843604223,
+  "macro_f1_by_hand": 0.9979313527718735,
+  "accuracy_ci95": [
+   0.9976675669040019,
+   0.9993862018168426
+  ],
+  "macro_f1_ci95": [
+   0.9966092708934391,
+   0.9991837713437635
+  ],
+  "top_confusions": [
+   [
+    "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+    "Corn_(maize)___Northern_Leaf_Blight",
+    3
+   ],
+   [
+    "Potato___Late_blight",
+    "Tomato___Late_blight",
+    2
+   ],
+   [
+    "Corn_(maize)___Northern_Leaf_Blight",
+    "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+    2
+   ],
+   [
+    "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+    "Tomato___Bacterial_spot",
+    1
+   ],
+   [
+    "Soybean___healthy",
+    "Apple___healthy",
+    1
+   ],
+   [
+    "Tomato___Late_blight",
+    "Tomato___healthy",
+    1
+   ],
+   [
+    "Tomato___Target_Spot",
+    "Tomato___Spider_mites Two-spotted_spider_mite",
+    1
+   ],
+   [
+    "Cherry_(including_sour)___healthy",
+    "Squash___Powdery_mildew",
+    1
+   ]
+  ]
+ },
  "mcnemar_group": {
   "vit_right_mnv2_wrong": 15,
   "mnv2_right_vit_wrong": 6,
   "p_value": 0.0783538818359375
+ },
+ "mcnemar_random": {
+  "vit_right_mnv2_wrong": 24,
+  "mnv2_right_vit_wrong": 2,
+  "p_value": 1.049041748046875e-05
  }
 }
