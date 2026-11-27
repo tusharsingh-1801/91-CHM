@@ -932,3 +932,6 @@ html { scroll-padding-top:84px; }
 html[data-ts-theme=dark] { --box-bg:initial; --box-bg-solid:initial; --box-line:initial; }
 :root { --paper:var(--box-bg,#fff); }
 html:not([data-ts-theme=dark]) .farm-home { --card:var(--box-bg,#fff); }
+.data-credits { margin:22px 0 0; font-size:.82rem; line-height:1.55; color:var(--muted); }
+.data-credits a { color:inherit; text-decoration:underline; }
+.site-credits { width:min(1320px,calc(100% - 64px)); margin:0 auto; padding:0 0 28px; text-align:center; }

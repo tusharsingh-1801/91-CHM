@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Camera, CloudSun, MapPinned, Sprout } from 'lucide-react';
 import { usePreferences } from '../../lib/preferencesContext';
+import { DataCredits } from '../../features/credits/DataCredits';
 
 export function Help() {
   const { t } = usePreferences();
@@ -28,5 +29,6 @@ export function Help() {
       <details><summary>{t('Does it work without internet?', 'क्या बिना इंटरनेट के काम करता है?')}</summary><p>{t('A connection is needed to load and save records or get new pictures. Check your connection before a field visit; offline saving is not available yet.', 'जानकारी खोलने, सेव करने और नई तस्वीर लेने के लिए इंटरनेट चाहिए। खेत जाने से पहले कनेक्शन देखें; ऑफ़लाइन सेव करना अभी उपलब्ध नहीं है।')}</p></details>
     </section>
     <div className="help-footer"><Link className="primary-action" to="/">{t('Go to my fields', 'मेरे खेत खोलें')} <span aria-hidden="true">→</span></Link></div>
+    <DataCredits/>
   </main>;
 }

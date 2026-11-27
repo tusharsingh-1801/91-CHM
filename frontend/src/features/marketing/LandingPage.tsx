@@ -1,6 +1,7 @@
 import { ArrowRight, Check, CloudSun, MapPinned, Satellite, ShieldCheck, Sprout } from 'lucide-react';
 import { usePreferences } from '../../lib/preferencesContext';
 import './landing-page.css';
+import { DataCredits } from '../credits/DataCredits';
 
 export function LandingPage({ onSignIn, onCreateAccount }: { onSignIn: () => void; onCreateAccount: () => void }) {
   const { t } = usePreferences();
@@ -52,5 +53,6 @@ export function LandingPage({ onSignIn, onCreateAccount }: { onSignIn: () => voi
       <section className="site-how" id="how-it-works"><div><span>{t('A simple place to start', 'आसान शुरुआत')}</span><h2>{t('From field boundary to next step.', 'खेत की सीमा से अगले कदम तक।')}</h2><p>{t('Add your fields, review the map and recent signals, then record what you find on the ground.', 'अपने खेत जोड़ें, नक्शे और नए संकेत देखें, फिर खेत में मिली जानकारी दर्ज करें।')}</p><button className="site-cta" onClick={onCreateAccount}>{t('Start with your fields', 'अपने खेतों से शुरू करें')}<ArrowRight size={16}/></button></div><div className="site-steps"><div><b>01</b><span><strong>{t('Add a field', 'खेत जोड़ें')}</strong><small>{t('Save a field boundary and crop details.', 'खेत की सीमा और फसल की जानकारी सहेजें।')}</small></span></div><div><b>02</b><span><strong>{t('Review the signals', 'संकेत देखें')}</strong><small>{t('Check satellite changes and weather.', 'सैटेलाइट बदलाव और मौसम देखें।')}</small></span></div><div><b>03</b><span><strong>{t('Plan your visit', 'खेत की जाँच करें')}</strong><small>{t('Record observations and next steps.', 'निरीक्षण और अगले कदम दर्ज करें।')}</small></span></div></div></section>
     </main>
     <footer className="site-footer"><a className="site-brand" href="#home"><span><img src="/images/logo.png" alt="" width={28} height={28} className="brand-logo"/></span><span className="brand-word" aria-label="TerraScope">Terra<span className="brand-s" aria-hidden="true">S</span>cope</span></a><small>© {new Date().getFullYear()} TerraScope · {t('Clearer decisions for every field.', 'हर खेत के लिए बेहतर फैसले।')}</small><button onClick={onSignIn}>{t('Sign in', 'साइन इन')}<ArrowRight size={14}/></button></footer>
+    <DataCredits className="site-credits"/>
   </div>;
 }
