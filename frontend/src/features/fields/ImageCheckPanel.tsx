@@ -63,6 +63,5 @@ export function ImageCheckPanel({ field, onComplete }: { field: DatabaseField; o
       {startError && <p role="alert">{t('Image check could not be started. Your field is safe. Please retry.', 'तस्वीर की जाँच शुरू नहीं हुई। आपका खेत सुरक्षित है। फिर कोशिश करें।')}</p>}
     </div>
     <button type="button" className="primary-action" disabled={starting || active || !field.boundary_geojson} onClick={() => void start()}>{starting || active ? t('Checking images…', 'तस्वीरें जाँच रहे हैं…') : job?.status === 'failed' ? t('Retry image check', 'दोबारा जाँच करें') : t('Check for a new image', 'नई तस्वीर देखें')}</button>
-    {job && <details className="job-details"><summary>{t('Technical details', 'तकनीकी जानकारी')}</summary><p>{job.progress}</p>{job.error && <p>{job.error}</p>}<small>{t('Job', 'जाँच ID')}: {job.id}</small></details>}
   </section>;
 }

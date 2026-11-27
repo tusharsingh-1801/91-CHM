@@ -38,14 +38,13 @@ for(const width of [320,390,768,1440]){
   await expect(page.getByRole('region',{name:'Field evidence'})).toContainText('91%');
   await expect(page.getByRole('region',{name:'Vegetation trends'}).locator('.vegetation-chart .recharts-surface')).toBeVisible();
   const comparison=page.getByRole('region',{name:'Two-date comparison'});
-  await page.getByText('Advanced: measurements and experimental score',{exact:true}).click();
+  await page.getByText('Advanced: measurements',{exact:true}).click();
   await expect(comparison).toContainText('NDVI change between these dates: -0.250');
   await expect(comparison).toContainText('91%');
-  await expect(comparison).toContainText('900 pixels');
   const timeline=page.getByRole('region',{name:'Acquisition timeline'});
-  await expect(timeline).toContainText('before');
-  await expect(timeline).toContainText('new');
-  await page.getByText('Advanced: measurements and experimental score',{exact:true}).click();
+  await expect(timeline).toContainText('clear view');
+  await expect(timeline).not.toContainText('pixels');
+  await page.getByText('Advanced: measurements',{exact:true}).click();
   await expect(page.getByRole('region',{name:'Vegetation observations'})).not.toBeVisible();
   await page.getByLabel('Date range').selectOption('30');await page.getByLabel('Show on chart').selectOption('ndmi_value');
   await page.getByLabel('Show on chart').selectOption('ndvi_value');

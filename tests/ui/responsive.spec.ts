@@ -43,7 +43,7 @@ for (const size of [
       await expect(page.getByRole('heading', { name: longText, exact: true })).toBeVisible();
       if (tab === 'analysis') {
         await expect(page.getByLabel('Question for field assistant')).toBeVisible();
-        await page.getByText('Advanced: measurements and experimental score',{exact:true}).click();
+        await page.getByText('Advanced: measurements',{exact:true}).click();
         const table = page.getByRole('region', { name: 'Vegetation observations' });
         await expect(table).toBeVisible();
         await page.getByText('Past weather near this field',{exact:true}).click();

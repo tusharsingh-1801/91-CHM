@@ -16,7 +16,7 @@ test('farmer opens a flagged field, reviews two-image NDVI change, and reaches t
   await expect(page.getByRole('heading', { name: 'Changes over time' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Picture comparison summary' })).toContainText('less green');
   await expect(page.getByRole('region', { name: 'Picture comparison summary' })).toContainText('field visit');
-  await page.getByText('Advanced: measurements and experimental score').click();
+  await page.getByText('Advanced: measurements').click();
   await expect(page.getByRole('region', { name: 'Two-date comparison' })).toContainText('NDVI change');
   await expect(page.getByRole('region', { name: 'Two-date comparison' })).toContainText((Number(latest.ndvi_value) - Number(previous.ndvi_value)).toFixed(3));
   await page.getByRole('link', { name: 'Open report' }).click();
