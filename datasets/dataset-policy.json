@@ -27,9 +27,31 @@
     "crop-calendar"
   ],
   "raw_data_extensions": [
-    ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp",
-    ".zip", ".7z", ".rar", ".tar", ".gz",
-    ".parquet", ".feather", ".h5", ".hdf5", ".npy", ".npz"
+    ".7z",
+    ".bmp",
+    ".csv",
+    ".dbf",
+    ".feather",
+    ".geojson",
+    ".gpx",
+    ".gz",
+    ".h5",
+    ".hdf5",
+    ".jpeg",
+    ".jpg",
+    ".npy",
+    ".npz",
+    ".parquet",
+    ".png",
+    ".rar",
+    ".shp",
+    ".tar",
+    ".tif",
+    ".tiff",
+    ".webp",
+    ".xls",
+    ".xlsx",
+    ".zip"
   ],
   "raw_data_directories": [
     "datasets/raw/",
@@ -41,6 +63,7 @@
     "Unlisted datasets default to hold.",
     "A licence declaration does not prove the uploader owns third-party image rights.",
     "Do not add raw competition data or unverified third-party images to public Git history.",
-    "Update this policy only after checking the exact source version and rights."
+    "Update this policy only after checking the exact source version and rights.",
+    "CSV and common tabular/geospatial data files are treated as raw data when placed in configured public raw-data directories."
   ]
 }
