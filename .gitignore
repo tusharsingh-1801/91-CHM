@@ -45,3 +45,9 @@ __pycache__/
 
 # Kaggle Paddy Doctor competition data: rules forbid redistribution to non-participants
 /datasets/paddy-disease-classification/
+
+# LaTeX build byproducts (the PDFs are committed)
+docs/**/*.aux
+docs/**/*.bbl
+docs/**/*.blg
+docs/**/*.out
