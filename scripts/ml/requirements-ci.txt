@@ -1,0 +1,12 @@
+# Lightweight dependencies needed by scripts/ml/test_ml_pipeline.py in CI.
+# Deliberately excludes CUDA PyTorch, torchvision and rasterio: the unit tests
+# exercise selection, metrics, abstention and prediction-safety logic only.
+numpy==2.4.6
+scipy==1.17.1
+scikit-learn==1.9.1
+matplotlib==3.11.2
+joblib==1.6.0
+PyYAML
+optuna
+lightgbm
+psutil
