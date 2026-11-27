@@ -49,3 +49,12 @@ The missing `npm run test:research` step has been replaced with a dedicated Pyth
 * TimeSen2Crop repository subset is exactly `datasets/TimeSen2Crop/2019_33UVP/`; it contains only class folders `0` and `1`, with 853 and 823 sample CSVs respectively, plus one `dates.csv`. Do not describe this as the complete TimeSen2Crop release.
 * The five other CSV files are: two blank FAO calendar templates, one blank ground-truth observation template, `india-crop-calendar-ggcmi.csv`, and `india-field-calendar-import-DRAFT.csv`. The latter is explicitly a draft and is not cleared for release. The GGCMI reference CSV cites RiceAtlas and IndiaAgStat; preserve its source attribution, and keep the source-layer rights review separate from the TimeSen2Crop licence decision.
 * A Git tree SHA is not a SHA-256 checksum of the original Zenodo archive. No archive-level checksum match was performed in this audit.
+
+
+## 2026-11-27 TimeSen2Crop follow-up (live main-branch inspection)
+
+* Re-read the live recursive Git tree after the dataset-register update. The inspected main tree SHA is `2abccd7c446dd40fe5e00b246ba8562f61e744d3`; it contains 1,677 Git blobs under `datasets/TimeSen2Crop/`. The paths remain confined to `2019_33UVP/`, class folders `0/` and `1/`, plus `dates.csv`.
+* The GitHub tree exposes Git blob object IDs and byte sizes for each tracked file. These are Git object identifiers, **not** SHA-256 hashes from the original Zenodo archive and cannot prove archive identity.
+* The official dataset description PDF lists a dedicated 2019 33UVP tile as part of TimeSen2Crop; the Hugging Face dataset documentation cites the original Zenodo record and CC BY 4.0. These sources support the dataset identity and source-level licence statement, but do not establish that this repository's 1,677 individual files are byte-identical to Zenodo.
+* No Zenodo archive was downloaded or checksum-compared in this audit. **Provenance remains unverified.** Keep this tracked subset out of any dataset release bundle until an archive-level checksum comparison or reproducible source-file match is completed.
+* The Zenodo record describes the wider dataset as Austrian Sentinel-2 crop-type time series. It is not Indian crop-disease or field-stress ground truth; do not present it as such in CHM.
