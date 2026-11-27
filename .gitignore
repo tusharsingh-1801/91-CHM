@@ -42,3 +42,6 @@ __pycache__/
 /data/reports/
 
 .venv-ml/
+
+# Kaggle Paddy Doctor competition data: rules forbid redistribution to non-participants
+/datasets/paddy-disease-classification/
