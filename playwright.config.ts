@@ -8,6 +8,11 @@ export default defineConfig({
     launchOptions: process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH, args:['--no-sandbox','--no-zygote','--disable-dev-shm-usage'] } : {},
   },
   webServer: [{
+    command: 'npm run dev:server',
+    url: 'http://127.0.0.1:3001/api/health',
+    reuseExistingServer: false,
+    timeout: 60000,
+  }, {
     command: 'npm run dev:client -- --port 5174',
     url: 'http://127.0.0.1:5174',
     env: { VITE_GOOGLE_MAPS_API_KEY: '' },
