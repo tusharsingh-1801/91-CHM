@@ -7,6 +7,7 @@ import {PhotoQualityPreview} from '../../features/fields/PhotoQualityPreview';
 import {isScoutingDraftDate} from '../../features/fields/scoutingDraft';
 import {OfflineDiaryDrafts} from '../../features/fields/OfflineDiaryDrafts';
 import {growthStages, observationCategories, observationSeverities, type GrowthStage, type ObservationCategory, type ObservationSeverity} from '../../../../shared/inspection';
+import { eventLabel } from '../../lib/eventLabels';
 
 function isOneOf<T extends string>(values:readonly T[],value:unknown):value is T{
   return typeof value==='string'&&values.includes(value as T);
@@ -22,7 +23,6 @@ function EventNotes({event}:{event:FieldEvent}) {
   if(source) return <>
     <p>{t(`Historical boundary recorded in ${source.boundary_year || 'an unknown year'}. Current crop and dates are unverified.`, `${source.boundary_year || 'अज्ञात वर्ष'} की पुरानी सीमा। अभी की फ़सल और तारीख़ें सत्यापित नहीं हैं।`)}</p>
     {typeof source.source_url==='string'&&source.source_url.startsWith('https://')&&<a href={source.source_url} target="_blank" rel="noreferrer">{t('Dataset source and attribution ↗','स्रोत और श्रेय ↗')}</a>}
-    <details><summary>{t('Source details','स्रोत की जानकारी')}</summary><p>{String(source.dataset||'')} · {String(source.license||'')}</p><p>{String(source.warning||'')}</p></details>
   </>;
   return <p>{event.notes || t('No notes provided','कोई नोट नहीं')}</p>;
 }
@@ -170,7 +170,7 @@ export function FieldHistory() {
       else sessionStorage.removeItem(storageKey);
     } catch { /* Private browsing or storage quotas must not prevent uploading. */ }
   }, [field.id,photoDate,symptoms,photoNotes,photo,observationCategory,growthStage,severity,key,draftReadyField]);
-  const eventTitle = (value:string) => ({planting:t('Planting','बुवाई'),fertilizer:t('Fertilizer Application','खाद डालना'),irrigation:t('Irrigation','सिंचाई'),pesticide:t('Pesticide Application','कीटनाशक डालना'),scouting:t('Scouting / Observation','खेत की जाँच'),harvest:t('Harvest','कटाई'),other:t('Other','अन्य'),dataset_import:t('Public boundary imported','सार्वजनिक सीमा जोड़ी गई')} as Record<string,string>)[value] || value;
+  const eventTitle = (value:string) => eventLabel(t, value);
   useEffect(() => {
     // On field navigation, do not display another field's cached diary while loading.
     setLoading(true);

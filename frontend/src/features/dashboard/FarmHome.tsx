@@ -360,7 +360,7 @@ export function FarmHome({ fields, onAddField }: { fields: DatabaseField[]; onAd
         {/* Compare */}
         <section className="fh-card">
           <h3 className="fh-h">{t('Compare Satellite Dates', 'सैटेलाइट तारीखों की तुलना')}</h3>
-          <p className="fh-muted">{t('Add two accepted imagery dates to compute reflectance change.', 'बदलाव देखने के लिए दो साफ़ तस्वीरों की तारीख़ें चुनें।')}</p>
+          <p className="fh-muted">{t('Pick two clear satellite dates to see how your crop changed.', 'बदलाव देखने के लिए दो साफ़ तस्वीरों की तारीख़ें चुनें।')}</p>
           <div className="fh-dates"><span>{t('Date 1', 'तारीख़ 1')}: {t('Not set', 'चुनी नहीं')}</span><span>{t('Date 2', 'तारीख़ 2')}: {t('Not set', 'चुनी नहीं')}</span></div>
           <Link className="fh-wide" to={firstWith ? `/fields/${firstWith.id}/history` : '/'}>{t('Select Dates for Comparison', 'तुलना के लिए तारीख़ें चुनें')}</Link>
         </section>
