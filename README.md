@@ -213,3 +213,7 @@ Fictional scenarios remain under `tests/fixtures/` for automated regression chec
 - **Leaf photos (research only, not in the app):** models trained on public CC BY data reached 95.5% (UP potato, 2,024 test images) and 94.8% (Odisha rice after removing near-duplicates, 887 test images). These are held-out scores on the same datasets, not accuracy on this app's fields.
 - **Next evidence needed:** 30-50 dated, consented field visits labelled healthy or problem, scored with `scripts/evaluate-ndvi-alerts.mjs`.
 - Licences and what was checked for every dataset: `datasets/TRAINING-DATA-REGISTER.md`.
+
+## Licences
+
+There is no single licence for the whole repository. Each folder carries its own: the ViT paper code is MIT-licensed (`docs/vit-paper/LICENSE`), and dataset terms and third-party notices are in `datasets/TRAINING-DATA-REGISTER.md` and `datasets/THIRD_PARTY_DATA_NOTICES.md`. Where a folder has no licence file, no licence is granted by this README.
