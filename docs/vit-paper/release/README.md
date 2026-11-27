@@ -82,8 +82,20 @@ Seed 42 is shown. Over three seeds ViT averages 0.9987 and MobileNetV2 0.9976
 
 ## Weights
 
-Trained weights (`best.pt`: ViT 343 MB, MobileNetV2 9.3 MB) are too large for git.
-They are not released: the PlantVillage licence terms are unresolved (see Data), so models trained on it are held back. Regenerate them with the commands in Reproduce; the split list fixes the data partition.
+Trained weights are released for research use as GitHub release
+[`vit-paper-v1.0`](https://github.com/tusharsingh-1801/91-CHM/releases/tag/vit-paper-v1.0). Both are seed-42 runs on the near-duplicate-aware
+split, as reported in the paper.
+
+| File | Model | Size (bytes) | SHA-256 |
+|---|---|---|---|
+| `vit_b16_group_seed42_best.pt` | ViT-B/16 | 343,360,373 | `74952491592021eb90119a6ae688e82baa7efe80c2a0e80040f0359f4c2965ec` |
+| `mobilenetv2_group_seed42_best.pt` | MobileNetV2 | 9,319,115 | `b65cc61d34f508e06b673732877d792a453531ab1091f1dc93dc0e53275df613` |
+
+Verify a download with `sha256sum <file>`. The weights were trained on
+PlantVillage, whose upstream repository has no licence file and declares
+CC BY-SA 3.0 in its `README_HF.md`. Users must check the dataset's terms before
+reuse; share-alike obligations may apply. The weights are not validated for field
+use and are not a diagnostic tool. A DOI is not yet recorded here.
 
 ## Citation
 

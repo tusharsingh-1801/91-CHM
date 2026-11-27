@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this code, split list or the released weights, please cite the manuscript below."
+title: "Fine-Tuned Vision Transformer for 38-Class Plant Leaf Disease Classification with Attention-Rollout Explanations and Efficiency Benchmarking"
+type: software
+authors:
+  - family-names: Singh
+    given-names: Tushar
+  - family-names: Singh
+    given-names: Anurodh
+  - family-names: Thakur
+    given-names: Vansh
+  - family-names: Sharma
+    given-names: Sahil
+repository-code: "https://github.com/tusharsingh-1801/91-CHM"
+url: "https://github.com/tusharsingh-1801/91-CHM/releases/tag/vit-paper-v1.0"
+license: MIT
+version: "vit-paper-v1.0"
+date-released: "2026-11-27"
+keywords:
+  - plant disease classification
+  - vision transformer
+  - MobileNetV2
+  - PlantVillage
+  - attention rollout
