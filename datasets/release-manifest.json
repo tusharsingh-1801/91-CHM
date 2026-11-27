@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "policy": "fail-closed",
+  "note": "Only list files explicitly cleared for public redistribution. Empty list means no dataset files are approved for public release.",
+  "datasets": []
+}
