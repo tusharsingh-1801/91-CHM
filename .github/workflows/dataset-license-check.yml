@@ -1,0 +1,37 @@
+name: Dataset licence release gate
+
+on:
+  pull_request:
+    paths:
+      - "datasets/**"
+      - "data/**"
+      - "training_data/**"
+      - "training-data/**"
+      - "scripts/check_dataset_licenses.py"
+      - ".github/workflows/dataset-license-check.yml"
+  push:
+    branches: [main]
+    paths:
+      - "datasets/**"
+      - "data/**"
+      - "training_data/**"
+      - "training-data/**"
+      - "scripts/check_dataset_licenses.py"
+      - ".github/workflows/dataset-license-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dataset-license-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Validate tracked dataset files
+        run: python scripts/check_dataset_licenses.py
