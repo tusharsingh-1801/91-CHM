@@ -95,12 +95,13 @@ Verify a download with `sha256sum <file>`. The weights were trained on
 PlantVillage, whose upstream repository has no licence file and declares
 CC BY-SA 3.0 in its `README_HF.md`. Users must check the dataset's terms before
 reuse; share-alike obligations may apply. The weights are not validated for field
-use and are not a diagnostic tool. A DOI is not yet recorded here.
+use and are not a diagnostic tool.
+
+**DOI.** Publishing the release minted Zenodo DOI [10.5281/zenodo.24590449](https://doi.org/10.5281/zenodo.24590449) (all versions: [10.5281/zenodo.24590448](https://doi.org/10.5281/zenodo.24590448)). Zenodo archives a snapshot of the repository source (code, split list, results) at the release tag; it does **not** archive the two weight files, which are the GitHub release assets above and are identified by the SHA-256 checksums in the table. The Zenodo record's licence field defaulted to CC BY 4.0; the licences that apply are those stated in this README (code MIT, split list and result files CC BY-SA 3.0).
 
 ## Citation
 
 T. Singh, A. Singh, V. Thakur and S. Sharma, "Fine-Tuned Vision Transformer
 for 38-Class Plant Leaf Disease Classification with Attention-Rollout
 Explanations and Efficiency Benchmarking," 2026 (manuscript). Code:
-https://github.com/tusharsingh-1801/91-CHM (directory `docs/vit-paper`). No DOI
-has been issued yet.
+https://github.com/tusharsingh-1801/91-CHM (directory `docs/vit-paper`). Repository snapshot DOI: 10.5281/zenodo.24590449.
