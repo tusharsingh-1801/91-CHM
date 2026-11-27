@@ -36,4 +36,5 @@ jobs:
       - name: Validate tracked dataset files
         run: python scripts/check_dataset_licenses.py
       - name: Validate public release manifest
+        if: ${{ always() }}
         run: python scripts/check_release_manifest.py
