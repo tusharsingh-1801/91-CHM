@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Moon, Sun, House, FileText, Database, CircleHelp, Globe2, Menu, X, Sparkles, ArrowRight } from 'lucide-react';
+import { Moon, Sun, House, FileText, CircleHelp, Globe2, Menu, X, Sparkles, ArrowRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import '../features/dashboard/farm-home.css';
 import '../features/letter-colors.css';
@@ -24,7 +24,6 @@ export function PreferencesBar({children}:{children?:ReactNode}) {
     <nav className="top-nav" aria-label={t('Main navigation', 'मुख्य नेविगेशन')}>
       <NavLink to="/" end onClick={() => setMenuOpen(false)}><House aria-hidden="true" size={18}/><span>{t('Dashboard', 'डैशबोर्ड')}</span></NavLink>
       <NavLink to="/reports" onClick={() => setMenuOpen(false)}><FileText aria-hidden="true" size={18}/><span>{t('Reports', 'रिपोर्ट')}</span></NavLink>
-      <NavLink to="/datasets" onClick={() => setMenuOpen(false)}><Database aria-hidden="true" size={18}/><span>{t('Datasets', 'डेटासेट')}</span></NavLink>
       <NavLink to="/help" onClick={() => setMenuOpen(false)}><CircleHelp aria-hidden="true" size={18}/><span>{t('Help', 'मदद')}</span></NavLink>
     </nav>
     <section className="sidebar-promo">

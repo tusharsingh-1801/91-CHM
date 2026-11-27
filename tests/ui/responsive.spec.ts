@@ -38,11 +38,6 @@ for (const size of [
     await expect(page.getByLabel('Planting Date')).toBeVisible();
     await fits();
     await page.getByRole('button', { name: 'Close add field' }).click();
-    await page.goto('/datasets', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Project datasets' })).toBeVisible();
-    await page.getByLabel('Search datasets').fill('Earth Search');
-    await expect(page.getByRole('heading', { name: 'Sentinel-2 L2A Collection 1 via Earth Search (AWS Open Data)' })).toBeVisible();
-    await fits();
     for (const tab of ['map', 'analysis', 'history']) {
       await page.goto(`/fields/${id}/${tab}`, { waitUntil: 'domcontentloaded' });
       await expect(page.getByRole('heading', { name: longText, exact: true })).toBeVisible();

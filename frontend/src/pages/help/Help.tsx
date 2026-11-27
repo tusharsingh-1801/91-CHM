@@ -27,6 +27,6 @@ export function Help() {
       <details><summary>{t('How do I share a report?', 'रिपोर्ट कैसे साझा करें?')}</summary><p>{t('Open a field, choose Report and select the dates. Use Print / save PDF. Detailed readings and boundary downloads are available there too.', 'खेत खोलें, रिपोर्ट चुनें और तारीख़ें तय करें। प्रिंट / PDF सेव करें दबाएँ। ज़रूरत पर रीडिंग और सीमा की फ़ाइल भी मिलेंगी।')}</p></details>
       <details><summary>{t('Does it work without internet?', 'क्या बिना इंटरनेट के काम करता है?')}</summary><p>{t('A connection is needed to load and save records or get new pictures. Check your connection before a field visit; offline saving is not available yet.', 'जानकारी खोलने, सेव करने और नई तस्वीर लेने के लिए इंटरनेट चाहिए। खेत जाने से पहले कनेक्शन देखें; ऑफ़लाइन सेव करना अभी उपलब्ध नहीं है।')}</p></details>
     </section>
-    <div className="help-footer"><Link className="primary-action" to="/">{t('Go to my fields', 'मेरे खेत खोलें')} <span aria-hidden="true">→</span></Link><Link to="/datasets">{t('For more detail: data sources & limitations', 'और जानकारी: स्रोत और सीमाएँ')}</Link></div>
+    <div className="help-footer"><Link className="primary-action" to="/">{t('Go to my fields', 'मेरे खेत खोलें')} <span aria-hidden="true">→</span></Link></div>
   </main>;
 }

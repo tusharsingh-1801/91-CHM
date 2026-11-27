@@ -73,7 +73,7 @@ for (const [width, height, minShare] of [[1536, 864, .95], [1920, 1080, .9]] as 
   test(`pages use the screen on a ${width} px laptop instead of a narrow centred column`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await setup(page);
-    for (const path of [`/fields/${id}/analysis`, `/fields/${id}/map`, '/datasets', '/']) {
+    for (const path of [`/fields/${id}/analysis`, `/fields/${id}/map`, '/']) {
       await page.goto(path);
       await page.locator('.field-shell, .dashboard-shell, .farm-home').first().waitFor();
       const content = await page.evaluate(() => {

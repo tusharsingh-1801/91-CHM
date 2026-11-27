@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { setup, id, boundary, day } from './fixtures';
 import {readFileSync} from 'node:fs';
-const sourceCount=(JSON.parse(readFileSync('datasets/catalog.json','utf8')) as {datasets:unknown[]}).datasets.length;
 
 test('dashboard retry, empty state, wizard boundary controls and saved-field retry', async ({page}) => {
   const state=await setup(page);state.fields=[];state.fail.add('GET /api/fields');
@@ -79,8 +78,8 @@ test('point-only records cannot request image processing without a field boundar
   const state=await setup(page);state.fields[0].boundary_geojson=null;state.fields[0].latestObservation=null;await page.goto(`/fields/${id}/map`);await expect(page.locator('.open-field-map')).toBeVisible();await expect(page.getByRole('button',{name:'Check for a new image'})).toBeDisabled();expect(state.errors).toEqual([]);
 });
 
-test('help catalog filters and historical public-boundary attribution remain accessible',async({page})=>{
-  const state=await setup(page);await page.goto('/');await page.getByRole('link',{name:'Help',exact:true}).click();await page.getByRole('link',{name:'For more detail: data sources & limitations'}).click();await expect(page.getByRole('heading',{name:'Project datasets'})).toBeVisible();await expect(page.getByRole('status')).toContainText(`${sourceCount} sources`);await page.getByLabel('Search datasets').fill('Earth Search');await expect(page.getByRole('heading',{name:'Sentinel-2 L2A Collection 1 via Earth Search (AWS Open Data)'})).toBeVisible();await page.getByLabel('Integration status').selectOption('Connected');await expect(page.getByText('No sources match this search.',{exact:false})).toBeVisible();await page.getByLabel('Search datasets').fill('');await expect(page.getByRole('status')).toContainText('2 sources');
+test('datasets catalogue is hidden from the app and historical public-boundary attribution remains accessible',async({page})=>{
+  const state=await setup(page);await page.goto('/');await expect(page.getByRole('link',{name:'Datasets',exact:true})).toHaveCount(0);await page.goto('/help');await expect(page.getByRole('link',{name:'For more detail: data sources & limitations'})).toHaveCount(0);await page.goto('/datasets');await expect(page).toHaveURL(/\/$/);await expect(page.getByRole('heading',{name:'Project datasets'})).toHaveCount(0);
   state.fields[0].isDemo=true;state.fields[0].provenance='public_boundary';state.events=[{id:'source-event',field_id:id,created_at:new Date().toISOString(),event_type:'dataset_import',event_date:day(0),notes:JSON.stringify({dataset:'FTW India',boundary_year:2016,license:'CC BY 4.0',source_url:'https://source.coop/example'})}];
   await page.setViewportSize({width:390,height:844});await page.goto(`/fields/${id}/history`);await expect(page.getByText('Historical boundary recorded in 2016. Current crop and dates are unverified.')).toBeVisible();await expect(page.getByRole('link',{name:'Dataset source and attribution',exact:false})).toHaveAttribute('href','https://source.coop/example');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(state.errors).toEqual([]);
 });

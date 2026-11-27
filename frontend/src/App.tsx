@@ -10,7 +10,6 @@ import { usePreferences } from './lib/preferencesContext';
 
 const Profile = lazy(() => import('./pages/profile/Profile').then(module => ({default:module.Profile})));
 const CropGallery = lazy(() => import('./pages/gallery/CropGallery').then(module => ({ default: module.CropGallery })));
-const Datasets = lazy(() => import('./pages/datasets/Datasets').then(module => ({ default: module.Datasets })));
 const Dashboard = lazy(() => import('./pages/dashboard/Dashboard').then(module => ({ default: module.Dashboard })));
 const FieldLayout = lazy(() => import('./pages/fields/FieldLayout').then(module => ({ default: module.FieldLayout })));
 const FieldMap = lazy(() => import('./pages/fields/FieldMap').then(module => ({ default: module.FieldMap })));
@@ -46,7 +45,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/profile" element={<Profile/>} />
-            <Route path="/datasets" element={<Datasets />} />
+            <Route path="/datasets" element={<Navigate to="/" replace />} />
             <Route path="/gallery" element={<CropGallery />} />
             <Route path="/help" element={<Help />} />
             <Route path="/reports" element={<Reports />} />
