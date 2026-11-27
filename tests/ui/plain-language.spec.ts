@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { assessEvidence } from '../../shared/evidence';
-import { setup, id, seed, latest, previous, day } from './fixtures';
+import { setup, id, seed, latest, previous, day, openMenu, closeMenu } from './fixtures';
 
 test('missing pictures never produce a reassuring crop summary and lead to the image check', async ({ page }) => {
   const state = await setup(page);
@@ -66,7 +66,9 @@ test('the bilingual help journey explains uncertainty, photos and reports on a p
   await expect(page.locator('.help-steps li')).toHaveCount(4);
   await page.getByText('Can a photo identify crop disease?', { exact: true }).click();
   await expect(page.getByText('Automatic disease diagnosis is currently unavailable.', { exact: false })).toBeVisible();
+  await openMenu(page);
   await page.getByLabel('Language / भाषा').selectOption('hi');
+  await closeMenu(page);
   await expect(page.getByRole('heading', { name: 'कुछ आसान कदमों में अपने खेत का हाल देखें' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await page.screenshot({ path: test.info().outputPath('help-hindi-phone.png'), fullPage: true });

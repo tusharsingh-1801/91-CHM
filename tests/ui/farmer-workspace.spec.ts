@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
-import {setup,id,seed,day,latest} from './fixtures';
+import {setup,id,seed,day,latest,openMenu,closeMenu} from './fixtures';
 import {assessEvidence} from '../../shared/evidence';
 
 test('inspection actions stay separate from missing imagery',async({page})=>{
@@ -15,7 +15,7 @@ test('inspection actions stay separate from missing imagery',async({page})=>{
 });
 
 test('Hindi and acre preferences persist across navigation and reload at phone width',async({page})=>{
-  const state=await setup(page);await page.setViewportSize({width:390,height:844});await page.goto('/');await page.getByLabel('Language / भाषा').selectOption('hi');await page.getByLabel('क्षेत्रफल की इकाई').selectOption('acre');
+  const state=await setup(page);await page.setViewportSize({width:390,height:844});await page.goto('/');await openMenu(page);await page.getByLabel('Language / भाषा').selectOption('hi');await openMenu(page);await page.getByLabel('क्षेत्रफल की इकाई').selectOption('acre');await closeMenu(page);
   await expect(page.getByRole('heading',{name:'नमस्ते, किसान!'})).toBeVisible();await page.locator('.fh-field',{hasText:'Test field'}).click();await expect(page.getByRole('region',{name:'खेत की स्थिति'})).toContainText('24.71 एकड़');await page.reload();await expect(page.getByLabel('Language / भाषा')).toHaveValue('hi');await expect(page.getByLabel('क्षेत्रफल की इकाई')).toHaveValue('acre');
   await expect(page.getByRole('button',{name:/खेत की जाँच तय करें/})).toBeVisible();await expect(page.getByRole('region',{name:'खेत की स्थिति'})).toContainText('खेत जाकर देखें');
   expect(await page.evaluate(async()=>{const fonts=await document.fonts.load('16px "Noto Sans Devanagari"','खेत');return fonts.length>0;})).toBeTruthy();

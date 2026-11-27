@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setup, id, boundary, day } from './fixtures';
+import { setup, id, boundary, day, openMenu, closeMenu } from './fixtures';
 import {readFileSync} from 'node:fs';
 
 test('dashboard retry, empty state, wizard boundary controls and saved-field retry', async ({page}) => {
@@ -50,7 +50,7 @@ test('diary errors preserve notes and support event save/delete retries',async({
 test('analysis, language, queued weather and assistant recover from unavailable services',async({page})=>{
   const state=await setup(page);state.fail.add(`GET /api/fields/${id}/ndvi/analysis`);await page.goto(`/fields/${id}/analysis`);await expect(page.getByRole('alert')).toBeVisible();
   state.fail.clear();await page.getByRole('button',{name:'Retry analysis'}).click();await page.getByText('More about the trend',{exact:true}).click();await expect(page.getByText('Two clear images show a vegetation decrease.')).toBeVisible();
-  await page.getByLabel('Language / भाषा').selectOption('hi');await expect(page.getByRole('heading',{name:'समय के साथ बदलाव'})).toBeVisible();await expect.poll(()=>state.calls.some(call=>call.includes('language=hi-IN'))).toBeTruthy();await page.getByLabel('Language / भाषा').selectOption('en');
+  await openMenu(page);await page.getByLabel('Language / भाषा').selectOption('hi');await expect(page.getByRole('heading',{name:'समय के साथ बदलाव'})).toBeVisible();await expect.poll(()=>state.calls.some(call=>call.includes('language=hi-IN'))).toBeTruthy();await openMenu(page);await page.getByLabel('Language / भाषा').selectOption('en');await closeMenu(page);
   await page.getByText('Past weather near this field',{exact:true}).click();state.fail.add(`POST /api/fields/${id}/jobs`);await page.getByRole('button',{name:'Update past weather'}).click();await expect(page.getByRole('status')).toContainText('Weather update could not finish');
   state.fail.clear();state.autoComplete=true;await page.getByRole('button',{name:'Update past weather'}).click();await expect.poll(()=>state.jobs.some(job=>job.kind==='weather'&&job.status==='succeeded')).toBeTruthy();
   await expect(page.getByRole('button',{name:'Ask AI'})).toBeDisabled();await page.getByLabel('Question for field assistant').fill('What changed?');state.fail.add('POST /api/assistant');await page.getByRole('button',{name:'Ask AI'}).click();await expect(page.getByRole('alert')).toContainText('Assistant unavailable');

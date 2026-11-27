@@ -57,3 +57,15 @@ export async function setup(page:Page) {
   });
   return state;
 }
+
+/** Opens the collapsed side menu (which holds the language and area-unit selects) if it is closed. Safe to call repeatedly. */
+export async function openMenu(page: Page) {
+  const toggle = page.getByRole('button', { name: /^(Open navigation menu|नेविगेशन खोलें)$/ });
+  if (await toggle.isVisible().catch(() => false)) await toggle.click();
+}
+/** Closes the side menu again so it does not cover the page. Safe to call when it is already closed. */
+export async function closeMenu(page: Page) {
+  const close = page.getByRole('button', { name: /^(Close navigation menu|नेविगेशन बंद करें)$/ }).first();
+  // dispatch the click directly: the drawer animation keeps the button from ever counting as "stable" on phones
+  if (await close.isVisible().catch(() => false)) await close.dispatchEvent('click');
+}
