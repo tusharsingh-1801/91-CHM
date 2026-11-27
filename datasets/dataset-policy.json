@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "default": "hold",
+  "approved_datasets": [
+    {
+      "id": "india-data-portal-des-crop-statistics",
+      "status": "approved_with_attribution",
+      "scope": "Only the specific DES crop-wise area/production/yield dataset version recorded in the downloaded manifest; this is not blanket approval for other government data.",
+      "license": "ODC-Attribution",
+      "source": "https://data.gov.in/Godl",
+      "attribution_required": true
+    }
+  ],
+  "restricted_or_unverified_keywords": [
+    "plantvillage",
+    "plant-village",
+    "plantdoc",
+    "plant-doc",
+    "paddy-doctor",
+    "paddy_doctor",
+    "mdsd",
+    "sage-crop",
+    "ccfi",
+    "pmfby",
+    "irdd",
+    "nccd",
+    "crop-calendar"
+  ],
+  "raw_data_extensions": [
+    ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp",
+    ".zip", ".7z", ".rar", ".tar", ".gz",
+    ".parquet", ".feather", ".h5", ".hdf5", ".npy", ".npz"
+  ],
+  "raw_data_directories": [
+    "datasets/raw/",
+    "data/raw/",
+    "training_data/",
+    "training-data/"
+  ],
+  "notes": [
+    "Unlisted datasets default to hold.",
+    "A licence declaration does not prove the uploader owns third-party image rights.",
+    "Do not add raw competition data or unverified third-party images to public Git history.",
+    "Update this policy only after checking the exact source version and rights."
+  ]
+}
