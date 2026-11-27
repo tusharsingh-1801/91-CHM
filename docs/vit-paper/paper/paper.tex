@@ -35,7 +35,7 @@ Automated recognition of plant disease from leaf photographs has been studied si
 
 \textbf{Contributions.}
 \begin{enumerate}
-\item We fine-tune ViT-B/16 on 38 PlantVillage classes with a near-duplicate-aware split and report 99.89\% accuracy and macro F1 of 0.9976 on 8,155 held-out images (95\% CI 99.82--99.95\%).
+\item We fine-tune ViT-B/16 on 38 PlantVillage classes with a near-duplicate-aware split and report 99.89\% accuracy and macro F1 of 0.9976 on 8,155 held-out images for seed 42 (95\% CI 99.82--99.95\%; three-seed mean 99.87\%).
 \item We compare it with MobileNetV2 under the same split and training budget. Over three seeds ViT is ahead by 0.11 points on average (0.06 to 0.15), but the McNemar test is significant on only one seed ($p=0.078$, $0.017$, $0.42$), so the advantage is small, while ViT costs 85.8\,M versus 2.27\,M parameters, 343\,MB versus 9.3\,MB, and 223\,ms versus 22.8\,ms CPU latency per image.
 \item We compute attention-rollout maps and test them with a deletion check on 400 correctly classified images. Removing the top-ranked 25\% of patches lowers the true-class probability about twice as much as removing random patches (0.029 versus 0.015), but the maps do not concentrate on the leaf more than its area share, so we make no localisation claim.
 \item We analyse the weakest classes and the dataset's duplicate and background-bias risks, with all 38 classes in the appendix.
@@ -61,10 +61,10 @@ We compute attention rollout \cite{abnar2020rollout} for 400 correctly classifie
 
 \section{Results}
 \subsection{Classification}
-Table~\ref{tab:main} gives the seed-42 results, and Table~\ref{tab:seeds} the three seeds. Across seeds ViT-B/16 reaches 99.87\% test accuracy (SD 0.04) and MobileNetV2 99.76\% (SD 0.02), with macro F1 0.9979 and 0.9957. ViT is ahead on every seed, by 0.11, 0.15 and 0.06 points. On the images where the two models disagree, ViT is right and MobileNetV2 wrong on 15, 17 and 15 images, and the reverse on 6, 5 and 10; the McNemar test gives $p=0.078$, $0.017$ and $0.42$. The seeds share one test set, so these tests are not independent. We read this as a small advantage for ViT of about 0.1 points that a single run cannot establish, and we do not claim a larger one.
+Table~\ref{tab:seeds} gives the three seeds, and Table~\ref{tab:main} the full seed-42 results. Across seeds ViT-B/16 reaches 99.87\% test accuracy (SD 0.04) and MobileNetV2 99.76\% (SD 0.02), with macro F1 0.9979 and 0.9957. ViT is ahead on every seed, by 0.11, 0.15 and 0.06 points. On the images where the two models disagree, ViT is right and MobileNetV2 wrong on 15, 17 and 15 images, and the reverse on 6, 5 and 10; the McNemar test gives $p=0.078$, $0.017$ and $0.42$. The seeds share one test set, so these tests are not independent. We read this as a small advantage for ViT of about 0.1 points that a single run cannot establish, and we do not claim a larger one.
 
 \begin{table}[t]
-\caption{Test accuracy of the three seeds on the near-duplicate-aware split, and one run on a plain random split.}
+\caption{Test accuracy of the three seeds on the near-duplicate-aware split (same test set), and one run on a plain random split (a different test set of 8,146 images, so not paired with the rows above).}
 \label{tab:seeds}
 \centering
 \small
