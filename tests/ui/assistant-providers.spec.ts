@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-import {setup,id} from './fixtures';
+import { setup, id, openMenu } from './fixtures';
 test('Gemini is the only provider, sends requests and preserves failed drafts',async({page})=>{
  await setup(page);
  await page.route('**/api/auth/session',route=>route.fulfill({json:{mode:'required',user:{id:'test-user',email:'test@example.invalid'}}}));
@@ -38,7 +38,7 @@ test('late replies stay in their original field conversation',async({page})=>{
  // The dashboard has its own inline chat, so the floating assistant is opened from Help and kept open while navigating.
  await page.goto('/help');await page.getByRole('button',{name:'Ask crop assistant'}).click();await page.getByLabel('Your question').fill('General question');await page.getByRole('button',{name:'Send question'}).click();
  await expect(page.getByRole('button',{name:'Send question'})).toBeDisabled();
- await page.getByRole('link',{name:'Dashboard',exact:true}).click();
+ await openMenu(page);await page.getByRole('link',{name:'Dashboard',exact:true}).click();
  await page.locator('.fh-field',{hasText:'Test field'}).first().click();await expect(page).toHaveURL(new RegExp(id));release();
  const panel=page.getByRole('region',{name:'Crop assistant chat'});await expect(panel).not.toContainText('Original general reply');await expect(panel).not.toContainText('General question');
 });

@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-import {setup} from './fixtures';
+import { setup, openMenu, closeMenu } from './fixtures';
 
 test('signed-in account and notification bell share the top header on desktop and mobile',async({page})=>{
  await setup(page);
@@ -10,8 +10,8 @@ test('signed-in account and notification bell share the top header on desktop an
  const header=page.locator('header.preferences-bar');
  const profile=header.getByLabel('Your account',{exact:true});
  const bell=header.getByLabel(/Notifications, \d+ unread/);
- await expect(profile).toBeVisible();await expect(bell).toBeVisible();
- await profile.click();await expect(page.getByLabel('Email address',{exact:true})).toHaveValue('farmer@example.invalid');
+ await openMenu(page);await expect(profile).toBeVisible();await expect(bell).toBeVisible();
+ await profile.click({force:true});await closeMenu(page);await expect(page.getByLabel('Email address',{exact:true})).toHaveValue('farmer@example.invalid');
  await page.getByLabel('Full name',{exact:true}).fill('Tushar');
  await page.getByRole('button',{name:'Save changes'}).click();
  await expect(profile).toContainText('Tushar');
@@ -28,7 +28,7 @@ test('signed-in account and notification bell share the top header on desktop an
  const bounds=await notifications.boundingBox();expect(bounds!.x).toBeGreaterThanOrEqual(0);expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(320);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  await page.keyboard.press('Escape');
- await profile.click();await expect(page.getByRole('button',{name:'Sign out',exact:true})).toBeVisible();
+ await openMenu(page);await profile.click({force:true});await closeMenu(page);await expect(page.getByRole('button',{name:'Sign out',exact:true})).toBeVisible();
  await page.screenshot({path:test.info().outputPath('header-mobile.png')});
 });
 

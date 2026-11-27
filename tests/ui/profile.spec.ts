@@ -1,11 +1,11 @@
 import {test,expect} from '@playwright/test';
-import {setup} from './fixtures';
+import { setup, openMenu, closeMenu } from './fixtures';
 
 test('local profile personalizes the greeting, persists changes and restores the default when name is blank',async({page})=>{
  await setup(page);
  await page.goto('/');
  await expect(page.getByRole('heading',{name:'Hello, Farmer!',exact:true})).toBeVisible();
- await page.getByLabel('Your account',{exact:true}).click();
+ await openMenu(page);await page.getByLabel('Your account',{exact:true}).click({force:true});await closeMenu(page);
  await expect(page).toHaveURL(/\/profile$/);
  await page.getByLabel('Full name',{exact:true}).fill('Tushar Singh');
  await page.getByLabel('Phone number',{exact:true}).fill('+91 98765 43210');
@@ -18,7 +18,7 @@ test('local profile personalizes the greeting, persists changes and restores the
  await expect(page.getByLabel('Full name',{exact:true})).toHaveValue('Tushar Singh');
  await page.getByRole('link',{name:'Back to dashboard'}).click();
  await expect(page.getByRole('heading',{name:'Hello, Tushar Singh!',exact:true})).toBeVisible();
- await page.getByLabel('Your account',{exact:true}).click();
+ await openMenu(page);await page.getByLabel('Your account',{exact:true}).click({force:true});await closeMenu(page);
  await page.getByLabel('Full name',{exact:true}).fill('Discard this');
  await page.getByRole('button',{name:'Cancel changes',exact:true}).click();
  await expect(page.getByLabel('Full name',{exact:true})).toHaveValue('Tushar Singh');
@@ -64,7 +64,7 @@ test('registration name becomes the greeting immediately after sign-in',async({p
   return route.fulfill({json:[]});
  });
  await page.goto('/');
- await page.getByRole('button',{name:'New to TerraScope? Create an account'}).click();
+ await page.getByRole('button',{name:/Get started/}).first().click();
  await page.getByLabel('Your name (optional)',{exact:true}).fill('Nisha');
  await page.getByLabel('Email',{exact:true}).fill('nisha@example.invalid');
  await page.getByLabel('Password',{exact:true}).fill('a-long-new-password');

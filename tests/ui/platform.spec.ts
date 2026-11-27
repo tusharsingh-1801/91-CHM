@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 import {setup,id} from './fixtures';
 import {forecastFixture} from './fixtures';
 
-test('forecast, processed layers and report keep their source labels',async({page})=>{
+test('forecast, processed layers and report stay free of provider names',async({page})=>{
  await setup(page);
  await page.route(`**/api/fields/${id}/forecast`,route=>route.fulfill({json:forecastFixture()}));
  await page.goto(`/fields/${id}/overview`);
@@ -16,7 +16,7 @@ test('forecast, processed layers and report keep their source labels',async({pag
  const current=await after.inputValue();expect(current).toMatch(/^\d{4}-\d{2}-\d{2}$/);await expect(before).toHaveValue(/^\d{4}-\d{2}-\d{2}$/);
  await before.fill(current);await expect(comparison.getByRole('status')).toContainText('must be earlier');   // a Before date on or after the After date is refused with a message
  await page.getByRole('link',{name:'Report',exact:true}).click();
- const appendix=page.getByRole('region',{name:'Additional monitoring report',exact:true});await expect(appendix).toContainText('Open-Meteo');
+ const appendix=page.getByRole('region',{name:'Additional monitoring report',exact:true});await expect(appendix).toContainText('Forecast as of');await expect(appendix).not.toContainText('Open-Meteo');
 });
 
 test('forecast failure is separate from historical data and retry is functional',async({page})=>{
