@@ -67,7 +67,25 @@ Automated recognition of plant disease from leaf photographs has been studied si
 \section{Related Work}
 PlantDoc was built to test models on field images \cite{singh2020plantdoc}, and an audit of PlantVillage showed that a model given only 8 background pixels reached 49\% accuracy against 2.6\% for chance \cite{noyan2022bias}. Vision transformers \cite{dosovitskiy2021vit,touvron2021deit} have since been applied to plant disease alone \cite{borhani2022}, combined with CNNs \cite{thakur2023plantxvit}, as lightweight hybrids \cite{tonmoy2025mobileplantvit}, with a mixture of experts for field data \cite{salman2025moe}, and compared with CNNs and CLIP \cite{radford2021clip} under domain shift \cite{benabbas2025rethinking}; surveys are given in \cite{mehdipour2025vitagri,banerjee2025eval}. Explanation methods for transformers include attention rollout \cite{abnar2020rollout} and gradient-based relevance \cite{chefer2021beyond}, Grad-CAM is the usual choice for CNNs \cite{selvaraju2017gradcam}, and attention weights alone are not always faithful explanations \cite{jain2019attention}.
 
-Published PlantVillage results are very high: 99.9\% for an encoder--decoder transformer \cite{feng2024encdec} and above 99.3\% for a hierarchical ViT as summarised in \cite{banerjee2025eval}. Accuracy falls on field images: a ViT with a mixture of experts reaches 68\% when trained on PlantVillage and tested on PlantDoc \cite{salman2025moe}. Our 99.89\% on PlantVillage is in the same range as the published figures. Because protocols differ (split, augmentation, pretraining), direct ranking is not meaningful, and we did not test cross-dataset transfer. We add a comparison of a fine-tuned ViT-B/16 and MobileNetV2 under a near-duplicate-aware split, with deployment cost and a deletion test of the rollout maps.
+Table~\ref{tab:published} lists published PlantVillage and PlantDoc results next to ours. Published PlantVillage results are very high: 99.9\% for an encoder--decoder transformer \cite{feng2024encdec} and above 99.3\% for a hierarchical ViT as summarised in \cite{banerjee2025eval}. Accuracy falls on field images: a ViT with a mixture of experts reaches 68\% when trained on PlantVillage and tested on PlantDoc \cite{salman2025moe}. Our 99.89\% on PlantVillage is in the same range as the published figures. Because protocols differ (split, augmentation, pretraining), direct ranking is not meaningful, and we did not test cross-dataset transfer. We add a comparison of a fine-tuned ViT-B/16 and MobileNetV2 under a near-duplicate-aware split, with deployment cost and a deletion test of the rollout maps.
+
+\begin{table}[t]
+\caption{Published PlantVillage / PlantDoc results (protocols differ; not directly comparable). ``Ours'' rows are three-seed means on the near-duplicate-aware split.}
+\label{tab:published}
+\centering
+\footnotesize
+\begin{tabular}{@{}p{1.5cm}p{2.0cm}p{2.5cm}r@{}}
+\toprule
+Work & Model & Dataset / split & Accuracy \
+\midrule
+\cite{feng2024encdec} & Encoder--decoder transformer & PlantVillage, authors' protocol & 99.9\% \
+\cite{banerjee2025eval} & Hierarchical ViT (as summarised in the survey) & PlantVillage, authors' protocol & $>$99.3\% \
+\cite{salman2025moe} & ViT with mixture of experts & PlantVillage $\rightarrow$ PlantDoc & 68\% \
+Ours & ViT-B/16 & PlantVillage, grouped split & 99.87\% \
+Ours & MobileNetV2 & PlantVillage, grouped split & 99.76\% \
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Data and Method}
 \subsection{Dataset and split}
