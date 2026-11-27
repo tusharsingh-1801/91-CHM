@@ -6,24 +6,38 @@ Audited default-branch tree SHA: `a7cfad2e6270cd78666e8f0572bf233e4e408181`
 
 ## Scope and counts
 
+*Counts updated 2026-11-27 after the draft calendar import was untracked (see the licence-gate section near the end). The audited SHA above is the original audit point.*
+
 This inventory counts Git-tracked blobs under `datasets/` in the inspected repository tree at commit `a7cfad2e6270cd78666e8f0572bf233e4e408181`. It does not count ignored local files under `.local/datasets/` and does not inspect the contents of every CSV.
 
 | Item | Count |
 |---|---:|
-| Tracked files under `datasets/` | 1,695 |
-| CSV files | 1,682 |
+| Tracked files under `datasets/` | 1,694 |
+| CSV files | 1,681 |
 | Markdown files | 9 |
 | JSON files | 3 |
 | TXT files | 1 |
 | CSV files under `datasets/TimeSen2Crop/` | 1,677 |
-| Other CSV files | 5 |
+| Other CSV files | 4 |
+
+## Status summary (2026-11-27)
+
+| Area | State |
+|---|---|
+| Tracked TimeSen2Crop subset (1,677 CSVs) | Content identical to the CC BY 4.0 Zenodo archive (line endings differ); provenance verified, release not approved |
+| Local PLDD-UP, rice (Sethy), wheat IARI, IITKGP potato, RiceLeafBD | Hash match with the upstream record (RiceLeafBD matches Mendeley kx9rx8p2mz, not the previously cited sjkptpgv79) |
+| Local AgriFieldNet | 17,644 of 17,644 files byte-identical to the live source; the source publishes no checksums |
+| Local DES statistics | Unchanged since retrieval; the portal publishes no checksum |
+| Local `reference/` folder | Mapped to sources; CropHarvest files hash-match Zenodo; UAV maize inferred from extraction; calendar PDFs and the sync cache are not cleared or not source-hashed |
+| Release allow-list | Empty. No dataset payload is approved for public release by any of these checks |
+| Licence gate (`check_dataset_licenses.py`) | Passes after the draft calendar import was untracked |
 
 ## Identified dataset-bearing paths
 
-* `datasets/TimeSen2Crop/` — 1,677 tracked CSV files, all under `2019_33UVP/`, with 853 files in class folder `0/`, 823 in `1/`, and one `dates.csv`. This is only the 2019 tile, not the full 15-tile 2017/18 dataset. The register records Zenodo record 4715631 / DOI 10.1109/JSTARS.2021.3073965 as CC BY 4.0. Official dataset documentation describes a 2019 tile as an additional agronomic year; the 2019 tile's files contain 9 spectral bands plus a quality flag. **Licence finding:** CC BY 4.0 is supported by the Zenodo/Hugging Face dataset metadata and original paper. **Provenance finding:** the 1,677 repository CSVs have not been byte- or checksum-matched to the Zenodo archive, so retain as licence-declared but provenance-unverified until that comparison is done. The dataset is Austria crop-type data, not Indian crop-stress labels; do not treat it as Indian field-health ground truth.
+* `datasets/TimeSen2Crop/` — 1,677 tracked CSV files, all under `2019_33UVP/`, with 853 files in class folder `0/`, 823 in `1/`, and one `dates.csv`. This is only the 2019 tile, not the full 15-tile 2017/18 dataset. The register records Zenodo record 4715631 / DOI 10.1109/JSTARS.2021.3073965 as CC BY 4.0. Official dataset documentation describes a 2019 tile as an additional agronomic year; the 2019 tile's files contain 9 spectral bands plus a quality flag. **Licence finding:** CC BY 4.0 is supported by the Zenodo/Hugging Face dataset metadata and original paper. **Provenance finding:** the 1,677 repository CSVs have not been byte- or checksum-matched to the Zenodo archive, so retain as licence-declared but provenance-unverified until that comparison is done. The dataset is Austria crop-type data, not Indian crop-stress labels; do not treat it as Indian field-health ground truth. **Update 2026-11-27:** the "provenance-unverified" statement above is superseded; the 1,677 files were compared with the Zenodo archive and match in content (see the archive comparison section).
 * `datasets/ground-truth/observation-template.csv` — field-observation template, not an external third-party dataset.
 * `datasets/reference/india-crop-calendar-ggcmi.csv` — 0.5° reference calendar entries attributed in the file to RiceAtlas and IndiaAgStat and described in the register as derived from GGCMI Phase 3 (Zenodo 5062513, CC BY 4.0). Check the source-layer rights and keep the attribution; do not treat this derived CSV as farmer observations.
-* `datasets/reference/india-field-calendar-import-DRAFT.csv` — draft import file; do not treat the filename as evidence of licence clearance.
+* `datasets/reference/india-field-calendar-import-DRAFT.csv` — **no longer tracked** (removed 2026-11-27 because the licence gate blocks it; a copy is kept in the ignored `.local/datasets/reference/calendar-drafts/`). It was a draft import, not cleared for release.
 * `datasets/fao-calendar-template.csv` and `datasets/fao-calendar-template.original.csv` — both are header-only blank templates in the inspected GitHub versions; no FAO records are present in these files. The header/schema alone does not establish FAO endorsement or a licence to FAO data.
 
 ## Important distinction
@@ -33,10 +47,10 @@ The register also describes datasets stored under the ignored `.local/datasets/`
 ## Release implications
 
 1. The 1,677 TimeSen2Crop CSVs are already tracked in the public repository tree inspected at the SHA above. This is not a newly uploaded dataset in this audit.
-2. The current path-based release gate does not verify all CSV content or prove that the exact TimeSen2Crop files match the licensed Zenodo version.
+2. The path-based release gate does not verify CSV content. The exact TimeSen2Crop files were compared with the licensed Zenodo archive on 2026-11-27 and match in content (see the TimeSen2Crop archive comparison section), but that comparison does not approve them for a release bundle.
 3. Do not use this inventory as proof that every tracked file has a verified licence.
 4. Keep the dataset register, third-party notices, source licence files and checksums synchronized with each exact dataset version.
-5. A separate local scan and checksum comparison is required for ignored `.local/datasets/` content.
+5. The local scan and upstream comparison for ignored `.local/datasets/` content were done on 2026-11-27; results are in the sections below. The reference folder source map and the local comparison table list the evidence level for each dataset.
 
 ## CI research-test integration
 
