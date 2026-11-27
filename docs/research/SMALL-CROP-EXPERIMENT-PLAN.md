@@ -4,7 +4,7 @@ Declared 2026-11-20, before any wheat/rice model was trained. Research only; not
 
 ## Data (all CC BY 4.0, verified through DataCite; see datasets/TRAINING-DATA-REGISTER.md)
 - Wheat leaf rust, IARI India (Mendeley th422bg4yd): 859 photos, Healthy / Leaf rust. Split 602/129/128 by duplicate group.
-- Rice leaf disease, Bangladesh (Mendeley sjkptpgv79): 1,516 photos, 4 classes. Split 875/228/227 by duplicate group.
+- Rice leaf disease, Bangladesh (Mendeley kx9rx8p2mz): 1,516 photos, 4 classes. Split 875/228/227 by duplicate group.
 - The publisher's own split is ignored (wheat: 3 duplicate groups cross it).
 
 ## Models (MobileNetV2, 224 px, strong phone-photo augmentation, cosine LR, seed 42, no ImageNet weights)

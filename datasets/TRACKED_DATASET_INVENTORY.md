@@ -79,7 +79,7 @@ A local scan (`scripts/inventory_local_datasets.py`) hashed 1,350,838 files (abo
 | Wheat IARI (`wheat-iari`) | Mendeley th422bg4yd v1 | both zips match |
 | IITKGP potato (`iitkgp-potato`) | Zenodo 22059910 | MD5 matches |
 | DES crop-wise statistics (`yield/raw`) | India Data Portal | 3 of 3 files unchanged against the retrieval-time `manifest.json`; the portal publishes no upstream checksum, so this shows no change since 2026-10-30, not a match to an official source |
-| RiceLeafBD (`ricelbd`) | Mendeley sjkptpgv79 v1/v2 | **no match.** Upstream is a single 21,642,468-byte `.rar`; the local file is a 497,906,237-byte `Original Images.zip`. The register's "SHA-256 matched" note for this dataset could not be reproduced; treat its provenance as unconfirmed |
+| RiceLeafBD (`ricelbd`) | Mendeley kx9rx8p2mz v1 (CC BY 4.0) | **match.** `Original Images.zip` (497,906,237 bytes) is identical in SHA-256 to the record's only file. The register and licence list previously cited `sjkptpgv79`, which is a different, later record (2,545 images, five classes); that ID was wrong and has been corrected. The record text says 1,555 images while the archive holds 1,560 |
 | AgriFieldNet (`agrifieldnet`) | Radiant Earth / Source Cooperative | not comparable: no upstream file checksums were found |
 
 The hash report is `.local/dataset_inventory.json` (ignored by Git; paths, sizes and SHA-256 only).
