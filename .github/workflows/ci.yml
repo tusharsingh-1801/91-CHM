@@ -40,7 +40,17 @@ jobs:
         run: node --import tsx --test backend/api/services/scoutingRecovery.test.ts
       - run: npm run typecheck
       - run: npm test
-      - run: npm run test:research
+      - name: Set up Python for research tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: scripts/ml/requirements-ci.txt
+      - name: Install research test dependencies
+        run: python -m pip install -r scripts/ml/requirements-ci.txt
+      - name: Run model-comparison research unit tests
+        working-directory: scripts/ml
+        run: python -m unittest test_ml_pipeline -v
       - run: npm run photos:test
       - run: npm run test:integration
       - run: npm run lint
